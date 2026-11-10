@@ -38,6 +38,7 @@ public final class Freecam extends Module {
 	final BoolSetting collide = add(new BoolSetting("collide", "Collide with blocks", false));
 	final BoolSetting smooth = add(new BoolSetting("smooth", "Smooth movement", true));
 	final BoolSetting remember = add(new BoolSetting("remember", "Remember last position", false));
+	final BoolSetting servers = add(new BoolSetting("servers", "Allow on servers", false));
 
 	private CameraType saved;
 	private boolean held;
@@ -77,6 +78,10 @@ public final class Freecam extends Module {
 
 	private void start(Minecraft mc) {
 		if (!mc.hasSingleplayerServer()) {
+			if (!servers.on()) {
+				Mc.say(Component.literal("§5[§dK§5] §rFreecam is off on servers. Turn on \"Allow on servers\" in its settings at your own risk: anti-cheats can ban for it."));
+				return;
+			}
 			Mc.say(Component.literal("§5[§dK§5] §rFreecam is not recommended on servers: some anti-cheats flag it."));
 		}
 		saved = mc.options.getCameraType();

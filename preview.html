@@ -25,6 +25,7 @@
     content_list: Array.from({length: 64}, (_, i) => ({ folder: i < 52 ? "mods" : i < 60 ? "resourcepacks" : "shaderpacks", file: "mod-" + i + ".jar", enabled: i % 7 !== 3, title: ["Sodium", "Lithium", "Iris", "AppleSkin", "Mod Menu", "Zoomify", "Fabric API", "EntityCulling"][i%8] + " " + i, projectId: null })),
     content_search: { hits: Array.from({length: 20}, (_, i) => ({ project_id: "p"+i, slug: "s"+i, title: "Cool mod " + i, description: "Does a thing to the game so it looks and plays better, in two short lines at most.", icon_url: null, downloads: 123456*(i+1), author: "someone" })), total_hits: 340 },
     jobs_list: [],
+    memory_info: [16384, 3840],
     java_supported: [8, 17, 21],
     theme_list: [],
     content_categories: [],

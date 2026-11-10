@@ -7,6 +7,8 @@ import { useI18n } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useJobs } from "../lib/jobs";
 import { Progress } from "../ui/Progress";
+import { Select } from "../ui/Select";
+import { LaunchError } from "../ui/LaunchError";
 import { LOADER_NAMES, useLauncher, type Instance } from "../lib/launcher";
 import { VersionPicker, versionReady, type VersionChoice } from "../home/VersionPicker";
 import { Glyph } from "../ui/Glyph";
@@ -21,6 +23,7 @@ import { ContentUpdates } from "../content/Updates";
 import { Backups, Cloud, Files, FolderButton, SavedServers, Screenshots, Worlds } from "./InstanceExtras";
 import { Conflicts } from "./Conflicts";
 import { LagCheck } from "./LagCheck";
+import { Memory } from "./Memory";
 import { Metrics } from "./Metrics";
 
 type Preset = "auto" | "maxFps" | "balanced" | "quality";
@@ -28,7 +31,7 @@ const PRESETS: Preset[] = ["auto", "maxFps", "balanced", "quality"];
 
 type Tab = "content" | "conflicts" | "worlds" | "servers" | "screenshots" | "settings" | "performance" | "files" | "backups" | "cloud" | "icon";
 const TABS: Tab[] = ["content", "worlds", "servers", "screenshots", "settings", "performance"];
-const MORE_TABS: Tab[] = ["conflicts", "files", "backups", "cloud"];
+const MORE_TABS: Tab[] = ["conflicts", "cloud"];
 const TAB_LABELS: Record<Tab, MessageKey> = {
   content: "builds.content",
   conflicts: "conflicts.title",
@@ -43,7 +46,7 @@ const TAB_LABELS: Record<Tab, MessageKey> = {
   icon: "builds.icon",
 };
 
-export function Builds({ onAddContent }: { onAddContent: (kind: Kind) => void }) {
+export function Builds({ onAddContent, onAccounts }: { onAddContent: (kind: Kind) => void; onAccounts: () => void }) {
   const { t } = useI18n();
   const [instances, setInstances] = useState<Instance[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -319,14 +322,7 @@ export function Builds({ onAddContent }: { onAddContent: (kind: Kind) => void })
                     )}
                 </div>
               </header>
-              {launcher.errors[inst.id] && (
-                <p className="error">
-                  {launcher.errors[inst.id]}{" "}
-                  <button className="btn btn-ghost" onClick={() => invoke("instance_open_log", { instanceId: inst.id }).catch((e) => setError(String(e)))}>
-                    <Glyph name="external-link" /> {t("game.openLog")}
-                  </button>
-                </p>
-              )}
+              <LaunchError instanceId={inst.id} onAccounts={onAccounts} />
               <div className="tabs-row">
                 <div className="segmented tabs">
                   {TABS.map((k) => (
@@ -374,10 +370,14 @@ export function Builds({ onAddContent }: { onAddContent: (kind: Kind) => void })
               {tab === "worlds" && <Worlds inst={inst} />}
               {tab === "servers" && <SavedServers inst={inst} />}
               {tab === "screenshots" && <Screenshots inst={inst} />}
-              {tab === "files" && <Files inst={inst} />}
-              {tab === "backups" && <Backups inst={inst} onRestored={refresh} />}
               {tab === "cloud" && <Cloud inst={inst} onInstalled={refresh} />}
-              {tab === "settings" && <InstanceSettings key={inst.id} inst={inst} groups={groups} onSaved={refresh} />}
+              {tab === "settings" && (
+                <>
+                  <InstanceSettings key={inst.id} inst={inst} groups={groups} onSaved={refresh} />
+                  <Backups inst={inst} onRestored={refresh} />
+                  <Files inst={inst} />
+                </>
+              )}
               {tab === "performance" && (
                 <>
                   <LagCheck
@@ -389,6 +389,7 @@ export function Builds({ onAddContent }: { onAddContent: (kind: Kind) => void })
                     onConflicts={() => setTab("conflicts")}
                   />
                   <section className="card">
+                    <Memory inst={inst} onSaved={refresh} />
                     <p className="muted">{t(inst.loader ? "builds.presetHint" : "builds.presetVanilla")}</p>
                     {presetJob ? (
                       <div className="job">
@@ -456,7 +457,6 @@ function InstanceSettings({ inst, groups, onSaved }: { inst: Instance; groups: s
     loader: inst.loader?.kind ?? null,
     build: inst.loader?.version ?? "",
   });
-  const [memory, setMemory] = useState(inst.memoryMb ? String(inst.memoryMb) : "");
   const [java, setJava] = useState(inst.javaPath ?? "");
   const [jvmArgs, setJvmArgs] = useState(inst.jvmArgs ?? "");
   const [gpu, setGpu] = useState(inst.gpu);
@@ -476,7 +476,7 @@ function InstanceSettings({ inst, groups, onSaved }: { inst: Instance; groups: s
         name,
         mcVersion: choice.mc,
         loader: choice.loader ? { kind: choice.loader, version: choice.build } : null,
-        memoryMb: num(memory),
+        memoryMb: inst.memoryMb,
         javaPath: java,
         jvmArgs,
         gpu,
@@ -507,10 +507,7 @@ function InstanceSettings({ inst, groups, onSaved }: { inst: Instance; groups: s
       </div>
       <VersionPicker value={choice} onChange={setChoice} />
       <h3>{t("builds.launch")}</h3>
-      <div className="field">
-        <span>{t("builds.memory")}</span>
-        <input className="input" inputMode="numeric" value={memory} placeholder={t("builds.auto")} onChange={(e) => setMemory(e.currentTarget.value)} />
-      </div>
+      <Memory inst={inst} onSaved={onSaved} />
       <div className="field">
         <span>{t("java.title")}</span>
         <input className="input" value={java} placeholder={t("builds.auto")} onChange={(e) => setJava(e.currentTarget.value)} />
@@ -719,6 +716,20 @@ function InstanceContent({ inst, rev, onAdd }: { inst: Instance; rev: number; on
     invoke<Duplicate[]>("content_conflicts", { instanceId: inst.id }).then((c) => setDupes(c.filter((x) => x.kind === "duplicate")), () => setDupes([]));
     return invoke<Installed[]>("content_list", { instanceId: inst.id }).then(setFiles, () => setFiles([]));
   };
+  const others = useLauncher().instances.filter((i) => i.id !== inst.id && i.loader);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const copies = useJobs("copymods-", (_, e) => {
+    setCopyError(e);
+    refresh();
+  });
+  const copyJob = copies.jobs[`copymods-${inst.id}`];
+  const copyFrom = (fromId: string) => {
+    setCopyError(null);
+    invoke<number>("content_copy_mods", { instanceId: inst.id, fromId }).then(
+      (id) => copies.started(`copymods-${inst.id}`, id),
+      (e) => setCopyError(String(e)),
+    );
+  };
   const keepOnly = (d: Duplicate, keep: string) =>
     Promise.all(d.files.filter((f) => f !== keep).map((file) => invoke("content_remove", { instanceId: inst.id, folder: "mods", file }))).finally(refresh);
   const q = query.trim().toLowerCase();
@@ -751,6 +762,9 @@ function InstanceContent({ inst, rev, onAdd }: { inst: Instance; rev: number; on
         </div>
         <div className="actions">
           <FolderButton inst={inst} folder={tab.folder} />
+          {tab.folder === "mods" && inst.loader && others.length > 0 && (
+            <Select value={t("builds.copyMods")} disabled={!!copyJob} options={others.map((i) => ({ value: i.id, label: `${i.name} · ${i.mcVersion}` }))} onChange={copyFrom} />
+          )}
           <button className="btn" onClick={() => onAdd(tab.kind)}>
             <Glyph name="plus" /> {t("builds.add")}
           </button>
@@ -779,6 +793,12 @@ function InstanceContent({ inst, rev, onAdd }: { inst: Instance; rev: number; on
             </div>
           </div>
         ))}
+      {copyJob && (
+        <div className="job">
+          <Progress job={copyJob} />
+        </div>
+      )}
+      {copyError && <p className="error">{copyError}</p>}
       <ContentUpdates instanceId={inst.id} onChange={refresh} />
       <InstalledList files={shown} instanceId={inst.id} onChange={refresh} />
       {tab.folder === "mods" && <SafetyCheck instanceId={inst.id} />}

@@ -38,7 +38,6 @@ export function Showcase() {
   return (
     <div className={s.showcase}>
       <div className={s.stage}>
-        <div className={s.glow} />
         <img src="/showcase-poster.webp" alt="" className={s.poster} data-hidden={ready || undefined} />
         <Player3D className={s.player} cosmetics={{ items: Object.values(worn) }} zoom={0.78} turn={0.7} onReady={() => setReady(true)} />
         <svg className={s.pedestal} viewBox="0 0 280 110" aria-hidden="true">

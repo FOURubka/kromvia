@@ -142,6 +142,12 @@ fn options(o: &HashMap<String, String>, m: u32, out: &mut Vec<Finding>) {
     }
 }
 
+pub fn auto_memory(instance_id: &str) -> u64 {
+    let mods = content::list(instance_id).map_or(0, |l| l.iter().filter(|f| f.folder == "mods" && f.enabled && !f.file.ends_with(DISABLED)).count());
+    let shaders = instances::game_dir(instance_id).is_ok_and(|d| shaders_on(&d).is_some());
+    tuning::auto_memory_mb(tuning::total_ram_bytes(), mods, shaders)
+}
+
 pub async fn scan(instance_id: &str) -> Result<Vec<Finding>, String> {
     let inst = instances::get(instance_id)?;
     let dir = instances::game_dir(instance_id)?;
@@ -172,8 +178,8 @@ pub async fn scan(instance_id: &str) -> Result<Vec<Finding>, String> {
     let shaders = shaders_on(&dir);
     let total = tuning::total_ram_bytes();
     let total_mb = total / (1024 * 1024);
-    let set = inst.memory_mb.unwrap_or_else(|| tuning::auto_memory_mb(total, 0, false));
     let recommended = tuning::auto_memory_mb(total, mods.len(), shaders.is_some());
+    let set = inst.memory_mb.unwrap_or(recommended);
     if set * 10 < recommended * 8 {
         out.push(finding("high", "memoryLow", None, Some(format!("{set}|{recommended}")), Some(Fix::Memory { mb: recommended })));
     } else if set > total_mb * 3 / 4 || (set > 8192 && set > recommended * 2) {

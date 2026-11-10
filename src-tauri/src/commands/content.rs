@@ -147,6 +147,11 @@ pub fn content_add_files(instance_id: String, paths: Vec<std::path::PathBuf>) ->
 }
 
 #[tauri::command]
+pub fn content_copy_mods(app: AppHandle, jobs: State<'_, Jobs>, instance_id: String, from_id: String) -> Result<u64, String> {
+    jobs.spawn(&app, format!("copymods-{instance_id}"), move |job| async move { content::copy_mods(&instance_id, &from_id, &job).await })
+}
+
+#[tauri::command]
 pub fn content_list(instance_id: String) -> Result<Vec<InstalledFile>, String> {
     content::list(&instance_id)
 }
@@ -164,6 +169,20 @@ pub async fn lag_scan(instance_id: String) -> Result<Vec<crate::engine::game::la
 #[tauri::command]
 pub fn lag_fix(instance_id: String, fix: crate::engine::game::lag::Fix) -> Result<(), String> {
     crate::engine::game::lag::fix(&instance_id, fix)
+}
+
+#[tauri::command]
+pub fn memory_info(instance_id: String) -> (u64, u64) {
+    use crate::engine::game::{lag, tuning};
+    (tuning::total_ram_bytes() / (1024 * 1024), lag::auto_memory(&instance_id))
+}
+
+#[tauri::command]
+pub fn instance_set_memory(instance_id: String, memory_mb: Option<u64>) -> Result<(), String> {
+    if memory_mb.is_some_and(|m| !(512..=65536).contains(&m)) {
+        return Err("memory must be 512–65536 MB".into());
+    }
+    crate::engine::instances::set_memory(&instance_id, memory_mb).map(|_| ())
 }
 
 #[tauri::command]

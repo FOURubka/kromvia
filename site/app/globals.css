@@ -14,9 +14,6 @@
   --top: #c9b5ff;
   --side: #2f55c8;
   --bevel-top: rgb(255 255 255 / 0.07);
-  --page-glow: radial-gradient(ellipse 55% 45% at 55% 0%, rgb(0 92 198 / 0.2), transparent 70%),
-    radial-gradient(ellipse 50% 50% at 0% 100%, rgb(191 111 140 / 0.12), transparent 70%),
-    radial-gradient(ellipse 50% 50% at 100% 100%, rgb(135 87 153 / 0.14), transparent 70%);
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --wrap: 1200px;
   --gutter: clamp(16px, 4vw, 40px);
@@ -40,8 +37,7 @@ body {
   font-size: 16px;
   line-height: 1.55;
   color: var(--text);
-  background: var(--page-glow), var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;

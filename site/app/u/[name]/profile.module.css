@@ -13,14 +13,6 @@
   background-color: var(--b-rim);
 }
 
-.stageBox::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: radial-gradient(ellipse 60% 50% at 50% 60%, rgb(139 92 246 / 0.3), transparent 70%);
-}
-
 .stage {
   position: absolute;
   inset: 0;

@@ -27,6 +27,7 @@ const T = {
     boring: "The launcher handles the boring part",
     friends: "Play with friends without running a server",
     roomsAlt: "A Kromvia bee opening a door",
+    shotAlt: "The Builds page of the Kromvia launcher with a list of installed mods",
     get: "Get Kromvia", platforms: "For Windows, macOS and Linux.", download: "Download Kromvia", discord: "Join our Discord",
   },
   uk: {
@@ -42,6 +43,7 @@ const T = {
     boring: "Нудну частину лаунчер бере на себе",
     friends: "Грай з друзями без свого сервера",
     roomsAlt: "Бджілка Kromvia відчиняє двері",
+    shotAlt: "Сторінка збірок у лаунчері Kromvia зі списком встановлених модів",
     get: "Отримати Kromvia", platforms: "Для Windows, macOS і Linux.", download: "Завантажити Kromvia", discord: "Наш Discord",
   },
 };
@@ -99,7 +101,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className={`section ${s.cosmetics}`}>
+      <section className="section">
         <div className={`wrap ${s.split}`} data-m="cosm">
           <Showcase />
           <div className="section-head">
@@ -119,7 +121,15 @@ export default async function Home() {
           <div className="section-head center">
             <h2>{t.boring}</h2>
           </div>
-          <BeeCards cards={LAUNCHER} />
+          <img src="/launcher-builds.webp" alt={t.shotAlt} width={2560} height={1600} loading="lazy" className={s.shot} />
+          <div className={s.feats}>
+            {LAUNCHER.map((c) => (
+              <div key={c.title}>
+                <b>{c.title}</b>
+                <p>{c.text}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

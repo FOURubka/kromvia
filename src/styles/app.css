@@ -3645,3 +3645,49 @@ kbd {
   display: block;
   image-rendering: pixelated;
 }
+
+.memory-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 260px;
+  max-width: 520px;
+}
+
+.memory-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  appearance: none;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--accent) var(--fill), var(--border) var(--fill));
+  cursor: pointer;
+}
+
+.memory-row input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.memory-value {
+  min-width: 110px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.launch-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  user-select: text;
+}

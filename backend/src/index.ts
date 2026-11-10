@@ -1,7 +1,7 @@
 
 import { Hono } from "hono";
 import { b64url, verify } from "./auth";
-import { NAME, isDev } from "./playing";
+import { DEV, NAME, isDev } from "./playing";
 import { asset, downloads, manifest } from "./update";
 export { Hub } from "./hub";
 
@@ -242,8 +242,10 @@ app.get("/bot/links", async (c) => {
 
 app.get("/v1/top", async (c) => {
   const { results } = await c.env.DB.prepare(
-    "SELECT a.id, a.name, a.mc_uuid, COUNT(*) AS likes FROM likes l JOIN accounts a ON a.id = l.to_id GROUP BY l.to_id ORDER BY likes DESC, a.name_lower LIMIT 50",
-  ).all<{ id: string; name: string; mc_uuid: string | null; likes: number }>();
+    "SELECT a.id, a.name, a.mc_uuid, COUNT(*) AS likes FROM likes l JOIN accounts a ON a.id = l.to_id WHERE a.name_lower != ? GROUP BY l.to_id ORDER BY likes DESC, a.name_lower LIMIT 50",
+  )
+    .bind(DEV.toLowerCase())
+    .all<{ id: string; name: string; mc_uuid: string | null; likes: number }>();
   return c.json(results.map((a) => ({ ...publicAccount(a), likes: a.likes })));
 });
 

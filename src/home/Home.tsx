@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useI18n } from "../i18n";
 import { Progress } from "../ui/Progress";
+import { LaunchError } from "../ui/LaunchError";
 import { Glyph } from "../ui/Glyph";
 import { usePaged } from "../ui/Pager";
 import { Empty } from "../ui/Empty";
@@ -349,14 +350,7 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
                 />
               )}
               {clientNote && <small className="muted">{clientNote}</small>}
-              {l.errors[current.id] && (
-                <p className="error">
-                  {l.errors[current.id]}{" "}
-                  <button className="btn btn-ghost" onClick={() => invoke("instance_open_log", { instanceId: current.id }).catch(() => {})}>
-                    <Glyph name="external-link" /> {t("game.openLog")}
-                  </button>
-                </p>
-              )}
+              <LaunchError instanceId={current.id} onAccounts={() => onNavigate("accounts")} />
               {run && <MinimapOffer inst={current} />}
             </div>
           ) : (

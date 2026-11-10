@@ -102,10 +102,6 @@
   }
 }
 
-.cosmetics {
-  background: radial-gradient(ellipse 50% 60% at 25% 50%, rgb(139 92 246 / 0.16), transparent 70%);
-}
-
 .split {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -138,14 +134,6 @@
   place-items: center;
 }
 
-.roomsArt::before {
-  content: "";
-  position: absolute;
-  inset: 10%;
-  z-index: -1;
-  background: radial-gradient(circle, rgb(31 99 214 / 0.35), transparent 65%);
-}
-
 .roomsBee {
   width: min(100%, 440px);
   animation: bob 4s ease-in-out infinite;
@@ -161,7 +149,6 @@
   position: relative;
   padding: clamp(80px, 12vw, 140px) 0;
   overflow: hidden;
-  background: radial-gradient(ellipse 60% 70% at 50% 100%, rgb(31 99 214 / 0.3), transparent 70%);
 }
 
 .finalInner {
@@ -184,6 +171,31 @@
   margin-bottom: 12px;
 }
 
+.shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.feats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px 32px;
+  margin-top: 40px;
+}
+
+.feats b {
+  font-size: 17px;
+}
+
+.feats p {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
 @media (max-width: 1100px) {
   .heroGrid {
     grid-template-columns: 1fr;
@@ -197,6 +209,10 @@
 
 @media (max-width: 860px) {
   .split {
+    grid-template-columns: 1fr;
+  }
+
+  .feats {
     grid-template-columns: 1fr;
   }
 

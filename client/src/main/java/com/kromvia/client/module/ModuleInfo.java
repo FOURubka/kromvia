@@ -61,7 +61,7 @@ public final class ModuleInfo {
 		put("freelook", "freelook", "Hold Alt to look around without turning your player.");
 		put("snaplook", "snaplook", "Hold V to look at yourself from the front.");
 		put("behind_you", "behind_you", "Hold V to look behind you, B for the front view.");
-		put("freecam", "freecam", "Fly the camera away from your player, great for screenshots. Not recommended on servers.");
+		put("freecam", "freecam", "Fly the camera away from your player, great for screenshots. Off on servers unless you allow it.");
 		put("easy_place", "easy_place", "Place blocks on doors, trapdoors, chests and other usable blocks without sneaking.");
 		put("zoom", "zoom", "Hold C to zoom in. Scroll while zooming to change it.");
 		put("fullbright", "fullbright", "Makes everything bright, even caves at night.");

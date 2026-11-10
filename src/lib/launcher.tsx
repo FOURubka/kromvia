@@ -62,7 +62,7 @@ function savedOffline(): string[] {
   }
 }
 
-function useLauncherState() {
+function useLauncherState(onNeedAccount: () => void) {
   const [instances, setInstances] = useState<Instance[]>([]);
   const [nick, setNickState] = useState(savedNick);
   const [offline, setOfflineState] = useState(savedOffline);
@@ -207,6 +207,7 @@ function useLauncherState() {
   };
 
   const play = (inst: Instance, extra: LaunchExtra = {}) => {
+    if (!account && !NICK.test(nick.trim())) return onNeedAccount();
     if (!account) rememberNick();
     launch(inst, extra, account?.id ?? null, nick.trim());
   };
@@ -258,8 +259,8 @@ function useLauncherState() {
 type Launcher = ReturnType<typeof useLauncherState>;
 const Ctx = createContext<Launcher | null>(null);
 
-export function LauncherProvider({ children }: { children: ReactNode }) {
-  return <Ctx.Provider value={useLauncherState()}>{children}</Ctx.Provider>;
+export function LauncherProvider({ children, onNeedAccount }: { children: ReactNode; onNeedAccount: () => void }) {
+  return <Ctx.Provider value={useLauncherState(onNeedAccount)}>{children}</Ctx.Provider>;
 }
 
 export function useLauncher() {

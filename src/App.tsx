@@ -114,7 +114,7 @@ function App() {
   }, [t]);
 
   return (
-    <LauncherProvider>
+    <LauncherProvider onNeedAccount={() => setPage("accounts")}>
       <SocialProvider>
         {background && <img className="app-bg" src={background} alt="" aria-hidden />}
         <div className="shell">
@@ -147,6 +147,7 @@ function App() {
                 {page === "friends" && <Friends />}
                 {page === "builds" && (
                   <Builds
+                    onAccounts={() => setPage("accounts")}
                     onAddContent={(kind) => {
                       setContentTab(kind);
                       setPage("content");

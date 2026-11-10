@@ -147,6 +147,35 @@ pub fn add_files(instance_id: &str, paths: &[PathBuf]) -> Result<Vec<String>, St
     Ok(added)
 }
 
+pub async fn copy_mods(instance_id: &str, from_id: &str, job: &std::sync::Arc<crate::engine::core::jobs::Job>) -> Result<(), String> {
+    let (to, from) = (instances::get(instance_id)?, instances::get(from_id)?);
+    let same = to.mc_version == from.mc_version && to.loader.as_ref().map(|l| l.kind) == from.loader.as_ref().map(|l| l.kind);
+    let index = read_index(from_id);
+    let src = instances::game_dir(from_id)?.join("mods");
+    let mut skipped = Vec::new();
+    for f in list(from_id)?.into_iter().filter(|f| f.folder == "mods" && f.enabled) {
+        let have = read_index(instance_id);
+        match index.iter().find(|e| e.folder == "mods" && e.file == f.file) {
+            Some(e) if have.iter().any(|h| h.project_id == e.project_id) => {}
+            Some(e) if !e.is_curseforge() => {
+                let version = same.then_some(e.version_id.as_str());
+                if modrinth::install(instance_id, &e.project_id, version, ContentKind::Mod, job).await.is_err() {
+                    skipped.push(f.title);
+                }
+            }
+            _ if same => {
+                add_files(instance_id, &[src.join(&f.file)])?;
+            }
+            _ => skipped.push(f.title),
+        }
+    }
+    if skipped.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("no compatible version for: {}", skipped.join(", ")))
+    }
+}
+
 pub fn checked_file(instance_id: &str, folder: &str, file: &str) -> Result<PathBuf, String> {
     if !FOLDERS.contains(&folder) || file.contains('/') {
         return Err("bad content path".into());

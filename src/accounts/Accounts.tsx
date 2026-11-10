@@ -42,6 +42,7 @@ export function Accounts() {
     setLogin(null);
     setError(e);
     refresh();
+    l.refreshAccounts();
   });
 
   const start = () => {
@@ -100,6 +101,7 @@ export function Accounts() {
         )}
       </div>
       {error && <p className="error">{error}</p>}
+      {!l.account && !NICK.test(l.nick.trim()) && !login && <p className="launch-error">{t("launch.needAccount")}</p>}
       {login && (
         <section className="card">
           <h2>{t("account.signin")}</h2>

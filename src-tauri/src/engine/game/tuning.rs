@@ -49,8 +49,11 @@ fn known_xx_flags(java: &Path) -> Option<Arc<HashSet<String>>> {
     if let Some(known) = CACHE.lock().unwrap().get(java) {
         return Some(known.clone());
     }
-    let out = std::process::Command::new(java)
-        .args(["-XX:+UnlockExperimentalVMOptions", "-XX:+UnlockDiagnosticVMOptions", "-XX:+PrintFlagsFinal", "-version"])
+    let mut cmd = std::process::Command::new(java);
+    cmd.args(["-XX:+UnlockExperimentalVMOptions", "-XX:+UnlockDiagnosticVMOptions", "-XX:+PrintFlagsFinal", "-version"]);
+    #[cfg(windows)]
+    std::os::windows::process::CommandExt::creation_flags(&mut cmd, 0x0800_0000); // CREATE_NO_WINDOW
+    let out = cmd
         .output()
         .ok()
         .filter(|o| o.status.success())?;

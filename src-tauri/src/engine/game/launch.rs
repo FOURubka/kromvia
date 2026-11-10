@@ -502,7 +502,7 @@ async fn resolve(inst: &Instance, job: &Arc<Job>) -> Result<(VersionJson, PathBu
 fn prepare_from(inst: &Instance, session: &Session, version: VersionJson, java_bin: PathBuf, game_dir: PathBuf) -> Result<Prepared, String> {
     let natives = natives_dir(&instances::dir(&inst.id)?.join("natives"), &version)?;
 
-    let memory = inst.memory_mb.unwrap_or_else(|| tuning::auto_memory_mb(tuning::total_ram_bytes(), 0, false));
+    let memory = inst.memory_mb.unwrap_or_else(|| super::lag::auto_memory(&inst.id));
     let mut jvm_extra = tuning::jvm_flags(memory);
     if let Some(log) = version.logging.as_ref().and_then(|l| l.client.as_ref()) {
         let path = log_config_path(&log.file.id)?;
