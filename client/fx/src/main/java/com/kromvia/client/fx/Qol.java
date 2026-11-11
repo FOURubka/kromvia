@@ -92,6 +92,7 @@ public final class Qol {
 
 	public static @Nullable Component filter(Component message) {
 		if (relayNotice(message.getString())) return null;
+		More.AUTO_GG.onChat(message.getString());
 		if (!FILTER.enabled) return message;
 		List<String> words = FILTER.list();
 		String text = message.getString().toLowerCase(Locale.ROOT);

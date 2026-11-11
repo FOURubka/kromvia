@@ -107,15 +107,25 @@ public final class ModuleInfo {
 		put("lyrics", "lyrics", "Shows synced lyrics for the song you are playing.");
 		put("music", "music", "Shows the song you are playing. Press M for the music menu.");
 		put("kromvia_players", "kromvia_players", "Shows the capes and cosmetics of other Kromvia players.");
+		put("screen_colours", "screen_colours", "Saturation, brightness, contrast and hue for the whole screen.");
+		put("health", "health", "Shows your exact health, with absorption if you want it.");
+		put("xp", "xp", "Shows your level and how far you are to the next one.");
+		put("held_count", "held_count", "Counts how many of the item in your hand you have in total, handy for blocks.");
+		put("nether_coords", "nether_coords", "Shows where you would come out in the other dimension.");
+		put("world_time", "world_time", "Shows the in-game time of day as a clock.");
+		put("rotation", "rotation", "Shows your exact yaw and pitch.");
+		put("player_count", "player_count", "Shows how many players are online.");
+		put("free_slots", "free_slots", "Shows how many inventory slots are empty, or only warns when you run low.");
+		put("looking_at", "looking_at", "Names the block or mob you are looking at.");
+		put("move_status", "move_status", "Shows if you are sprinting, sneaking, swimming, gliding or flying.");
+		put("auto_respawn", "auto_respawn", "Respawns you after you die. Never in hardcore.");
+		put("auto_gg", "auto_gg", "Says gg for you when a game ends. Knows the big servers, and you can add your own trigger words.");
 		put("welcome_guide", "welcome_guide", "Opens the first-launch guide again.");
 	}
 
 	private ModuleInfo() {}
 
 	private static String[] of(Module m) {
-		if (m.id.equals("saturation") && m.category == Module.Category.UTILITY) {
-			return new String[] {"screen_colours", "Saturation, brightness, contrast and hue for the whole screen."};
-		}
 		return INFO.get(m.id);
 	}
 

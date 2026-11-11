@@ -1,6 +1,7 @@
 package com.kromvia.client;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -31,32 +32,51 @@ public final class Config {
 		Map<Cosmetic.Slot, String> cosmetics = new TreeMap<>();
 		Map<String, Integer> colors = new TreeMap<>();
 		Map<String, float[]> hud = new TreeMap<>();
+		java.util.Set<String> starred = new java.util.TreeSet<>();
+		java.util.List<Integer> swatches = new java.util.ArrayList<>();
 	}
+
+	private static final long SAVE_DELAY_MS = 800;
+	private static final Map<String, String> LEGACY_IDS = new TreeMap<>();
+	private static volatile long dirtyAt;
+	private static boolean hooked;
+
+	static {
+		LEGACY_IDS.put("screen_colours", "saturation");
+	}
+
+	public static final java.util.Set<String> STARRED = new java.util.TreeSet<>();
+	public static final java.util.List<Integer> SWATCHES = new java.util.ArrayList<>();
 
 	private Config() {}
 
 	public static void load() {
 		if (!Files.isRegularFile(FILE)) return;
 		try {
-			Data data = GSON.fromJson(Files.readString(FILE), Data.class);
+			Data data = GSON.fromJson(new String(Files.readAllBytes(FILE), StandardCharsets.UTF_8), Data.class);
 			if (data == null) return;
 			for (Module m : KromviaClient.MODULES) {
-				Boolean on = data.modules == null ? null : data.modules.get(m.id);
+				String id = stored(data, m);
+				Boolean on = data.modules == null ? null : data.modules.get(id);
 				if (on != null) m.enabled = on;
-				Integer key = data.keys == null ? null : data.keys.get(m.id);
+				Integer key = data.keys == null ? null : data.keys.get(id);
 				m.key = key == null ? -1 : key;
-				float[] pos = data.hud == null ? null : data.hud.get(m.id);
+				float[] pos = data.hud == null ? null : data.hud.get(id);
 				if (pos != null && pos.length == 2) {
 					m.hudX = pos[0];
 					m.hudY = pos[1];
 				}
-				JsonObject values = data.settings == null ? null : data.settings.get(m.id);
+				JsonObject values = data.settings == null ? null : data.settings.get(id);
 				if (values == null) continue;
 				for (Setting<?> st : m.settings) {
 					JsonElement v = values.get(st.id);
 					if (v != null) st.load(v);
 				}
 			}
+			STARRED.clear();
+			if (data.starred != null) STARRED.addAll(data.starred);
+			SWATCHES.clear();
+			if (data.swatches != null) SWATCHES.addAll(data.swatches);
 			if (data.cosmetics != null) Wardrobe.EQUIPPED.putAll(data.cosmetics);
 			if (data.colors != null) Wardrobe.COLORS.putAll(data.colors);
 		} catch (IOException | JsonParseException e) {
@@ -64,7 +84,27 @@ public final class Config {
 		}
 	}
 
+	private static String stored(Data data, Module m) {
+		String old = LEGACY_IDS.get(m.id);
+		boolean fresh = data.modules != null && data.modules.containsKey(m.id);
+		return old == null || fresh ? m.id : old;
+	}
+
 	public static void save() {
+		dirtyAt = System.currentTimeMillis();
+		if (!hooked) {
+			hooked = true;
+			Runtime.getRuntime().addShutdownHook(new Thread(Config::flush, "kromvia-config"));
+		}
+	}
+
+	public static void tick() {
+		if (dirtyAt != 0 && System.currentTimeMillis() - dirtyAt >= SAVE_DELAY_MS) flush();
+	}
+
+	public static synchronized void flush() {
+		if (dirtyAt == 0) return;
+		dirtyAt = 0;
 		Data data = new Data();
 		for (Module m : KromviaClient.MODULES) {
 			data.modules.put(m.id, m.enabled);
@@ -75,11 +115,15 @@ public final class Config {
 			for (Setting<?> st : m.settings) values.add(st.id, st.save());
 			data.settings.put(m.id, values);
 		}
+		data.starred.addAll(STARRED);
+		data.swatches.addAll(SWATCHES);
 		data.cosmetics.putAll(Wardrobe.EQUIPPED);
 		data.colors.putAll(Wardrobe.COLORS);
 		try {
 			Files.createDirectories(FILE.getParent());
-			Files.writeString(FILE, GSON.toJson(data));
+			Path tmp = FILE.resolveSibling(FILE.getFileName() + ".tmp");
+			Files.write(tmp, GSON.toJson(data).getBytes(StandardCharsets.UTF_8));
+			Files.move(tmp, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 		} catch (IOException e) {
 			LOG.warn("Could not write {}", FILE, e);
 		}
@@ -109,6 +153,7 @@ public final class Config {
 	public static void saveProfile(String name) {
 		if (!validProfile(name)) return;
 		save();
+		flush();
 		try {
 			Files.createDirectories(PROFILES);
 			Files.copy(FILE, PROFILES.resolve(name + ".json"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
@@ -119,6 +164,7 @@ public final class Config {
 
 	public static void loadProfile(String name) {
 		if (!validProfile(name)) return;
+		dirtyAt = 0;
 		try {
 			Files.createDirectories(FILE.getParent());
 			Files.copy(PROFILES.resolve(name + ".json"), FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);

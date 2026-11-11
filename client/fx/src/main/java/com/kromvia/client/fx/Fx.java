@@ -114,7 +114,7 @@ public final class Fx {
 		final SliderSetting hue = add(new SliderSetting("hue", "Hue shift", 0, 0, 330, 30, "°"));
 
 		Saturation() {
-			super("saturation", "Screen Colours", Category.UTILITY);
+			super("screen_colours", "Screen Colours", Category.UTILITY);
 			icon(Items.INK_SAC);
 		}
 

@@ -24,41 +24,123 @@ import net.minecraft.network.chat.Component;
 
 public class ModuleSettingsScreen extends KScreen {
 	private static final int ROW = 24;
+	private static final int HEADER = 34;
 	private final Screen parent;
 	private final Module module;
+	private final boolean preview;
 	private final List<Placed> placed = new ArrayList<>();
-	private final List<String[]> labels = new ArrayList<>();
+	private final List<Label> labels = new ArrayList<>();
 	private final long opened = System.currentTimeMillis();
+	private List<String> about = new ArrayList<>();
 	private int px, py, pw, ph, scroll, contentH;
 	private KButton keyButton;
 	private boolean listening;
 
-	private record Placed(AbstractWidget widget, int y) {}
+	private static final class Placed {
+		final AbstractWidget widget;
+		final int y;
+
+		Placed(AbstractWidget widget, int y) {
+			this.widget = widget;
+			this.y = y;
+		}
+	}
+
+	private static final class Label {
+		final String text;
+		final int y;
+
+		Label(String text, int y) {
+			this.text = text;
+			this.y = y;
+		}
+	}
 
 	public ModuleSettingsScreen(Screen parent, Module module) {
 		super(Component.literal(module.name));
 		this.parent = parent;
 		this.module = module;
+		this.preview = module == Features.CROSSHAIR || module.hud();
 	}
 
 	private int listX() {
-		return px + pw / 2 + 6;
+		return preview ? px + pw / 2 + 6 : px + 10;
 	}
 
 	private int listW() {
-		return pw / 2 - 16;
+		return preview ? pw / 2 - 16 : pw - 20;
+	}
+
+	private int aboutH() {
+		return about.isEmpty() ? 0 : about.size() * 10 + 6;
 	}
 
 	@Override
 	protected void init() {
 		placed.clear();
 		labels.clear();
-		pw = Math.min(width - 40, 460);
-		ph = Math.min(height - 30, 320);
+		pw = Math.min(width - 40, preview ? 460 : 340);
 		px = (width - pw) / 2;
+		about = UiStyle.wrap(font, ModuleInfo.description(module), preview ? pw / 2 - 34 : pw - 24);
+
+		int x = listX(), w = listW();
+		int y = 0;
+		for (Setting<?> s : module.settings) {
+			if (!s.shown) continue;
+			if (s instanceof BoolSetting) {
+				BoolSetting b = (BoolSetting) s;
+				place(new KButton(x, 0, w, 20, Component.literal(b.name + ": " + (b.on() ? "On" : "Off")), btn -> {
+					b.set(!b.on());
+					btn.setMessage(Component.literal(b.name + ": " + (b.on() ? "On" : "Off")));
+					Config.save();
+				}, b::on), y);
+			} else if (s instanceof ChoiceSetting) {
+				ChoiceSetting c = (ChoiceSetting) s;
+				place(new KButton(x, 0, w, 20, Component.literal(c.name + ": " + c.current()), btn -> {
+					c.next();
+					btn.setMessage(Component.literal(c.name + ": " + c.current()));
+					Config.save();
+				}), y);
+			} else if (s instanceof SliderSetting) {
+				place(new KSlider(x, 0, w, (SliderSetting) s, Config::save), y);
+			} else if (s instanceof TextSetting) {
+				TextSetting tx = (TextSetting) s;
+				labels.add(new Label(tx.name, y));
+				EditBox box = new EditBox(font, x, 0, w, 18, Component.literal(tx.name));
+				box.setMaxLength(tx.max);
+				box.setValue(tx.get());
+				box.setResponder(v -> {
+					tx.set(v);
+					Config.save();
+				});
+				place(box, y + 11);
+				y += 11;
+			} else if (s instanceof ColorSetting) {
+				ColorSetting col = (ColorSetting) s;
+				labels.add(new Label(col.name, y));
+				int size = 14, per = Math.max(1, (w + 3) / (size + 3));
+				for (int i = 0; i < ColorSetting.PALETTE.size(); i++) {
+					int argb = ColorSetting.PALETTE.get(i);
+					int sx = x + (i % per) * (size + 3);
+					place(new Swatch(sx, 0, size, argb, () -> {
+						col.set(argb);
+						Config.save();
+					}, () -> col.argb() == argb), y + 11 + (i / per) * (size + 3));
+				}
+				int last = ColorSetting.PALETTE.size();
+				place(new KButton(x + (last % per) * (size + 3), 0, size, size, Component.literal("+"), b -> Mc.setScreen(new ColorPicker(this, col)),
+						() -> !ColorSetting.PALETTE.contains(col.argb())), y + 11 + (last / per) * (size + 3));
+				y += 11 + ((last + per) / per) * (size + 3) - ROW + 4;
+			}
+			y += ROW;
+		}
+		contentH = Math.max(0, y - 4);
+
+		int tallest = Math.min(height - 30, 320);
+		ph = preview ? tallest : Math.max(96, Math.min(tallest, HEADER + aboutH() + contentH + 38));
 		py = (height - ph) / 2;
 
-		addRenderableWidget(new KButton(px + 10, py + ph - 28, pw / 2 - 26, 20, Component.literal("Back"), b -> onClose()));
+		addRenderableWidget(new KButton(px + 10, py + ph - 28, preview ? pw / 2 - 26 : 80, 20, Component.literal("Back"), b -> onClose()));
 		addRenderableWidget(new KButton(px + pw - 90, py + 8, 80, 18, Component.literal(module.enabled ? "On" : "Off"), b -> {
 			module.enabled = !module.enabled;
 			if (!module.enabled) module.disable(minecraft);
@@ -72,51 +154,7 @@ public class ModuleSettingsScreen extends KScreen {
 		}, () -> listening);
 		addRenderableWidget(keyButton);
 
-		int x = listX(), w = listW();
-		int y = 0;
-		for (Setting<?> s : module.settings) {
-			if (!s.shown) continue;
-			switch (s) {
-				case BoolSetting b -> place(new KButton(x, 0, w, 20, Component.literal(b.name + ": " + (b.on() ? "On" : "Off")), btn -> {
-					b.set(!b.on());
-					btn.setMessage(Component.literal(b.name + ": " + (b.on() ? "On" : "Off")));
-					Config.save();
-				}, b::on), y);
-				case ChoiceSetting c -> place(new KButton(x, 0, w, 20, Component.literal(c.name + ": " + c.current()), btn -> {
-					c.next();
-					btn.setMessage(Component.literal(c.name + ": " + c.current()));
-					Config.save();
-				}), y);
-				case SliderSetting sl -> place(new KSlider(x, 0, w, sl, Config::save), y);
-				case TextSetting tx -> {
-					labels.add(new String[] {tx.name, String.valueOf(y)});
-					EditBox box = new EditBox(font, x, 0, w, 18, Component.literal(tx.name));
-					box.setMaxLength(tx.max);
-					box.setValue(tx.get());
-					box.setResponder(v -> {
-						tx.set(v);
-						Config.save();
-					});
-					place(box, y + 11);
-					y += 11;
-				}
-				case ColorSetting col -> {
-					labels.add(new String[] {col.name, String.valueOf(y)});
-					int size = 14, per = Math.max(1, (w + 3) / (size + 3));
-					for (int i = 0; i < ColorSetting.PALETTE.size(); i++) {
-						int argb = ColorSetting.PALETTE.get(i);
-						int sx = x + (i % per) * (size + 3);
-						place(new Swatch(sx, 0, size, argb, () -> {
-							col.set(argb);
-							Config.save();
-						}, () -> col.argb() == argb), y + 11 + (i / per) * (size + 3));
-					}
-					y += 11 + ((ColorSetting.PALETTE.size() + per - 1) / per) * (size + 3) - ROW + 4;
-				}
-			}
-			y += ROW;
-		}
-		contentH = y;
+		scroll = Math.min(scroll, maxScroll());
 		layout();
 	}
 
@@ -126,11 +164,15 @@ public class ModuleSettingsScreen extends KScreen {
 	}
 
 	private int top() {
-		return py + 34;
+		return py + HEADER + (preview ? 0 : aboutH());
 	}
 
 	private int bottom() {
-		return py + ph - 8;
+		return py + ph - (preview ? 8 : 34);
+	}
+
+	private int maxScroll() {
+		return Math.max(0, contentH - (bottom() - top()));
 	}
 
 	private void layout() {
@@ -143,7 +185,7 @@ public class ModuleSettingsScreen extends KScreen {
 
 	@Override
 	public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
-		scroll = Math.max(0, Math.min(Math.max(0, contentH - (bottom() - top())), scroll - (int) (scrollY * ROW)));
+		scroll = Math.max(0, Math.min(maxScroll(), scroll - (int) (scrollY * ROW)));
 		layout();
 		return true;
 	}
@@ -159,13 +201,19 @@ public class ModuleSettingsScreen extends KScreen {
 		g.pose().pushMatrix();
 		slide(g);
 		UiStyle.panel(g, px, py, pw, ph);
-		g.fill(px + pw / 2 - 4, py + 34, px + pw / 2 - 3, py + ph - 8, UiStyle.LINE);
-		int l = px + 10, r = px + pw / 2 - 12, t = py + 48, b = py + ph - 36;
-		g.fill(l, t, r, b, 0xFF0C0F13);
-		for (int gx = l + 4; gx < r; gx += 8) {
-			for (int gy = t + 4; gy < b; gy += 8) g.fill(gx, gy, gx + 1, gy + 1, 0xFF1A1F27);
+		if (preview) {
+			g.fill(px + pw / 2 - 4, py + HEADER, px + pw / 2 - 3, py + ph - 8, UiStyle.LINE);
+			int l = px + 10, r = px + pw / 2 - 12, t = py + 48, b = paneBottom();
+			g.fill(l, t, r, b, 0xFF0C0F13);
+			for (int gx = l + 4; gx < r; gx += 8) {
+				for (int gy = t + 4; gy < b; gy += 8) g.fill(gx, gy, gx + 1, gy + 1, 0xFF1A1F27);
+			}
 		}
 		g.pose().popMatrix();
+	}
+
+	private int paneBottom() {
+		return py + ph - 36 - aboutH();
 	}
 
 	@Override
@@ -183,34 +231,45 @@ public class ModuleSettingsScreen extends KScreen {
 			g.renderItem(module.icon(), 0, 0);
 			g.pose().popMatrix();
 		}
-		g.drawString(font, module.name, px + 34, py + 12, UiStyle.TEXT, false);
+		g.drawString(font, font.plainSubstrByWidth(module.name, pw - 34 - 182), px + 34, py + 12, UiStyle.TEXT, false);
 
-		for (String[] l : labels) {
-			int y = top() + Integer.parseInt(l[1]) - scroll;
-			if (y >= top() && y + 9 <= bottom()) g.drawString(font, l[0], listX(), y, UiStyle.MUTED, false);
+		for (Label l : labels) {
+			int y = top() + l.y - scroll;
+			if (y >= top() && y + 9 <= bottom()) g.drawString(font, l.text, listX(), y, UiStyle.MUTED, false);
+		}
+		int max = maxScroll();
+		if (max > 0) {
+			int track = bottom() - top();
+			int bar = Math.max(12, track * track / (track + max));
+			int by = top() + Math.round((track - bar) * (scroll / (float) max));
+			g.fill(px + pw - 5, by, px + pw - 3, by + bar, 0x668B5CF6);
 		}
 
-		int cx = px + pw / 4, cy = py + (ph - 30) / 2 + 10;
-		List<String> about = UiStyle.wrap(font, ModuleInfo.description(module), pw / 2 - 34);
-		for (int i = 0; i < about.size(); i++) g.drawString(font, about.get(i), px + 16, py + ph - 40 - (about.size() - i) * 10, UiStyle.MUTED, false);
+		if (preview) {
+			int aboutY = py + ph - 32 - aboutH();
+			for (int i = 0; i < about.size(); i++) g.drawString(font, about.get(i), px + 12, aboutY + i * 10, UiStyle.MUTED, false);
+			drawPreview(g);
+		} else {
+			for (int i = 0; i < about.size(); i++) g.drawString(font, about.get(i), px + 12, py + HEADER + i * 10, UiStyle.MUTED, false);
+		}
+		g.pose().popMatrix();
+	}
+
+	private void drawPreview(Gfx g) {
+		int l = px + 10, r = px + pw / 2 - 12, t = py + 48, b = paneBottom();
+		int cx = (l + r) / 2, cy = (t + b) / 2;
 		g.drawCenteredString(font, "Preview", cx, py + 36, UiStyle.MUTED);
 		if (module == Features.CROSSHAIR) {
 			Features.CROSSHAIR.draw(g, cx, cy);
-		} else if (module.hud()) {
-			float s = module.scale();
-			int w = Math.round(module.width(minecraft) * s), h = Math.round(module.height(minecraft) * s);
-			if (w > 0 && h > 0) Hud.drawScaled(g, minecraft, module, cx - w / 2, cy - h / 2);
-		} else {
-			if (Icons.has(icon)) {
-				Icons.draw(g, icon, cx - 24, cy - 24, 48, module.enabled ? UiStyle.TOP : UiStyle.MUTED);
-			} else {
-				g.pose().pushMatrix();
-				g.pose().translate(cx - 24, cy - 24);
-				g.pose().scale(3, 3);
-				g.renderItem(module.icon(), 0, 0);
-				g.pose().popMatrix();
-			}
+			return;
 		}
+		int w = module.width(minecraft), h = module.height(minecraft);
+		if (w <= 0 || h <= 0) return;
+		float fit = Math.min(1F, Math.min((r - l - 8) / (w * module.scale()), (b - t - 8) / (h * module.scale())));
+		g.pose().pushMatrix();
+		g.pose().translate(cx, cy);
+		g.pose().scale(fit, fit);
+		Hud.drawScaled(g, minecraft, module, -Math.round(w * module.scale() / 2), -Math.round(h * module.scale() / 2));
 		g.pose().popMatrix();
 	}
 

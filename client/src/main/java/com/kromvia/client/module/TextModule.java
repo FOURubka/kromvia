@@ -5,6 +5,7 @@ import com.kromvia.client.module.setting.BoolSetting;
 import com.kromvia.client.module.setting.ChoiceSetting;
 import com.kromvia.client.module.setting.ColorSetting;
 import com.kromvia.client.module.setting.SliderSetting;
+import com.kromvia.client.module.setting.TextSetting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
@@ -23,6 +24,10 @@ public abstract class TextModule extends Module {
 	public final SliderSetting opacity = add(new SliderSetting("opacity", "Background opacity", 55, 0, 100, 5, "%"));
 	public final BoolSetting shadow = add(new BoolSetting("shadow", "Text shadow", true));
 	public final ChoiceSetting brackets = add(new ChoiceSetting("brackets", "Brackets", 0, "None", "[ ]", "( )", "< >"));
+	public final ChoiceSetting textCase = add(new ChoiceSetting("case", "Letters", 0, "Normal", "UPPERCASE", "lowercase"));
+	public final TextSetting prefix = add(new TextSetting("prefix", "Text before", "", 16));
+	public final TextSetting suffix = add(new TextSetting("suffix", "Text after", "", 16));
+	public final SliderSetting padding = add(new SliderSetting("padding", "Padding", 3, 0, 8, 1, "px"));
 	public final SliderSetting size = add(new SliderSetting("scale", "Size", 100, 50, 200, 10, "%"));
 
 	protected TextModule(String id, String name, Category category, boolean enabledByDefault) {
@@ -31,20 +36,57 @@ public abstract class TextModule extends Module {
 
 	protected abstract String text(Minecraft mc);
 
-	private String shown(Minecraft mc, boolean preview) {
-		String t = preview && mc.player == null ? sample() : text(mc);
-		if (t.isEmpty()) return t;
-		return switch (brackets.index()) {
-			case 1 -> "[" + t + "]";
-			case 2 -> "(" + t + ")";
-			case 3 -> "<" + t + ">";
-			default -> t;
-		};
+	private static final long REFRESH_MS = 50;
+	private String live = "";
+	private long liveAt;
+	private String laid;
+	private long laidAt;
+	private String[] glyphs = new String[0];
+	private int[] offsets = new int[0];
+	private int laidWidth;
+
+	private String live(Minecraft mc) {
+		long now = System.currentTimeMillis();
+		if (now - liveAt >= REFRESH_MS || now < liveAt) {
+			live = text(mc);
+			liveAt = now;
+		}
+		return live;
+	}
+
+	private String shown(Minecraft mc) {
+		String t = mc.player == null ? "" : live(mc);
+		if (t.isEmpty()) t = sample();
+		if (textCase.index() == 1) t = t.toUpperCase(java.util.Locale.ROOT);
+		else if (textCase.index() == 2) t = t.toLowerCase(java.util.Locale.ROOT);
+		t = prefix.get() + t + suffix.get();
+		switch (brackets.index()) {
+			case 1: return "[" + t + "]";
+			case 2: return "(" + t + ")";
+			case 3: return "<" + t + ">";
+			default: return t;
+		}
+	}
+
+	private void lay(Minecraft mc, String s) {
+		long now = System.currentTimeMillis();
+		if (s.equals(laid) && now - laidAt < 1000 && now >= laidAt) return;
+		laid = s;
+		laidAt = now;
+		glyphs = new String[s.length()];
+		offsets = new int[s.length()];
+		int x = 0;
+		for (int i = 0; i < glyphs.length; i++) {
+			glyphs[i] = String.valueOf(s.charAt(i));
+			offsets[i] = x;
+			x += mc.font.width(glyphs[i]);
+		}
+		laidWidth = mc.font.width(s);
 	}
 
 	@Override
 	public boolean visible(Minecraft mc) {
-		return !text(mc).isEmpty();
+		return mc.player != null && !live(mc).isEmpty();
 	}
 
 	@Override
@@ -54,12 +96,21 @@ public abstract class TextModule extends Module {
 
 	@Override
 	public int width(Minecraft mc) {
-		return mc.font.width(shown(mc, true)) + 6;
+		lay(mc, shown(mc));
+		return laidWidth + padX() * 2;
+	}
+
+	private int padX() {
+		return Math.round(padding.value());
+	}
+
+	private int padY() {
+		return Math.max(1, padX() - 1);
 	}
 
 	@Override
 	public int height(Minecraft mc) {
-		return mc.font.lineHeight + 4;
+		return mc.font.lineHeight + padY() * 2;
 	}
 
 	public int colorAt(int i, int length, long now) {
@@ -86,8 +137,10 @@ public abstract class TextModule extends Module {
 
 	@Override
 	public void render(Gfx g, Minecraft mc, int x, int y) {
-		String s = shown(mc, true);
-		int w = width(mc), h = height(mc);
+		String s = shown(mc);
+		lay(mc, s);
+		int w = laidWidth + padX() * 2, h = height(mc);
+		int tx = x + padX(), ty = y + padY();
 		long now = System.currentTimeMillis();
 		if (background.on()) {
 			int a = Math.round(opacity.value() * 2.55F);
@@ -105,11 +158,13 @@ public abstract class TextModule extends Module {
 				break;
 			default: break;
 		}
-		int cx = x + 3;
-		for (int i = 0; i < s.length(); i++) {
-			String ch = String.valueOf(s.charAt(i));
-			g.drawString(mc.font, ch, cx, y + 2, colorAt(i, s.length(), now), shadow.on());
-			cx += mc.font.width(ch);
+		int mode = colorMode.index();
+		if (mode == 0 || mode == 4 || mode == 5) {
+			g.drawString(mc.font, s, tx, ty, line, shadow.on());
+			return;
+		}
+		for (int i = 0; i < glyphs.length; i++) {
+			g.drawString(mc.font, glyphs[i], tx + offsets[i], ty, colorAt(i, glyphs.length, now), shadow.on());
 		}
 	}
 }

@@ -1,3 +1,6 @@
+# 1.15.2 widgets take plain strings.
+, Component.literal("Hex")) -> , "Hex")
+new EditBox(font, x, 0, w, 18, Component.literal(tx.name)) -> new EditBox(font, x, 0, w, 18, tx.name)
 # 1.21.11 renamed ResourceLocation to Identifier and moved a few classes and methods.
 Identifier -> ResourceLocation
 .identifier() -> .location()
@@ -71,6 +74,7 @@ getX() - grow, y = getY() - grow -> this.x - grow, y = this.y - grow
 search.setHint(Component.literal("Search modules…")) -> search.setSuggestion("Search modules…")
 c.card.setPosition(x, y); -> c.card.x = x; c.card.y = y;
 c.gear.setPosition(x + ModuleCard.W - 17, y + 4); -> c.gear.x = x + ModuleCard.W - 17; c.gear.y = y + 4;
+c.star.setPosition(x + 3, y + 4); -> c.star.x = x + 3; c.star.y = y + 4;
 p.widget.setY(y) -> p.widget.y = y
 SoundEvents.NOTE_BLOCK_PLING.value() -> SoundEvents.NOTE_BLOCK_PLING
 SoundEvents.UI_BUTTON_CLICK.value() -> SoundEvents.UI_BUTTON_CLICK
@@ -116,7 +120,7 @@ setMessage(new net.minecraft.network.chat.TextComponent( -> setMessage(java.util
 , new net.minecraft.network.chat.TextComponent("Search")) -> , "Search")
 net.minecraft.network.chat.TextComponent.EMPTY -> new net.minecraft.network.chat.TextComponent("")
 k.getTranslatedKeyMessage().getString() -> k.getTranslatedKeyMessage()
-mc.font.plainSubstrByWidth( -> mc.font.substrByWidth(
+font.plainSubstrByWidth( -> font.substrByWidth(
 mc.player.isDeadOrDying() -> mc.player.getHealth() <= 0
 mc.player.blockPosition() -> new net.minecraft.core.BlockPos(mc.player)
 p.blockPosition() -> new net.minecraft.core.BlockPos(p)
@@ -129,6 +133,7 @@ ParticleTypes.WARPED_SPORE -> ParticleTypes.MYCELIUM
 net.minecraft.world.phys.Vec3 c = net.minecraft.world.phys.Vec3.fromRGB24(Mth.hsvToRgb((tick % 120) / 120f, 0.8f, 1f)); -> int rgb = Mth.hsvToRgb((tick % 120) / 120f, 0.8f, 1f); net.minecraft.world.phys.Vec3 c = new net.minecraft.world.phys.Vec3((rgb >> 16 & 0xFF) / 255.0, (rgb >> 8 & 0xFF) / 255.0, (rgb & 0xFF) / 255.0);
 addWidget(card) -> children.add(card)
 addWidget(gear) -> children.add(gear)
+addWidget(star) -> children.add(star)
 p.widget.getHeight() -> 20
 import net.minecraft.server.packs.repository.Pack; -> import net.minecraft.server.packs.repository.UnopenedPack;
 for (Pack p : mc.getResourcePackRepository().getSelectedPacks()) -> for (UnopenedPack p : mc.getResourcePackRepository().getSelected())
@@ -159,3 +164,7 @@ InputConstants.KEY_F9 -> org.lwjgl.glfw.GLFW.GLFW_KEY_F9
 InputConstants.KEY_NUMPAD4 -> org.lwjgl.glfw.GLFW.GLFW_KEY_KP_4
 InputConstants.KEY_NUMPAD5 -> org.lwjgl.glfw.GLFW.GLFW_KEY_KP_5
 InputConstants.KEY_NUMPAD6 -> org.lwjgl.glfw.GLFW.GLFW_KEY_KP_6
+# Info modules.
+p.getAbilities() -> p.abilities
+mc.level.dimension() == Level.NETHER -> mc.level.getDimension().getType() == net.minecraft.world.level.dimension.DimensionType.NETHER
+mc.level.dimension() == Level.OVERWORLD -> mc.level.getDimension().getType() == net.minecraft.world.level.dimension.DimensionType.OVERWORLD

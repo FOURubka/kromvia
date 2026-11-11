@@ -92,6 +92,7 @@ public final class Hud {
 	}
 
 	public static void tick(Minecraft mc) {
+		com.kromvia.client.Config.tick();
 		boolean free = mc.player != null && Mc.screen() == null;
 		for (Module m : KromviaClient.MODULES) {
 			if (m.key < 0) continue;

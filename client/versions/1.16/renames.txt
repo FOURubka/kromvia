@@ -71,6 +71,7 @@ getX() - grow, y = getY() - grow -> this.x - grow, y = this.y - grow
 search.setHint(Component.literal("Search modules…")) -> search.setSuggestion("Search modules…")
 c.card.setPosition(x, y); -> c.card.x = x; c.card.y = y;
 c.gear.setPosition(x + ModuleCard.W - 17, y + 4); -> c.gear.x = x + ModuleCard.W - 17; c.gear.y = y + 4;
+c.star.setPosition(x + 3, y + 4); -> c.star.x = x + 3; c.star.y = y + 4;
 p.widget.setY(y) -> p.widget.y = y
 SoundEvents.NOTE_BLOCK_PLING.value() -> SoundEvents.NOTE_BLOCK_PLING
 SoundEvents.UI_BUTTON_CLICK.value() -> SoundEvents.UI_BUTTON_CLICK
@@ -135,3 +136,5 @@ InputConstants.KEY_F9 -> org.lwjgl.glfw.GLFW.GLFW_KEY_F9
 InputConstants.KEY_NUMPAD4 -> org.lwjgl.glfw.GLFW.GLFW_KEY_KP_4
 InputConstants.KEY_NUMPAD5 -> org.lwjgl.glfw.GLFW.GLFW_KEY_KP_5
 InputConstants.KEY_NUMPAD6 -> org.lwjgl.glfw.GLFW.GLFW_KEY_KP_6
+# Info modules.
+p.getAbilities() -> p.abilities

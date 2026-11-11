@@ -59,16 +59,16 @@ export function Metrics({ instanceId }: { instanceId: string }) {
       <div className="metric-tiles">
         <div className="metric-tile">
           <span className="muted">{t("metrics.ram")}</span>
-          <strong>{last ? gb(last.ramAvgMb) : "—"}</strong>
+          <strong>{last ? gb(last.ramAvgMb) : "-"}</strong>
           {last && <span className="muted">{t("metrics.peak", { v: gb(last.ramPeakMb) })}</span>}
         </div>
         <div className="metric-tile">
           <span className="muted">{t("metrics.cpu")}</span>
-          <strong>{last ? `${Math.round(last.cpuAvg)}%` : "—"}</strong>
+          <strong>{last ? `${Math.round(last.cpuAvg)}%` : "-"}</strong>
         </div>
         <div className="metric-tile">
           <span className="muted">{t("metrics.disk")}</span>
-          <strong>{disk !== null ? formatBytes(disk) : "—"}</strong>
+          <strong>{disk !== null ? formatBytes(disk) : "-"}</strong>
         </div>
       </div>
       {runs.length < 2 ? (

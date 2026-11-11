@@ -12,6 +12,8 @@ import com.kromvia.client.Config;
 import com.kromvia.client.KromviaClient;
 import com.kromvia.client.module.Module;
 import com.kromvia.client.module.ModuleInfo;
+import com.kromvia.client.module.setting.ChoiceSetting;
+import com.kromvia.client.module.setting.Setting;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -36,7 +38,36 @@ public class ModuleMenu extends KScreen {
 	private Card hovered;
 	private long hoverSince;
 
-	private record Card(Module module, ModuleCard card, KButton gear) {}
+	private static final int TABS = CATEGORY_NAMES.length + 1;
+
+	private static final class Card {
+		final Module module;
+		final ModuleCard card;
+		final KButton gear;
+		final KButton star;
+		final int index;
+		final String words;
+		boolean shown = true;
+
+		Card(Module module, ModuleCard card, KButton gear, KButton star, int index) {
+			this.module = module;
+			this.card = card;
+			this.gear = gear;
+			this.star = star;
+			this.index = index;
+			StringBuilder b = new StringBuilder(module.name).append('\n').append(ModuleInfo.description(module));
+			for (Setting<?> s : module.settings) {
+				if (!s.shown) continue;
+				b.append('\n').append(s.name);
+				if (s instanceof ChoiceSetting) {
+					for (String o : ((ChoiceSetting) s).options) b.append('\n').append(o);
+				}
+			}
+			words = b.toString().toLowerCase(Locale.ROOT);
+		}
+	}
+
+	private boolean favOnly;
 
 	public ModuleMenu() {
 		super(Component.literal("Kromvia"));
@@ -55,15 +86,19 @@ public class ModuleMenu extends KScreen {
 		for (int i = 0; i < CATEGORY_NAMES.length; i++) {
 			Module.Category c = i == 0 ? null : Module.Category.values()[i - 1];
 			KButton tab = new KButton(px + 8, py + 40 + i * TAB, SIDEBAR - 16, TAB - 2, Component.literal(label(i, c)), b -> {
-				if (category == c) return;
+				if (category == c && !favOnly) return;
 				category = c;
-				scrollTarget = 0;
-				scroll = 0;
-				layout();
-				reveal();
-			}, () -> category == c).flat().appear(60 + i * 40);
+				favOnly = false;
+				refilter();
+			}, () -> category == c && !favOnly).flat().appear(60 + i * 40);
 			tabs.add(addRenderableWidget(tab));
 		}
+		KButton favTab = new KButton(px + 8, py + 40 + CATEGORY_NAMES.length * TAB, SIDEBAR - 16, TAB - 2, Component.literal("★ Favourites"), b -> {
+			if (favOnly) return;
+			favOnly = true;
+			refilter();
+		}, () -> favOnly).flat().appear(60 + CATEGORY_NAMES.length * 40);
+		tabs.add(addRenderableWidget(favTab));
 		int lift = com.kromvia.client.Launcher.PRESENT ? 0 : 24;
 		addRenderableWidget(new KButton(px + 8, py + ph - 102 + lift, SIDEBAR - 16, 20, Component.literal("Profiles"),
 				b -> Mc.setScreen(new ProfilesScreen(this))).appear(160));
@@ -83,10 +118,7 @@ public class ModuleMenu extends KScreen {
 		search.setValue(query);
 		search.setResponder(q -> {
 			query = q;
-			scrollTarget = 0;
-			scroll = 0;
-			layout();
-			reveal();
+			refilter();
 		});
 		addRenderableWidget(search);
 		setInitialFocus(search);
@@ -103,9 +135,41 @@ public class ModuleMenu extends KScreen {
 				gear = new KButton(0, 0, 14, 14, Component.literal("⚙"), b -> Mc.setScreen(new ModuleSettingsScreen(this, m)));
 				addWidget(gear);
 			}
+			KButton star = new KButton(0, 0, 14, 14, Component.literal(starLabel(m)), b -> {
+				if (!Config.STARRED.remove(m.id)) Config.STARRED.add(m.id);
+				b.setMessage(Component.literal(starLabel(m)));
+				Config.save();
+				if (favOnly) refilter();
+				else order();
+			}).flat();
+			addWidget(star);
 			addWidget(card);
-			cards.add(new Card(m, card, gear));
+			cards.add(new Card(m, card, gear, star, cards.size()));
 		}
+		refilter();
+	}
+
+	private static String starLabel(Module m) {
+		return Config.STARRED.contains(m.id) ? "§e★" : "§8☆";
+	}
+
+	private void order() {
+		cards.sort((a, b) -> {
+			boolean fa = Config.STARRED.contains(a.module.id), fb = Config.STARRED.contains(b.module.id);
+			return fa != fb ? (fa ? -1 : 1) : Integer.compare(a.index, b.index);
+		});
+	}
+
+	private void refilter() {
+		String q = query.trim().toLowerCase(Locale.ROOT);
+		for (Card c : cards) {
+			Module m = c.module;
+			boolean tab = favOnly ? Config.STARRED.contains(m.id) : category == null || m.category == category;
+			c.shown = tab && (q.isEmpty() || c.words.contains(q));
+		}
+		order();
+		scrollTarget = 0;
+		scroll = 0;
 		layout();
 		reveal();
 	}
@@ -120,16 +184,10 @@ public class ModuleMenu extends KScreen {
 		long now = System.currentTimeMillis();
 		int i = 0;
 		for (Card c : cards) {
-			if (!matches(c.module)) continue;
+			if (!c.shown) continue;
 			c.card.reveal(now + (i / cols) * 45L + (i % cols) * 20L);
 			i++;
 		}
-	}
-
-	private boolean matches(Module m) {
-		String q = query.trim().toLowerCase(Locale.ROOT);
-		return (category == null || m.category == category) && (q.isEmpty() || m.name.toLowerCase(Locale.ROOT).contains(q)
-				|| com.kromvia.client.module.ModuleInfo.description(m).toLowerCase(Locale.ROOT).contains(q));
 	}
 
 	private int gridTop() {
@@ -142,7 +200,7 @@ public class ModuleMenu extends KScreen {
 
 	private int maxScroll() {
 		int n = 0;
-		for (Card c : cards) if (matches(c.module)) n++;
+		for (Card c : cards) if (c.shown) n++;
 		int content = ((n + cols - 1) / cols) * (ModuleCard.H + GAP);
 		return Math.max(0, content - (gridBottom() - gridTop()));
 	}
@@ -152,7 +210,7 @@ public class ModuleMenu extends KScreen {
 		int s = Math.round(scroll);
 		int i = 0;
 		for (Card c : cards) {
-			boolean shown = matches(c.module);
+			boolean shown = c.shown;
 			int x = gx + (i % cols) * (ModuleCard.W + GAP);
 			int y = gridTop() + (i / cols) * (ModuleCard.H + GAP) - s;
 			boolean inView = shown && y + ModuleCard.H > gridTop() && y < gridBottom();
@@ -164,6 +222,9 @@ public class ModuleMenu extends KScreen {
 				c.gear.setPosition(x + ModuleCard.W - 17, y + 4);
 				c.gear.clip(gridTop(), gridBottom());
 			}
+			c.star.visible = inView;
+			c.star.setPosition(x + 3, y + 4);
+			c.star.clip(gridTop(), gridBottom());
 			if (shown) i++;
 		}
 	}
@@ -201,7 +262,7 @@ public class ModuleMenu extends KScreen {
 		g.fill(sx, py + 27, sx + sw, py + 28, focused ? UiStyle.FRONT : UiStyle.LINE);
 		g.drawString(font, "⌕", sx + 6, py + 14, focused ? UiStyle.FRONT : UiStyle.MUTED, false);
 
-		int sel = category == null ? 0 : category.ordinal() + 1;
+		int sel = favOnly ? CATEGORY_NAMES.length : category == null ? 0 : category.ordinal() + 1;
 		float target = py + 40 + sel * TAB;
 		marker = marker < 0 ? target : Mth.lerp(0.3F, marker, target);
 		int my = Math.round(marker);
@@ -225,11 +286,12 @@ public class ModuleMenu extends KScreen {
 		for (Card c : cards) {
 			g.widget(c.card, mouseX, mouseY, delta);
 			if (c.gear != null) g.widget(c.gear, mouseX, mouseY, delta);
+			g.widget(c.star, mouseX, mouseY, delta);
 		}
 		g.disableScissor();
 		Card hovered = null;
 		for (Card c : cards) {
-			if (c.card().visible && c.card().isMouseOver(mouseX, mouseY)) hovered = c;
+			if (c.card.visible && c.card.isMouseOver(mouseX, mouseY)) hovered = c;
 		}
 		if (hovered != this.hovered) {
 			this.hovered = hovered;
@@ -252,11 +314,11 @@ public class ModuleMenu extends KScreen {
 		int on = 0;
 		for (Card c : cards) if (c.module.enabled) on++;
 		String count = on + " / " + cards.size() + " enabled";
-		g.drawString(font, count, px + 10, py + 40 + CATEGORY_NAMES.length * TAB + 6, UiStyle.MUTED, false);
-		g.fill(px + 10, py + 40 + CATEGORY_NAMES.length * TAB + 18, px + 10 + Math.round((SIDEBAR - 20) * on / (float) cards.size()),
-				py + 40 + CATEGORY_NAMES.length * TAB + 20, UiStyle.FRONT);
+		g.drawString(font, count, px + 10, py + 40 + TABS * TAB + 6, UiStyle.MUTED, false);
+		g.fill(px + 10, py + 40 + TABS * TAB + 18, px + 10 + Math.round((SIDEBAR - 20) * on / (float) cards.size()),
+				py + 40 + TABS * TAB + 20, UiStyle.FRONT);
 		g.pose().popMatrix();
-		if (hovered != null && System.currentTimeMillis() - hoverSince > 350) tooltip(g, ModuleInfo.description(hovered.module()), mouseX, mouseY);
+		if (hovered != null && System.currentTimeMillis() - hoverSince > 350) tooltip(g, ModuleInfo.description(hovered.module), mouseX, mouseY);
 	}
 
 	private void tooltip(Gfx g, String text, int mouseX, int mouseY) {

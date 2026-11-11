@@ -97,7 +97,7 @@ export function MiniPlayer() {
         className="mini-cover"
         data-playing={track.playing || undefined}
         aria-expanded={open}
-        aria-label={`${track.title} — ${track.artist}`}
+        aria-label={`${track.title} - ${track.artist}`}
         onClick={() => setOpen((v) => !v)}
       >
         {track.art ? <img src={track.art} alt="" /> : <Glyph name="music" size={16} />}

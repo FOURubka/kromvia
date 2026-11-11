@@ -6,6 +6,7 @@ import com.kromvia.client.compat.Mc;
 import com.kromvia.client.module.Module;
 import com.kromvia.client.module.setting.BoolSetting;
 import com.kromvia.client.module.setting.ColorSetting;
+import com.kromvia.client.module.setting.ChoiceSetting;
 import com.kromvia.client.module.setting.SliderSetting;
 import com.kromvia.client.module.setting.TextSetting;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -15,6 +16,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.CameraType;
@@ -252,7 +254,87 @@ public final class More {
 
 	public static final Macros MACROS = new Macros();
 
+	public static final class AutoGg extends Flag {
+		private static final String[][] KNOWN = {
+				{"hypixel", "1st killer -", "1st place -", "winner:", "winners:", "winner -", "winning team -", "1st -", "winner!", "top seeker:", "last team standing!", "most wool placed -", "your overall winstreak:"},
+				{"mineplex", "1st place:", "won the game!"},
+				{"cubecraft", "won the game!", "is the winner!", "thank you for playing"},
+				{"minemen", "match results", "winner:"},
+				{"pvp.land", "match results", "winner:"},
+				{"lunar", "match results", "winner:"},
+				{"pika", "has won the game", "won the game!"},
+				{"jartex", "has won the game", "won the game!"},
+				{"hoplite", "has won the game", "victory!"},
+				{"mccisland", "game over!", "you finished"},
+				{"blocksmc", "has won the game", "won the game!"},
+				{"bedwarspractice", "you won", "match ended"},
+		};
+		private static final String[] GENERIC = {"has won the game", "won the game!", "winner:", "winners:", "game over!", "match results"};
+		private static final java.util.regex.Pattern PLAYER_LINE = java.util.regex.Pattern.compile("^(\\[[^\\]]{1,24}\\] ?)*<?[A-Za-z0-9_]{2,16}>? ?(:|»|>>|➜|→) .*");
+		final TextSetting message = add(new TextSetting("message", "Message", "gg", 100));
+		final TextSetting second = add(new TextSetting("second", "Second message (optional)", "", 100));
+		final ChoiceSetting servers = add(new ChoiceSetting("servers", "Works on", 0, "Known servers", "Any server", "Only my triggers"));
+		final TextSetting triggers = add(new TextSetting("triggers", "My triggers, comma separated", "", 512));
+		final TextSetting only = add(new TextSetting("only", "Only on servers (part of address)", "", 256));
+		final SliderSetting delay = add(new SliderSetting("delay", "Delay", 1, 0, 5, 0.5F, " s"));
+		final SliderSetting cooldown = add(new SliderSetting("cooldown", "Cooldown", 10, 5, 60, 5, " s"));
+		private long sendAt, lastAt;
+
+		AutoGg() {
+			super("auto_gg", "Auto GG", Category.UTILITY);
+			icon(Items.GOLD_INGOT);
+		}
+
+		private static boolean has(String text, String[] list, int from) {
+			for (int i = from; i < list.length; i++) {
+				String t = list[i].trim();
+				if (!t.isEmpty() && text.contains(t)) return true;
+			}
+			return false;
+		}
+
+		private boolean triggered(String text, String address) {
+			if (has(text, triggers.get().toLowerCase(Locale.ROOT).split(","), 0)) return true;
+			if (servers.index() == 2) return false;
+			for (String[] known : KNOWN) {
+				if (address.contains(known[0])) return has(text, known, 1);
+			}
+			return servers.index() == 1 && has(text, GENERIC, 0);
+		}
+
+		public void onChat(String raw) {
+			Minecraft mc = Minecraft.getInstance();
+			long now = System.currentTimeMillis();
+			if (!enabled || mc.player == null || mc.getCurrentServer() == null || now - lastAt < cooldown.value() * 1000) return;
+			String text = raw.replaceAll("§.", "").trim();
+			if (text.isEmpty() || PLAYER_LINE.matcher(text).matches()) return;
+			String address = mc.getCurrentServer().ip.toLowerCase(Locale.ROOT);
+			if (!only.get().trim().isEmpty() && !has(address, only.get().toLowerCase(Locale.ROOT).split(","), 0)) return;
+			if (!triggered(text.toLowerCase(Locale.ROOT), address)) return;
+			lastAt = now;
+			sendAt = now + Math.round(delay.value() * 1000);
+		}
+
+		@Override
+		public void tick(Minecraft mc) {
+			if (sendAt == 0 || System.currentTimeMillis() < sendAt) return;
+			sendAt = 0;
+			if (mc.player == null) return;
+			for (TextSetting line : List.of(message, second)) {
+				String text = line.get().trim();
+				if (!text.isEmpty()) Say.send(mc, text);
+			}
+		}
+
+		@Override
+		public void disable(Minecraft mc) {
+			sendAt = 0;
+		}
+	}
+
+	public static final AutoGg AUTO_GG = new AutoGg();
+
 	public static List<Module> modules() {
-		return List.of(HAND_SWAY, CHAT_HISTORY, BEHIND_YOU, ATTACK_INDICATOR, PARTICLE_COLOR, EFFECT_BARS, MACROS);
+		return List.of(HAND_SWAY, CHAT_HISTORY, BEHIND_YOU, ATTACK_INDICATOR, PARTICLE_COLOR, EFFECT_BARS, MACROS, AUTO_GG);
 	}
 }
