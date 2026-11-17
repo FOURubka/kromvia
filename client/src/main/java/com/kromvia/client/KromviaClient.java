@@ -73,7 +73,8 @@ public class KromviaClient implements ClientModInitializer {
 			Extras.HIT_SOUND,
 			Extras.TOTEM_POPS,
 			Extras.DEATH_COORDS,
-			Extras.TAB_PING);
+			Extras.TAB_PING,
+			com.kromvia.client.ui.UiFont.FONT);
 
 	private static List<Module> withFx(Module... modules) {
 		List<Module> all = new ArrayList<>(Arrays.asList(modules));

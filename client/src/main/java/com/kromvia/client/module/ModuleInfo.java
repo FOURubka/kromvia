@@ -128,6 +128,7 @@ public final class ModuleInfo {
 		put("party_pings", "party_pings", "Press Z to mark the block you look at. Your party sees the mark on any server, except PvP servers where it is off.");
 		put("frame_report", "frame_report", "Tells the launcher your FPS and 1% lows, so it can warn you when a mod update makes the game slower.");
 		put("ghosts", "ghosts", "Press K to start a run after a 3 second count, K again to stop. Start at the same spot to race your best run as a ghost, or load a friend's ghost by code from Ghosts in the pause menu.");
+		put("kromvia_font", "kromvia_font", "Draws all text with the Kromvia font. Switch it off for the normal Minecraft font.");
 		put("welcome_guide", "welcome_guide", "Opens the first-launch guide again.");
 	}
 
