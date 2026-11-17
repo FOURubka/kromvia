@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.kromvia.launcher</id>
+  <name>Kromvia</name>
+  <summary>Minecraft launcher with a built-in client</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <developer id="com.kromvia">
+    <name>Kromvia</name>
+  </developer>
+  <url type="homepage">https://kromvia.com</url>
+  <description>
+    <p>Kromvia installs and runs Minecraft with Fabric, Quilt, Forge or NeoForge, finds mods, modpacks, resource packs and shaders on Modrinth and CurseForge, and adds its own client: a module menu, HUD, cosmetics and friends in game.</p>
+  </description>
+  <launchable type="desktop-id">com.kromvia.launcher.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.15" date="2026-11-12"/>
+  </releases>
+</component>

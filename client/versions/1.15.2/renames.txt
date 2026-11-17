@@ -1,3 +1,6 @@
+W - 90, 18, Component.literal("Code")) -> W - 90, 18, "Code")
+cam.getYRot() -> cam.getYRot ()
+cam.getXRot() -> cam.getXRot ()
 # 1.15.2 widgets take plain strings.
 , Component.literal("Hex")) -> , "Hex")
 new EditBox(font, x, 0, w, 18, Component.literal(tx.name)) -> new EditBox(font, x, 0, w, 18, tx.name)
@@ -168,3 +171,11 @@ InputConstants.KEY_NUMPAD6 -> org.lwjgl.glfw.GLFW.GLFW_KEY_KP_6
 p.getAbilities() -> p.abilities
 mc.level.dimension() == Level.NETHER -> mc.level.getDimension().getType() == net.minecraft.world.level.dimension.DimensionType.NETHER
 mc.level.dimension() == Level.OVERWORLD -> mc.level.getDimension().getType() == net.minecraft.world.level.dimension.DimensionType.OVERWORLD
+w.setX(x); -> w.x = x;
+w.setY(y); -> w.y = y;
+w.getMessage().getString() -> w.getMessage()
+mc.level.dimension().location().toString() -> net.minecraft.world.level.dimension.DimensionType.getName(mc.level.getDimension().getType()).toString()
+InputConstants.KEY_Z -> org.lwjgl.glfw.GLFW.GLFW_KEY_Z
+ConnectScreen.startConnecting(parent, mc, ServerAddress.parseString(data.ip), data) -> mc.setScreen(new ConnectScreen(parent, mc, data))
+com.mojang.blaze3d.systems.RenderSystem.getDevice().getRenderer() -> com.mojang.blaze3d.platform.GlUtil.getRenderer()
+InputConstants.KEY_K -> org.lwjgl.glfw.GLFW.GLFW_KEY_K

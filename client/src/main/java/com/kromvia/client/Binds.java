@@ -16,6 +16,8 @@ public final class Binds {
 	public static final KeyMapping FREELOOK = add("Freelook", InputConstants.KEY_LALT);
 	public static final KeyMapping SNAPLOOK = add("Snaplook", InputConstants.KEY_V);
 	public static final KeyMapping FREECAM = add("Freecam", InputConstants.KEY_F4);
+	public static final KeyMapping PING = add("Party ping", InputConstants.KEY_Z);
+	public static final KeyMapping GHOST = add("Ghost run start/stop", InputConstants.KEY_K);
 
 	private Binds() {}
 

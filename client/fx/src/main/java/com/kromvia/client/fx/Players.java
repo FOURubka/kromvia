@@ -121,7 +121,9 @@ public final class Players extends Module {
 			JsonElement st = worn != null && worn.isJsonObject() ? worn.getAsJsonObject().get("style") : null;
 			JsonElement d = worn != null && worn.isJsonObject() ? worn.getAsJsonObject().get("dev") : null;
 			boolean dev = d != null && d.isJsonPrimitive() && d.getAsBoolean();
-			String cape = c != null && c.isJsonPrimitive() && c.getAsBoolean() ? dev ? Cosmetics.DEV_STYLE : st != null && st.isJsonPrimitive() ? st.getAsString() : "kromvia" : null;
+			JsonElement art = worn != null && worn.isJsonObject() ? worn.getAsJsonObject().get("art") : null;
+			String style = st != null && st.isJsonPrimitive() ? Cosmetics.customStyle(st.getAsString(), art != null && art.isJsonPrimitive() ? art.getAsString() : null) : "kromvia";
+			String cape = c != null && c.isJsonPrimitive() && c.getAsBoolean() ? dev ? Cosmetics.DEV_STYLE : style : null;
 			if (dev) Cosmetics.styled(Cosmetics.DEV_STYLE);
 			self.seen.put(name, new Seen(worn == null ? null : models(worn), cape, dev, at));
 		}

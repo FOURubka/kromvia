@@ -4,13 +4,13 @@ import s from "./Footer.module.css";
 
 const T = {
   en: {
-    home: "Kromvia home", download: "Download", features: "Features", cosmetics: "Cosmetics", changelog: "Changelog",
+    home: "Kromvia home", download: "Download", features: "Features", cosmetics: "Cosmetics", changelog: "Changelog", roadmap: "Roadmap",
     community: "Community", players: "Find players", top: "Top players", rooms: "Rooms", support: "Support Kromvia",
     legal: "Legal", privacy: "Privacy", terms: "Terms",
     disclaimer: "Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.",
   },
   uk: {
-    home: "Kromvia, головна", download: "Завантажити", features: "Можливості", cosmetics: "Косметика", changelog: "Зміни",
+    home: "Kromvia, головна", download: "Завантажити", features: "Можливості", cosmetics: "Косметика", changelog: "Зміни", roadmap: "Роадмап",
     community: "Спільнота", players: "Пошук гравців", top: "Топ гравців", rooms: "Кімнати", support: "Підтримати Kromvia",
     legal: "Правове", privacy: "Конфіденційність", terms: "Умови",
     disclaimer: "Не є офіційним продуктом Minecraft. Не схвалено Mojang чи Microsoft і не повʼязано з ними.",
@@ -36,6 +36,7 @@ export function Footer({ lang }: { lang: Lang }) {
           <Link href="/features">{t.features}</Link>
           <Link href="/cosmetics">{t.cosmetics}</Link>
           <Link href="/changelog">{t.changelog}</Link>
+          <Link href="/roadmap">{t.roadmap}</Link>
         </nav>
         <nav className={s.col}>
           <b>{t.community}</b>

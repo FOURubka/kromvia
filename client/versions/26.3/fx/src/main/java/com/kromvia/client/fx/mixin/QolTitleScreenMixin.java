@@ -18,6 +18,7 @@ public class QolTitleScreenMixin {
 		if ("1".equals(System.getenv("KROMVIA_AUDIT_MIXINS"))) mc.schedule(() -> {
 			Fx.MOTION_BLUR.audit(mc);
 			Fx.SATURATION.audit(mc);
+			Fx.COLOUR_FILTER.audit(mc);
 			mc.stop();
 		});
 		if (!Onboarding.needed()) return;

@@ -1,6 +1,6 @@
 
 use serde::Serialize;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_updater::UpdaterExt;
 
 use crate::engine::core::jobs::Jobs;
@@ -14,6 +14,9 @@ pub struct Available {
 
 #[tauri::command]
 pub async fn update_check(app: AppHandle) -> Result<Option<Available>, String> {
+    if app.path().resource_dir().is_ok_and(|d| d.join("package-managed").exists()) {
+        return Ok(None);
+    }
     let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
     Ok(update.map(|u| Available { version: u.version, notes: u.body }))
 }

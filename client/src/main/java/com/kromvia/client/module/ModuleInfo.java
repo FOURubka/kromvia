@@ -16,6 +16,10 @@ public final class ModuleInfo {
 		put("ping", "ping", "Shows your latency to the server.");
 		put("coords", "coords", "Shows your X, Y and Z position and the way you are facing.");
 		put("clock", "clock", "Shows the real time on your computer.");
+		put("elytra", "elytra", "While gliding: speed, pitch, elytra durability and how many rockets you have.");
+		put("nearby", "nearby", "Lists the players near you and how far away they are.");
+		put("timer", "timer", "A stopwatch that starts when you switch it on, or a countdown. Switch it off and on to restart.");
+		put("item_tips", "item_tips", "Adds durability as a number to tooltips and shows what is inside shulker boxes and on maps.");
 		put("speed", "speed", "Shows how fast you are moving in blocks per second.");
 		put("biome", "biome", "Shows the biome you are standing in.");
 		put("day", "day", "Shows which in-game day the world is on.");
@@ -107,6 +111,7 @@ public final class ModuleInfo {
 		put("lyrics", "lyrics", "Shows synced lyrics for the song you are playing.");
 		put("music", "music", "Shows the song you are playing. Press M for the music menu.");
 		put("kromvia_players", "kromvia_players", "Shows the capes and cosmetics of other Kromvia players.");
+		put("colour_filter", "colour_filter", "Shifts colours so reds, greens or blues you can't tell apart stand out from each other.");
 		put("screen_colours", "screen_colours", "Saturation, brightness, contrast and hue for the whole screen.");
 		put("health", "health", "Shows your exact health, with absorption if you want it.");
 		put("xp", "xp", "Shows your level and how far you are to the next one.");
@@ -120,6 +125,9 @@ public final class ModuleInfo {
 		put("move_status", "move_status", "Shows if you are sprinting, sneaking, swimming, gliding or flying.");
 		put("auto_respawn", "auto_respawn", "Respawns you after you die. Never in hardcore.");
 		put("auto_gg", "auto_gg", "Says gg for you when a game ends. Knows the big servers, and you can add your own trigger words.");
+		put("party_pings", "party_pings", "Press Z to mark the block you look at. Your party sees the mark on any server, except PvP servers where it is off.");
+		put("frame_report", "frame_report", "Tells the launcher your FPS and 1% lows, so it can warn you when a mod update makes the game slower.");
+		put("ghosts", "ghosts", "Press K to start a run after a 3 second count, K again to stop. Start at the same spot to race your best run as a ghost, or load a friend's ghost by code from Ghosts in the pause menu.");
 		put("welcome_guide", "welcome_guide", "Opens the first-launch guide again.");
 	}
 

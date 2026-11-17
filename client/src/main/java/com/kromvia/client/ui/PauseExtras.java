@@ -8,6 +8,7 @@ import com.kromvia.client.compat.Gfx;
 import com.kromvia.client.compat.Mc;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -33,17 +34,24 @@ public final class PauseExtras {
 			add.accept(new KButton(lx - BUTTON_W / 2, mid + previewH(height) / 2 - 4, BUTTON_W, 20, Component.literal("Wardrobe"),
 					b -> Mc.setScreen(new CosmeticsScreen(screen))));
 		}
-		int y = mid - 22;
+		java.util.Map<String, Button.OnPress> right = new java.util.LinkedHashMap<>();
 		net.minecraft.client.server.IntegratedServer server = Minecraft.getInstance().getSingleplayerServer();
 		if (server != null && !server.isPublished()) {
-			add.accept(new KButton(rx - BUTTON_W / 2, y, BUTTON_W, 20, Component.literal("Host World"), b -> {
+			right.put("Host World", b -> {
 				Rooms.hostNow();
 				screen.onClose();
-			}));
-			y += 24;
+			});
 		}
-		if (Social.available()) {
-			add.accept(new KButton(rx - BUTTON_W / 2, y, BUTTON_W, 20, Component.literal("Social"), b -> Mc.setScreen(new SocialScreen(screen))));
+		right.put("Friends", b -> Mc.setScreen(new SocialScreen(screen)));
+		right.put("Screenshots", b -> Mc.setScreen(new ScreenshotsScreen(screen)));
+		right.put("Mods", b -> Mc.setScreen(new ModsScreen(screen, true)));
+		right.put("Edit HUD", b -> Mc.setScreen(new HudEditor(screen)));
+		right.put("Profiles", b -> Mc.setScreen(new ProfilesScreen(screen)));
+		if (com.kromvia.client.module.Info.GHOSTS.enabled) right.put("Ghosts", b -> Mc.setScreen(new GhostsScreen(screen)));
+		int y = mid - right.size() * 24 / 2;
+		for (java.util.Map.Entry<String, Button.OnPress> e : right.entrySet()) {
+			add.accept(new KButton(rx - BUTTON_W / 2, y, BUTTON_W, 20, Component.literal(e.getKey()), e.getValue()));
+			y += 24;
 		}
 	}
 

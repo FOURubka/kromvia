@@ -53,6 +53,14 @@ public final class Fx {
 		Minecraft mc = Minecraft.getInstance();
 		if (msg.has("social") && msg.get("social").isJsonObject()) {
 			Social.set(msg.getAsJsonObject("social"));
+		} else if (msg.has("ghost") && msg.get("ghost").isJsonObject()) {
+			com.kromvia.client.Ghosts.answer(msg.getAsJsonObject("ghost"));
+		} else if (msg.has("room") && msg.get("room").isJsonObject()) {
+			com.kromvia.client.ui.ModsScreen.room(msg.getAsJsonObject("room"));
+		} else if (msg.has("mods") && msg.get("mods").isJsonObject()) {
+			com.kromvia.client.ui.ModsScreen.answer(msg.getAsJsonObject("mods"));
+		} else if (msg.has("ping") && msg.get("ping").isJsonObject()) {
+			com.kromvia.client.module.Info.pinged(msg.getAsJsonObject("ping"));
 		} else if (msg.has("accounts") && msg.get("accounts").isJsonObject()) {
 			Accounts.set(msg.getAsJsonObject("accounts"));
 		} else if (msg.has("wardrobe")) {

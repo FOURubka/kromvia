@@ -256,7 +256,7 @@ export function Friends() {
               onChat={(p) => setView({ chat: p.id })}
             />
           ) : (
-            <Empty bee="friends">{t("friends.pick")}</Empty>
+            <Empty bee="friends-online">{t("friends.pick")}</Empty>
           )}
         </section>
       </div>
@@ -293,7 +293,7 @@ function PlayerView({
   }, [p?.id]);
 
   if (p === undefined) return <p className="muted">{t("friends.loading")}</p>;
-  if (p === null) return <Empty bee="search">{error}</Empty>;
+  if (p === null) return <Empty bee="not-found">{error}</Empty>;
   const rel = relation(p.id);
   const c = p.cosmetics ?? {};
   const like = () =>

@@ -5,8 +5,9 @@ import { useJobs } from "../lib/jobs";
 import { Progress } from "../ui/Progress";
 import { Glyph } from "../ui/Glyph";
 import { Empty } from "../ui/Empty";
+import { Markdown } from "./Markdown";
 
-type Update = { folder: string; file: string; title: string; newFile: string; version: string };
+type Update = { folder: string; file: string; title: string; newFile: string; version: string; changelog: string | null };
 type Issue = { kind: "incompatible" | "missing"; title: string; other: string };
 
 const BIG_UPDATE = 5;
@@ -115,6 +116,12 @@ export function ContentUpdates({ instanceId, onChange }: { instanceId: string; o
                 <span className="path muted">
                   {u.file} → {u.newFile}
                 </span>
+                {u.changelog && (
+                  <details className="update-notes">
+                    <summary>{t("updates.changelog")}</summary>
+                    <Markdown source={u.changelog} />
+                  </details>
+                )}
               </div>
               <div className="row-tools">
                 <button className="btn btn-ghost" disabled={!!job} onClick={() => run([`${u.folder}/${u.file}`])}>

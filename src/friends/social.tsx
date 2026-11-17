@@ -6,6 +6,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useLauncher } from "../lib/launcher";
 import { headOf } from "./Head";
 import { outfitWorn, pushOutfit, savedOutfit, storeOutfit } from "../lib/outfit";
+import { pushNote } from "../lib/notes";
 
 export type ChatMessage = { id: number; from: string; to: string; text: string; time: number };
 type Player = { id: string; name: string; verified: boolean };
@@ -59,13 +60,13 @@ function useSocialState() {
       for (const x of f.friends) headOf(x.name).then((h) => h && setHeads((m) => (m[x.id] === h ? m : { ...m, [x.id]: h })));
     }, () => {});
 
-  const toast = async (id: string, text: (name: string) => string) => {
+  const toast = async (id: string, text: (name: string) => string, action?: Record<string, string>) => {
     if (!names.current[id]) {
       const list = await invoke<{ friends: { id: string; name: string }[] }>("social_friends").catch(() => null);
       for (const f of list?.friends ?? []) names.current[f.id] = f.name;
     }
     const name = names.current[id];
-    if (name) invoke("game_toast", { title: "Kromvia", text: text(name) }).catch(() => {});
+    if (name) invoke("game_toast", { title: "Kromvia", text: text(name), action: action ?? null }).catch(() => {});
   };
 
   const add = (other: string, msgs: ChatMessage[]) =>
@@ -88,7 +89,7 @@ function useSocialState() {
         setRooms(({ [e.id]: _, ...rest }) => (e.room ? { ...rest, [e.id]: e.room } : rest));
       else if (e.type === "online") {
         setOnline((s) => new Set(s).add(e.id));
-        toast(e.id, (name) => t("friends.toastOnline", { name }));
+        toast(e.id, (name) => t("friends.toastOnline", { name }), { chat: e.id });
       }
       else if (e.type === "offline") {
         setRooms(({ [e.id]: _, ...rest }) => rest);
@@ -101,12 +102,17 @@ function useSocialState() {
       else if (e.type === "chat") {
         const other = e.from === me.current ? e.to : e.from;
         add(other, [e]);
-        if (e.from !== me.current && open.current !== other && gameChat.current !== other) setUnread((u) => ({ ...u, [other]: (u[other] ?? 0) + 1 }));
-        if (e.from !== me.current) toast(e.from, (name) => `${name}: ${e.text}`);
+        if (e.from !== me.current && open.current !== other && gameChat.current !== other) {
+          setUnread((u) => ({ ...u, [other]: (u[other] ?? 0) + 1 }));
+          const name = names.current[other];
+          if (name) pushNote({ id: `chat:${other}`, kind: "message", text: `${name}: ${e.text}`, page: "friends" });
+        }
+        if (e.from !== me.current) toast(e.from, (name) => `${name}: ${e.text}`, { chat: e.from });
       } else if (e.type === "party") loadParty();
       else if (e.type === "party.invite") {
         loadParty();
-        invoke("game_toast", { title: "Kromvia", text: t("party.toastInvite", { name: e.from.name }) }).catch(() => {});
+        pushNote({ id: `party:${e.party}`, kind: "party", text: t("party.toastInvite", { name: e.from.name }), page: "friends" });
+        invoke("game_toast", { title: "Kromvia", text: t("party.toastInvite", { name: e.from.name }), action: { party: e.party } }).catch(() => {});
       } else if (e.type === "error") setError(e.error);
     });
     return () => {
@@ -166,7 +172,7 @@ function useSocialState() {
   const leads = !!party && party.leader === myId;
   const hostedMc = (l.hosting && l.instances.find((i) => i.id === l.hosting)?.mcVersion) || null;
   useEffect(() => {
-    if (connected) invoke("social_room", { room: hostedRoom, mc: hostedRoom ? hostedMc : null }).catch(() => {});
+    if (connected) invoke("social_room", { room: hostedRoom, mc: hostedRoom ? hostedMc : null, instance: hostedRoom ? l.hosting : null }).catch(() => {});
   }, [connected, hostedRoom, hostedMc]);
   useEffect(() => {
     if (leads && party!.room !== hostedRoom) partyActions.setRoom(hostedRoom);
@@ -216,7 +222,7 @@ function useSocialState() {
     const r = rooms[id];
     if (!r) return;
     setError(null);
-    if (!l.joinRoom(r.room, r.mc)) setError(t("friends.noBuildFor", { mc: r.mc }));
+    if (!l.joinRoom(r.room, r.mc, id)) setError(t("friends.noBuildFor", { mc: r.mc }));
   };
   joinFriend.current = join;
 

@@ -2,9 +2,7 @@ package com.kromvia.client.fx;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -24,10 +22,6 @@ final class Types {
 
 	static RenderType model(Identifier texture) {
 		return RenderTypes.entityCutoutNoCull(texture);
-	}
-
-	static void toast(Minecraft mc, SystemToast.SystemToastId id, Component title, Component text) {
-		mc.getToastManager().addToast(SystemToast.multiline(mc, id, title, text));
 	}
 
 	static void vertex(VertexConsumer b, PoseStack.Pose p, double x, double y, double z, int argb) {

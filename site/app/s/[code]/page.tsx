@@ -13,7 +13,7 @@ const T = {
     pack: (src: string) => `Modpack from ${src}`, added: (n: number) => `${n} added on top`,
     by: "From", open: "Open in Kromvia", get: "Get Kromvia",
     install: (c: string) => <>Nothing happened? In Kromvia, press &quot;New instance&quot;, pick &quot;Friend&apos;s code&quot; and enter <b>{c}</b>.</>,
-    buildDesc: (n: string, mc: string, mods: number) => `Kromvia build "${n}" for Minecraft ${mc}, ${mods} mods.`,
+    buildDesc: (n: string, mc: string, mods: number) => `Kromvia instance "${n}" for Minecraft ${mc}, ${mods} mods.`,
   },
   uk: {
     title: "Поширено з Kromvia", shot: "Скріншот", from: (c: string) => `Поширено з Kromvia · код ${c}`, log: "Лог",

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as RPointer } from "react";
 import { IdleAnimation, SkinViewer } from "skinview3d";
 import { useI18n } from "../i18n";
 import { Glyph } from "../ui/Glyph";
@@ -8,15 +8,17 @@ import { modelShot, shot } from "../art/gltf";
 import { BOX_ITEMS, PALETTE, RAINBOW, boxItem, boxModel, rainbow, wearBox, type BoxItem } from "../art/procedural";
 import { wear, wearable } from "../art/wear";
 import { effectIcon } from "../art/effectIcons";
-import { capeTexture, type CapeStyle } from "../art/capes";
+import { ART_H, ART_W, artFrom, capeFor, decodeArt, encodeArt, type CapeStyle } from "../art/capes";
 import { wearDevCape } from "../art/devCape";
 import SETS from "../art/sets.json";
-import { OUTFIT_EVENT, pushOutfit, savedOutfit, storeOutfit, type Back, type Outfit } from "../lib/outfit";
+import { OUTFIT_EVENT, pushOutfit, savedOutfit, storeOutfit, type Back, type Outfit, type OutfitStyle } from "../lib/outfit";
 
 const SLOTS: (Slot | "effect")[] = ["head", "face", "neck", "back", "weapon", "body", "feet", "effect"];
 
 const colorOf = (o: Outfit, id: string) => o.colors?.[id] ?? boxItem(id)?.color ?? 0xffffffff;
-const STYLES: CapeStyle[] = ["kromvia", "ember", "frost"];
+const STYLES: OutfitStyle[] = ["kromvia", "ember", "frost", "custom"];
+const PAINT = ["#ffffff", "#c9c9d1", "#6b6b78", "#18181d", "#e45c5c", "#f2994a", "#f2c94c", "#7bd93a", "#2dd4bf", "#3b82f6", "#8b5cf6", "#ec4899"];
+const CELL = 16;
 
 type CosmeticSet = { id: string; name: string; items: string[]; effect?: string };
 
@@ -73,14 +75,14 @@ function Stage({ skin, slim, outfit }: { skin: string | null; slim: boolean; out
         viewer.loadCape(null);
       };
     } else {
-      viewer.loadCape(capeTexture(outfit.style), { backEquipment: outfit.back });
+      viewer.loadCape(capeFor(outfit.style, outfit.art), { backEquipment: outfit.back });
       if (outfit.back === "elytra") {
         const e = viewer.playerObject.elytra;
         e.leftWing.rotation.set(Math.PI / 12, 0, Math.PI / 12);
         e.updateRightWing();
       }
     }
-  }, [viewer, outfit.back, outfit.style, outfit.equipped.back, outfit.dev]);
+  }, [viewer, outfit.back, outfit.style, outfit.art, outfit.equipped.back, outfit.dev]);
 
   const worn = SLOTS.map((s) => outfit.equipped[s]).filter((id): id is string => !!id && wearable(id));
   const key = worn.join(",");
@@ -145,6 +147,104 @@ function Swatches({ value, onPick }: { value: number; onPick: (c: number) => voi
           onClick={() => onPick(c)}
         />
       ))}
+    </div>
+  );
+}
+
+function CapePainter({ art, onChange }: { art: string; onChange: (art: string) => void }) {
+  const { t } = useI18n();
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const px = useRef<Uint8ClampedArray>(decodeArt(art) ?? decodeArt(artFrom("kromvia"))!);
+  const painting = useRef(false);
+  const [color, setColor] = useState("#8b5cf6");
+
+  const draw = () => {
+    const g = canvas.current?.getContext("2d");
+    if (!g) return;
+    g.imageSmoothingEnabled = false;
+    const small = document.createElement("canvas");
+    small.width = ART_W;
+    small.height = ART_H;
+    small.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(px.current), ART_W, ART_H), 0, 0);
+    g.drawImage(small, 0, 0, ART_W * CELL, ART_H * CELL);
+    g.strokeStyle = "rgb(255 255 255 / 0.06)";
+    for (let x = 1; x < ART_W; x++) g.strokeRect(x * CELL, 0, 0, ART_H * CELL);
+    for (let y = 1; y < ART_H; y++) g.strokeRect(0, y * CELL, ART_W * CELL, 0);
+  };
+
+  useEffect(() => {
+    if (!painting.current) {
+      px.current = decodeArt(art) ?? px.current;
+      draw();
+    }
+  }, [art]);
+
+  const at = (e: RPointer) => {
+    const r = canvas.current!.getBoundingClientRect();
+    const x = Math.floor(((e.clientX - r.left) / r.width) * ART_W);
+    const y = Math.floor(((e.clientY - r.top) / r.height) * ART_H);
+    return x >= 0 && y >= 0 && x < ART_W && y < ART_H ? (y * ART_W + x) * 4 : -1;
+  };
+  const paint = (e: RPointer) => {
+    const i = at(e);
+    if (i < 0) return;
+    if (e.altKey) {
+      const p = px.current;
+      setColor("#" + [p[i], p[i + 1], p[i + 2]].map((v) => v.toString(16).padStart(2, "0")).join(""));
+      return;
+    }
+    const n = parseInt(color.slice(1), 16);
+    px.current.set([(n >> 16) & 255, (n >> 8) & 255, n & 255, 255], i);
+    draw();
+  };
+  const commit = () => {
+    if (!painting.current) return;
+    painting.current = false;
+    onChange(encodeArt(px.current));
+  };
+  const fill = () => {
+    const n = parseInt(color.slice(1), 16);
+    for (let i = 0; i < px.current.length; i += 4) px.current.set([(n >> 16) & 255, (n >> 8) & 255, n & 255, 255], i);
+    draw();
+    onChange(encodeArt(px.current));
+  };
+
+  return (
+    <div className="cape-painter">
+      <canvas
+        ref={canvas}
+        width={ART_W * CELL}
+        height={ART_H * CELL}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          painting.current = true;
+          paint(e);
+        }}
+        onPointerMove={(e) => painting.current && paint(e)}
+        onPointerUp={commit}
+        onPointerCancel={commit}
+      />
+      <div className="cape-painter-tools">
+        <div className="skin-palette">
+          {PAINT.map((c) => (
+            <button key={c} style={{ background: c }} aria-label={c} aria-pressed={color === c} onClick={() => setColor(c)} />
+          ))}
+          <label className="skin-custom" style={{ background: color }} title={t("editor.color")}>
+            <input type="color" value={color} aria-label={t("editor.color")} onChange={(e) => setColor(e.currentTarget.value)} />
+          </label>
+        </div>
+        <div className="actions">
+          <button className="btn btn-ghost" onClick={fill}>
+            {t("cosmetics.capeFill")}
+          </button>
+          {(["kromvia", "ember", "frost"] as CapeStyle[]).map((s) => (
+            <button key={s} className="btn btn-ghost" onClick={() => onChange(artFrom(s))}>
+              {t(`cosmetics.style.${s}` as MessageKey)}
+            </button>
+          ))}
+        </div>
+        <small className="muted">{t("cosmetics.capeHint")}</small>
+      </div>
     </div>
   );
 }
@@ -230,12 +330,18 @@ export function Cosmetics({ skin, slim }: { skin: string | null; slim: boolean }
           </div>
           <div className="segmented" role="group" aria-label={t("cosmetics.style")}>
             {STYLES.map((s) => (
-              <button key={s} aria-pressed={outfit.style === s} disabled={outfit.back === "none"} onClick={() => setOutfit((o) => ({ ...o, style: s }))}>
+              <button
+                key={s}
+                aria-pressed={outfit.style === s}
+                disabled={outfit.back === "none"}
+                onClick={() => setOutfit((o) => ({ ...o, style: s, art: s === "custom" ? o.art ?? artFrom(o.style === "custom" ? "kromvia" : o.style) : o.art }))}
+              >
                 {t(`cosmetics.style.${s}` as MessageKey)}
               </button>
             ))}
           </div>
         </div>
+        {outfit.style === "custom" && outfit.back === "cape" && <CapePainter art={outfit.art ?? artFrom("kromvia")} onChange={(art) => setOutfit((o) => ({ ...o, art }))} />}
       </section>
 
       <div className="cosmetic-groups">

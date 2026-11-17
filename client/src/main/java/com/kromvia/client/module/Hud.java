@@ -73,6 +73,7 @@ public final class Hud {
 	}
 
 	public static boolean click(Minecraft mc) {
+		if (com.kromvia.client.ui.Notes.click(mc)) return true;
 		if (mc.player == null || !(Mc.screen() instanceof ChatScreen)) return false;
 		Window w = mc.getWindow();
 		double mx = mc.mouseHandler.xpos() * w.getGuiScaledWidth() / w.getScreenWidth();
@@ -93,6 +94,7 @@ public final class Hud {
 
 	public static void tick(Minecraft mc) {
 		com.kromvia.client.Config.tick();
+		com.kromvia.client.Config.serverChanged(mc, com.kromvia.client.Config.currentServer(mc));
 		boolean free = mc.player != null && Mc.screen() == null;
 		for (Module m : KromviaClient.MODULES) {
 			if (m.key < 0) continue;
@@ -108,5 +110,6 @@ public final class Hud {
 		for (Module m : KromviaClient.MODULES) {
 			if (m.enabled) m.tick(mc);
 		}
+		com.kromvia.client.ui.UiFont.tick(mc);
 	}
 }

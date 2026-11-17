@@ -26,3 +26,4 @@ mc.hasShiftDown() -> net.minecraft.client.gui.screens.Screen.hasShiftDown()
 mc.screen.resize(w.getGuiScaledWidth(), w.getGuiScaledHeight()); -> mc.screen.resize(mc, w.getGuiScaledWidth(), w.getGuiScaledHeight());
 # Kromvia CrashPatch leaves the world the way this version can.
 mc.level.disconnect(ClientLevel.DEFAULT_QUIT_MESSAGE) -> mc.level.disconnect()
+com.mojang.blaze3d.systems.RenderSystem.getDevice().getRenderer() -> com.mojang.blaze3d.platform.GlUtil.getRenderer()

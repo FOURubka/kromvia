@@ -22,3 +22,5 @@ import net.minecraft.client.gui.Hud; -> import net.minecraft.client.gui.Gui;
 @Mixin(Hud.class) -> @Mixin(Gui.class)
 Lnet/minecraft/client/gui/Hud; -> Lnet/minecraft/client/gui/Gui;
 Items.DYE.red() -> Items.RED_DYE
+gameRenderer.mainCamera() -> gameRenderer.getMainCamera()
+getDevice().getDeviceInfo().name() -> getDevice().getRenderer()

@@ -14,7 +14,6 @@ import { Console } from "./Console";
 import { CrashHelp } from "./CrashHelp";
 import { NewInstance } from "./NewInstance";
 import { ImportInstances } from "./ImportInstances";
-import { Flowers, Vines } from "./Decor";
 import { MinimapOffer } from "./MinimapOffer";
 import { TileMenu } from "./TileMenu";
 import { Select } from "../ui/Select";
@@ -82,6 +81,19 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [skin, setSkin] = useState<LibrarySkin | null>(null);
   const [showConsole, setShowConsole] = useState(false);
+  const [side, setSideState] = useState(() => {
+    try {
+      return localStorage.getItem("kromvia.homeSide") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setSide = (v: boolean) => {
+    setSideState(v);
+    try {
+      localStorage.setItem("kromvia.homeSide", v ? "1" : "0");
+    } catch {}
+  };
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Record<string, ServerStatus | null>>({});
   const [custom, setCustom] = useState<Server[]>(savedServers);
@@ -228,7 +240,7 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
   };
 
   return (
-    <div className="home">
+    <div className="home" data-side={side || undefined}>
       <div className="home-main">
         <div className="quickbar">
           <span className="quickbar-label">{t("home.quickPlay")}</span>
@@ -305,7 +317,10 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
         </div>
 
         <section className="launchpad tile-art-host" data-cover={cover ? "" : undefined} style={cover ? ({ "--cover": `url("${cover}")` } as CSSProperties) : undefined}>
-          <Vines />
+          <button className="side-toggle btn btn-ghost" onClick={() => setSide(!side)} aria-expanded={side} title={t(side ? "home.sideHide" : "home.sideShow")}>
+            <Glyph name="user" /> {name}
+            <Glyph name="layout-sidebar-right" />
+          </button>
           <div className="launchpad-art">
             <img className="launchpad-bee" src="/bee/empty-home.webp" alt="" draggable={false} />
           </div>
@@ -326,7 +341,6 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
                 </button>
               ) : (
                 <span className="launch-wrap">
-                  <Flowers />
                   <button className="launch" onClick={() => l.play(current)}>
                     <span className="launch-title">
                       {t("home.launch")} {current.mcVersion}
@@ -489,11 +503,12 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
             <button className="btn btn-ghost" onClick={() => setShowConsole((s) => !s)}>
               <Glyph name="terminal-2" /> {showConsole ? t("console.hide") : t("console.show")}
             </button>
-            {showConsole && <Console lines={l.logs[current.id]} />}
+            {showConsole && <Console lines={l.logs[current.id]} instanceId={current.id} />}
           </section>
         )}
       </div>
 
+      {side && (
       <aside className="home-side">
         <section className="side-block player">
           <span className="side-label">{t("home.playingAs")}</span>
@@ -562,6 +577,7 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
           </ul>
         </section>
       </aside>
+      )}
     </div>
   );
 }

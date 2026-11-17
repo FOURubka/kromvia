@@ -1,11 +1,9 @@
 package com.kromvia.client.ui;
 
 import com.kromvia.client.Config;
-import com.kromvia.client.KromviaClient;
 import com.kromvia.client.compat.Gfx;
 import com.kromvia.client.compat.KScreen;
 import com.kromvia.client.compat.Mc;
-import com.kromvia.client.module.Module;
 import java.util.List;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -48,10 +46,21 @@ public class ProfilesScreen extends KScreen {
 		}));
 
 		all = Config.profiles();
+		String server = Config.currentServer(minecraft);
+		java.util.Map<String, String> bound = Config.serverProfiles();
 		int ry = y + 48;
 		for (int i = 0; i < Math.min(MAX_ROWS, all.size()); i++) {
 			String p = all.get(i);
-			addRenderableWidget(new KButton(x, ry, W - 26, ROW - 2, Component.literal(p), b -> load(p)).appear(i * 30));
+			int nameW = server == null ? W - 26 : W - 72;
+			addRenderableWidget(new KButton(x, ry, nameW, ROW - 2, Component.literal(p), b -> load(p)).appear(i * 30));
+			if (server != null) {
+				boolean here = p.equals(bound.get(server));
+				addRenderableWidget(new KButton(x + nameW + 2, ry, 42, ROW - 2, Component.literal(here ? "Here ✓" : "Here"), b -> {
+					Config.bindServer(server, here ? null : p);
+					status = here ? "No profile for " + server : p + " loads on " + server;
+					rebuild();
+				}).flat());
+			}
 			addRenderableWidget(new KButton(x + W - 22, ry, 22, ROW - 2, Component.literal("✕"), b -> {
 				Config.deleteProfile(p);
 				status = "Deleted " + p;
@@ -63,10 +72,7 @@ public class ProfilesScreen extends KScreen {
 	}
 
 	private void load(String p) {
-		java.util.Set<Module> wasOn = new java.util.HashSet<>();
-		for (Module m : KromviaClient.MODULES) if (m.enabled) wasOn.add(m);
-		Config.loadProfile(p);
-		for (Module m : wasOn) if (!m.enabled) m.disable(minecraft);
+		Config.apply(minecraft, p);
 		status = "Loaded " + p;
 	}
 

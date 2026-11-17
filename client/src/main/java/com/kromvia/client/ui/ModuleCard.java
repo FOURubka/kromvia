@@ -64,22 +64,16 @@ public class ModuleCard extends DrawnButton {
 		g.pose().scale(s, s);
 		g.pose().translate(-(x + w / 2F), -(y + h / 2F));
 
-		if (knob > 0.02F) UiStyle.shadow(g, x, y, w, h, 4);
-		g.fill(x - 1, y - 1, x + w + 1, y + h + 1, UiStyle.fade(ARGB.srgbLerp(knob, 0x00000000, 0x555B3FD6), in));
-		int face = ARGB.srgbLerp(knob, UiStyle.CARD, 0xFF130F24);
-		face = ARGB.srgbLerp(hover * 0.5F, face, 0xFF161B22);
-		g.fill(x, y, x + w, y + h, UiStyle.fade(face, in));
-		g.fillGradient(x, y, x + w, y + h / 2, UiStyle.fade(0x10FFFFFF, in * (0.4F + hover * 0.6F)), 0);
-		int edge = ARGB.srgbLerp(knob, ARGB.srgbLerp(hover, UiStyle.LINE, 0xFF353D4A), UiStyle.FRONT);
-		g.fill(x, y, x + w, y + 1, UiStyle.fade(edge, in));
-		g.fill(x, y + h - 1, x + w, y + h, UiStyle.fade(0xFF050608, in));
-		if (pulse > 0.02F) g.fill(x, y, x + w, y + h, ARGB.color(Math.round(pulse * 70), UiStyle.TOP));
+		UiStyle.plain(g, x, y, w, h, 8, 0x9A18181D, 0x16FFFFFF, in);
+		UiStyle.plain(g, x, y, w, h, 8, 0x0A8B5CF6, 0xB08B5CF6, in * knob);
+		UiStyle.plain(g, x, y, w, h, 8, 0x0CFFFFFF, 0x30FFFFFF, in * hover);
+		UiStyle.plain(g, x, y, w, h, 8, 0x22FFFFFF, 0x40FFFFFF, pulse);
 
 		if (in > 0.35F) {
 			float bob = hover * Mth.sin((System.currentTimeMillis() % 1200) / 1200F * Mth.TWO_PI) * 1.2F;
 			String icon = ModuleInfo.icon(module);
 			if (Icons.has(icon)) {
-				int tint = ARGB.srgbLerp(knob, ARGB.srgbLerp(hover, UiStyle.MUTED, UiStyle.TEXT), UiStyle.TOP);
+				int tint = ARGB.srgbLerp(Math.max(knob, hover), UiStyle.MUTED, UiStyle.TEXT);
 				g.pose().pushMatrix();
 				g.pose().translate(0, bob);
 				Icons.draw(g, icon, x + w / 2 - 10, y + 8, 20, UiStyle.fade(tint, in));
@@ -100,10 +94,10 @@ public class ModuleCard extends DrawnButton {
 		int text = ARGB.srgbLerp(Math.max(knob, hover), UiStyle.MUTED, UiStyle.TEXT);
 		g.drawCenteredString(mc.font, name, x + w / 2, y + 35, UiStyle.fade(text, in));
 
-		int sx = x + w / 2 - 10, sy = y + h - 12;
-		g.fill(sx, sy, sx + 20, sy + 7, UiStyle.fade(ARGB.srgbLerp(knob, 0xFF232832, UiStyle.SIDE), in));
-		int kx = sx + 1 + Math.round(knob * 12);
-		g.fill(kx, sy + 1, kx + 7, sy + 6, UiStyle.fade(ARGB.srgbLerp(knob, UiStyle.MUTED, UiStyle.TOP), in));
+		int sx = x + w / 2 - 10, sy = y + h - 13;
+		UiStyle.round(g, sx, sy, sx + 20, sy + 10, 5, UiStyle.fade(ARGB.srgbLerp(knob, 0x40FFFFFF, UiStyle.FRONT), in));
+		float kx = sx + 1 + knob * 10;
+		UiStyle.round(g, kx, sy + 1, kx + 8, sy + 9, 4, UiStyle.fade(ARGB.srgbLerp(knob, UiStyle.MUTED, UiStyle.TEXT), in));
 		g.pose().popMatrix();
 	}
 }

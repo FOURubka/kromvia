@@ -5,6 +5,10 @@ import { useJobs, type JobProgress } from "./jobs";
 import { useAccounts, type Account } from "../accounts/Accounts";
 import { outfitFromGame, outfitWorn, pushOutfit, savedOutfit, type Outfit } from "./outfit";
 import type { LogLine } from "../home/Console";
+import { pushNote } from "./notes";
+import type { Regression } from "../builds/History";
+import { useI18n } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
 export type LoaderKind = "fabric" | "quilt" | "legacyfabric" | "ornithe" | "forge" | "neoforge";
 export type Instance = {
@@ -21,7 +25,11 @@ export type Instance = {
   created: number;
   icon: string | null;
   noClient: boolean;
+  sharedOptions: boolean;
+  hooks?: Hooks;
 };
+
+export type Hooks = { preLaunch: string; postExit: string; wrapper: string; env: string };
 
 export const LOADER_NAMES: Record<LoaderKind, string> = {
   fabric: "Fabric",
@@ -37,7 +45,7 @@ export type CrashCause = "outOfMemory" | "tooMuchMemory" | "wrongJava" | "missin
 export type Crash = { cause: CrashCause; detail: string | null; report: string | null; auto: boolean };
 export type ModsChange = { removed: string[]; added: string[] };
 type ExitEvent = RunInfo & { code: number | null; crash: Crash | null };
-export type LaunchExtra = { join?: string; world?: string; room?: boolean };
+export type LaunchExtra = { join?: string; world?: string; room?: boolean; safe?: boolean };
 
 const NICK_KEY = "kromvia.nickname";
 const OFFLINE_KEY = "kromvia.offlineAccounts";
@@ -63,6 +71,7 @@ function savedOffline(): string[] {
 }
 
 function useLauncherState(onNeedAccount: () => void) {
+  const { t } = useI18n();
   const [instances, setInstances] = useState<Instance[]>([]);
   const [nick, setNickState] = useState(savedNick);
   const [offline, setOfflineState] = useState(savedOffline);
@@ -121,9 +130,21 @@ function useLauncherState(onNeedAccount: () => void) {
       setModsChanged(({ [payload.instanceId]: _, ...rest }) => rest);
       setExits((e) => ({ ...e, [payload.instanceId]: payload.code }));
       const crash = payload.crash;
-      if (crash) setCrashes((c) => ({ ...c, [payload.instanceId]: crash }));
+      if (crash) {
+        setCrashes((c) => ({ ...c, [payload.instanceId]: crash }));
+        invoke<Instance[]>("instance_list").then((list) => {
+          const name = list.find((i) => i.id === payload.instanceId)?.name ?? payload.instanceId;
+          pushNote({ id: `crash:${payload.runId}`, kind: "crash", text: `${name}: ${t(`crash.${crash.cause}` as MessageKey, { mod: crash.detail ?? "" })}`, page: "home" });
+        });
+      }
       setRooms(({ [payload.instanceId]: _, ...rest }) => rest);
       setHosting((h) => (h === payload.instanceId ? null : h));
+    });
+    const unPerf = listen<{ instanceId: string; regression: Regression }>("perf-regression", ({ payload: { instanceId, regression: r } }) => {
+      invoke<Instance[]>("instance_list").then((list) => {
+        const name = list.find((i) => i.id === instanceId)?.name ?? instanceId;
+        pushNote({ id: `perf:${instanceId}:${r.beforeSet}`, kind: "perf", text: t("history.regression", { name, drop: r.dropPercent, mods: r.added.slice(0, 2).join(", ") || "-" }), page: "builds" });
+      });
     });
     const unScene = listen<{ runId: number; scene: string }>("game-scene", ({ payload }) => {
       const id = runs[payload.runId];
@@ -159,7 +180,7 @@ function useLauncherState(onNeedAccount: () => void) {
       refreshAccounts();
     });
     return () => {
-      [unStart, unMods, unLog, unExit, unScene, unRequest, unJoin, unWardrobe, unSwitch].forEach((u) => u.then((f) => f()));
+      [unStart, unMods, unLog, unExit, unPerf, unScene, unRequest, unJoin, unWardrobe, unSwitch].forEach((u) => u.then((f) => f()));
     };
   }, []);
 
@@ -197,6 +218,7 @@ function useLauncherState(onNeedAccount: () => void) {
       join: extra.join ?? null,
       world: extra.world ?? null,
       room: extra.room ?? false,
+      safe: extra.safe ?? false,
     }).then(
       (id) => started(`launch-${inst.id}`, id),
       (e) => {
@@ -211,10 +233,21 @@ function useLauncherState(onNeedAccount: () => void) {
     if (!account) rememberNick();
     launch(inst, extra, account?.id ?? null, nick.trim());
   };
-  const joinRoom = (room: string, mc: string) => {
+  const joinRoom = (room: string, mc: string, friend?: string) => {
     const inst = (current?.mcVersion === mc ? current : undefined) ?? instances.find((i) => i.mcVersion === mc && i.loader) ?? instances.find((i) => i.mcVersion === mc);
     if (!inst) return false;
-    play(inst, { join: room });
+    if (!friend || !inst.loader) {
+      play(inst, { join: room });
+      return true;
+    }
+    if (!account && !NICK.test(nick.trim())) return onNeedAccount(), true;
+    setError(inst.id, null);
+    setSelected(inst.id);
+    const live = running.some((r) => r.instanceId === inst.id);
+    invoke<number>("game_room_join", { instanceId: inst.id, friend, room, username: nick.trim(), accountId: account?.id ?? null }).then(
+      (id) => !live && started(`launch-${inst.id}`, id),
+      (e) => setError(inst.id, String(e)),
+    );
     return true;
   };
   const name = account?.name ?? nick.trim();

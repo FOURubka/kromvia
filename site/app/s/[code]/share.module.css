@@ -12,7 +12,7 @@
 .shot {
   width: 100%;
   image-rendering: auto;
-  box-shadow: 0 0 0 1px var(--border), 0 30px 80px rgb(0 0 0 / 0.5);
+  box-shadow: 0 0 0 1px var(--border), 0 6px 0 rgb(0 0 0 / 0.5);
 }
 
 .log {

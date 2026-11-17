@@ -27,44 +27,60 @@ public final class UiStyle {
 
 	private UiStyle() {}
 
+	public static final int GLASS = 0x7A1A1922, GLASS_RIM = 0x26FFFFFF, GLASS_HOT = 0x24FFFFFF, INK = 0xFF0E1016;
+
 	public static void button(Gfx g, int x, int y, int w, int h, boolean active, boolean lit) {
-		int face, top, side;
-		if (!active) {
-			face = 0xFF15181E;
-			top = 0xFF1B1F27;
-			side = 0xFF0C0E12;
-		} else if (lit) {
-			face = SIDE;
-			top = FRONT;
-			side = 0xFF2E1F73;
-		} else {
-			face = 0xFF1C212A;
-			top = 0xFF2C333F;
-			side = 0xFF0E1116;
-		}
-		g.fill(x, y, x + w, y + h - 2, face);
-		g.fill(x, y, x + w, y + 1, top);
-		g.fill(x, y + h - 2, x + w, y + h, side);
+		if (lit) glass(g, x, y, w, h, h / 2F, 0xF0FFFFFF, 0xFFFFFFFF);
+		else glass(g, x, y, w, h, h / 2F, active ? GLASS : 0x5A16151C, active ? GLASS_RIM : 0x12FFFFFF);
+	}
+
+	public static void glass(Gfx g, float x, float y, float w, float h, float r, int face, int rim) {
+		glass(g, x, y, w, h, r, face, rim, 1);
+	}
+
+	public static void glass(Gfx g, float x, float y, float w, float h, float r, int face, int rim, float alpha) {
+		Frost.draw(g, Math.round(x), Math.round(y), Math.round(w), Math.round(h), r, face, rim, alpha);
+	}
+
+	public static void plain(Gfx g, float x, float y, float w, float h, float r, int face, int rim, float alpha) {
+		Frost.plain(g, Math.round(x), Math.round(y), Math.round(w), Math.round(h), r, face, rim, alpha);
 	}
 
 	public static void panel(Gfx g, int x, int y, int w, int h) {
-		shadow(g, x, y, w, h, 10);
-		g.fill(x, y, x + w, y + h, PANEL);
-		g.fillGradient(x + 1, y + 1, x + w - 1, y + 40, 0x185B3FD6, 0x005B3FD6);
-		g.fill(x, y, x + w, y + 1, LINE);
-		g.fill(x, y + h - 1, x + w, y + h, LINE);
-		g.fill(x, y, x + 1, y + h, LINE);
-		g.fill(x + w - 1, y, x + w, y + h, LINE);
-		int glow = w / 3;
-		g.fill(x + (w - glow) / 2, y, x + (w + glow) / 2, y + 1, 0x998B5CF6);
+		glass(g, x, y, w, h, 12, 0xE0101014, 0x1EFFFFFF);
 	}
 
-	public static void shadow(Gfx g, int x, int y, int w, int h, int r) {
-		for (int i = r; i > 0; i--) {
-			int a = Math.round(36F * (1 - i / (float) (r + 1)) / r * 3);
-			g.fill(x - i, y - i + 3, x + w + i, y + h + i + 3, ARGB.color(a, 0));
-		}
+	private static float scale() {
+		return (float) (double) Minecraft.getInstance().getWindow().getGuiScale();
 	}
+
+	public static void round(Gfx g, float x1, float y1, float x2, float y2, float r, int color) {
+		float s = scale();
+		int X1 = Math.round(x1 * s), Y1 = Math.round(y1 * s), X2 = Math.round(x2 * s), Y2 = Math.round(y2 * s);
+		if (X2 <= X1 || Y2 <= Y1) return;
+		float R = Math.max(0, Math.min(r * s, Math.min(X2 - X1, Y2 - Y1) / 2F));
+		int alpha = color >>> 24, rgb = color & 0xFFFFFF;
+		g.pose().pushMatrix();
+		g.pose().scale(1 / s, 1 / s);
+		int top = Y1 + (int) Math.ceil(R), bottom = Y2 - (int) Math.ceil(R);
+		if (bottom > top) g.fill(X1, top, X2, bottom, color);
+		else top = bottom = (Y1 + Y2) / 2;
+		for (int y = Y1; y < top; y++) row(g, X1, X2, y, Y1 + R - (y + 0.5F), R, alpha, rgb, color);
+		for (int y = bottom; y < Y2; y++) row(g, X1, X2, y, y + 0.5F - (Y2 - R), R, alpha, rgb, color);
+		g.pose().popMatrix();
+	}
+
+	private static void row(Gfx g, int X1, int X2, int y, float dy, float R, int alpha, int rgb, int color) {
+		if (dy >= R) return;
+		float inset = dy <= 0 ? 0 : R - (float) Math.sqrt(R * R - dy * dy);
+		int whole = (int) inset;
+		float cover = 1 - (inset - whole);
+		if (X2 - whole - 1 > X1 + whole + 1) g.fill(X1 + whole + 1, y, X2 - whole - 1, y + 1, color);
+		int edge = Math.round(alpha * cover) << 24 | rgb;
+		g.fill(X1 + whole, y, X1 + whole + 1, y + 1, edge);
+		g.fill(X2 - whole - 1, y, X2 - whole, y + 1, edge);
+	}
+
 
 	public static void dim(Gfx g, int w, int h, float t) {
 		g.fill(0, 0, w, h, ARGB.color(Math.round(0xB0 * t), BG));

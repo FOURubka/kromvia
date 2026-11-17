@@ -80,6 +80,11 @@ public class KromviaClient implements ClientModInitializer {
 		all.addAll(Info.modules());
 		all.addAll(Fx.modules());
 		all.addAll(Qol.modules());
+		java.util.Set<String> ids = new java.util.HashSet<>();
+		for (Module m : all) {
+			// Two modules with one id share a config entry, so one keeps switching the other back on.
+			if (!ids.add(m.id)) org.slf4j.LoggerFactory.getLogger("kromvia").error("Duplicate module id {}", m.id);
+		}
 		return Collections.unmodifiableList(all);
 	}
 

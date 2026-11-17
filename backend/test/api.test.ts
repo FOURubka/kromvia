@@ -137,6 +137,8 @@ test("cosmetics are private to write, public to read", async () => {
   await signup("Bob");
   expect((await call(a, "PUT", "/v1/me/cosmetics", { cosmetics: [] })).status).toBe(400);
   expect((await call(a, "PUT", "/v1/me/cosmetics", { cosmetics: { x: "y".repeat(5000) } })).status).toBe(413);
+  expect((await call(a, "PUT", "/v1/me/cosmetics", { cosmetics: { style: "custom", art: "AAAA" } })).status).toBe(400);
+  expect((await call(a, "PUT", "/v1/me/cosmetics", { cosmetics: { style: "custom", art: Buffer.alloc(640, 9).toString("base64") } })).status).toBe(200);
   expect((await call(a, "PUT", "/v1/me/cosmetics", { cosmetics: { cape: "kromvia", colors: { cape: "#ff00ff" } } })).status).toBe(200);
   expect((await call(a, "GET", "/v1/me")).json.cosmetics).toEqual({ cape: "kromvia", colors: { cape: "#ff00ff" } });
 });
@@ -244,7 +246,7 @@ test("likes count, rank the top and can be taken back", async () => {
   await call(c, "PUT", `/v1/likes/${dev.id}`);
   expect((await call(dev, "GET", "/v1/me")).json.likes).toBe(3);
   expect((await call(b, "GET", "/v1/me")).json.likes).toBe(2);
-  expect((await call(a, "GET", "/v1/likes")).json).toEqual([b.id, dev.id]);
+  expect((await call(a, "GET", "/v1/likes")).json.sort()).toEqual([b.id, dev.id].sort());
   const top = await call(null, "GET", "/v1/top");
   expect(top.json.map((p: any) => [p.name, p.likes])).toEqual([["Bob", 2], ["Carol", 1]]);
   await call(a, "DELETE", `/v1/likes/${b.id}`);
@@ -458,4 +460,49 @@ test("the bot lists linked Discord accounts with badges", async () => {
   expect((await get("Bearer nope")).status).toBe(403);
   const list = await (await get("Bearer k")).json();
   expect(list).toEqual([{ discord: "42", name: "Linked", badges: Date.now() < Date.UTC(2027, 0, 1) ? ["early"] : [] }]);
+});
+
+test("roadmap votes toggle once per network", async () => {
+  const vote = (id: string) => app.request(`/v1/roadmap/${id}/vote`, { method: "POST", headers: { "cf-connecting-ip": ip, origin: "https://kromvia.com" } }, env);
+  const item = (list: any[]) => list.find((x) => x.id === "crash-bisect");
+  expect((await vote("nope")).status).toBe(404);
+  const first = await vote("crash-bisect");
+  expect(first.headers.get("access-control-allow-origin")).toBe("https://kromvia.com");
+  expect(item(await first.json())).toEqual({ id: "crash-bisect", votes: 1, voted: true });
+  ip = "198.51.100.9";
+  expect(item(await (await vote("crash-bisect")).json())).toEqual({ id: "crash-bisect", votes: 2, voted: true });
+  expect(item(await (await vote("crash-bisect")).json())).toEqual({ id: "crash-bisect", votes: 1, voted: false });
+  const list = await (await app.request("/v1/roadmap", { headers: { "cf-connecting-ip": ip } }, env)).json();
+  expect(item(list)).toEqual({ id: "crash-bisect", votes: 1, voted: false });
+  expect(list.find((x: any) => x.id === "portable")).toEqual({ id: "portable", votes: 0, voted: false });
+});
+
+test("room mods are shared with friends only", async () => {
+  const a = await signup("Hosty");
+  const b = await signup("Guesty");
+  const s = await signup("Outsider");
+  await befriend(a, b, "Guesty");
+  expect((await call(b, "GET", `/v1/friends/${a.id}/room-mods`)).status).toBe(404);
+  expect((await call(a, "PUT", "/v1/me/room-mods", { mods: [{ p: "../x", v: "AABBCCDD" }] })).status).toBe(400);
+  const mods = [{ p: "P7dR8mSH", v: "AABBCCDD" }];
+  expect((await call(a, "PUT", "/v1/me/room-mods", { mods })).status).toBe(200);
+  expect((await call(b, "GET", `/v1/friends/${a.id}/room-mods`)).json).toEqual({ mods });
+  expect((await call(s, "GET", `/v1/friends/${a.id}/room-mods`)).status).toBe(403);
+  await call(a, "DELETE", "/v1/me/room-mods");
+  expect((await call(b, "GET", `/v1/friends/${a.id}/room-mods`)).status).toBe(404);
+});
+
+test("perf runs and crashes feed mod insight", async () => {
+  const A = "AAAAAAAA", B = "BBBBBBBB", C = "CCCCCCCC";
+  const post = (path: string, body: unknown, from: string) => app.request(path, { method: "POST", body: JSON.stringify(body), headers: { "cf-connecting-ip": from } }, env);
+  const run = (n: number, projects: string[], fps: number) => post("/perf", { launcher: "0.1.15", os: "linux", gpu: "NVIDIA GeForce RTX 3060/PCIe/SSE2", cpu: "x", ramGb: 16, mc: "1.21.11", loader: "fabric", projects, fpsAvg: fps, fpsLow: fps / 2, seconds: 600 }, `198.51.100.${n}`);
+  expect((await post("/perf", { os: "linux" }, "198.51.100.1")).status).toBe(400);
+  for (let i = 1; i <= 6; i++) expect((await run(i, [A, C], 100)).status).toBe(201);
+  for (let i = 11; i <= 16; i++) await run(i, [A, B, C], 70);
+  const crash = { launcher: "0.1.15", os: "linux", arch: "x86_64", mc: "1.21.11", cause: "brokenMod", mods: [], projects: [A, B], log: "x", report: "" };
+  for (let i = 21; i <= 24; i++) await post("/crashes", crash, `198.51.100.${i}`);
+  const res = await app.request(`/perf/insight?mod=${B}&gpu=${encodeURIComponent("NVIDIA GeForce RTX 3060/PCIe/SSE2")}&mc=1.21.11&with=${A},${C}`, { headers: { "cf-connecting-ip": ip } }, env);
+  const body = (await res.json()) as any;
+  expect(body.cost).toEqual({ fps: 30, with: 6, without: 6 });
+  expect(body.pairs).toEqual([{ project: A, crashed: 4, rate: 0.4 }]);
 });

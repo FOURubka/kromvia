@@ -85,6 +85,10 @@ public final class Cosmetics {
 		return cape;
 	}
 
+	public static String customStyle(String style, String art) {
+		return style;
+	}
+
 	public static void useCape(String style) {
 		Cosmetics.style = style == null ? "kromvia" : style;
 		cape = null;

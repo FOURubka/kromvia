@@ -1,27 +1,11 @@
 import type { Lang } from "./i18n-shared";
+import MODULES_JSON from "./modules.json";
 
-export const MODULES: Record<"PvP" | "HUD" | "Utility & visuals", string[]> = {
-  PvP: [
-    "1.7 Animations", "Armor Status", "Armour Break Alert", "Attack Indicator", "Bow Charge", "Combo Counter", "CPS",
-    "Crosshair", "Damage Tint by Type", "Durability Alert", "Freelook", "Hit Bubbles", "Hit Colour",
-    "Hit Particle Colour", "Hit Particles", "Hit Sound", "Hitboxes", "Item Counter", "Keystrokes", "Low HP Warning",
-    "Potion Effects", "Reach Display", "Snaplook", "Stretched 4:3", "Target HUD", "Target Marker", "Totem Pop Counter",
-    "Visible Damage",
-  ],
-  HUD: [
-    "Biome", "Clock", "Compass", "Coordinates", "Day Counter", "Detailed Armour Bar", "Effect Bars", "Effect Timers",
-    "Food & Saturation", "FPS", "Light Level", "Lyrics", "Memory", "Music", "Pack Display", "Ping", "Scoreboard", "Server Address",
-    "Server TPS", "Session Time", "Speed", "Vanilla HUD",
-  ],
-  "Utility & visuals": [
-    "Ambience", "Auto Sprint", "Behind You", "Better Chat", "Block Outline", "Bobbing", "Camera", "Chat Filter",
-    "Chat History", "Chat Macros", "Chat Timestamps", "Chat Tools", "China Hat", "Clear Weather",
-    "Confirm Disconnect", "Crash Patch", "Custom FOV", "Death Coordinates", "Fullbright", "Gamma per Dimension", "Glint Colour", "Hand Position",
-    "Hand Sway", "Hide Scoreboard", "Inventory", "Inventory Scale", "IRL Weather", "Jump Circles", "Kromvia Players",
-    "Low Fire", "Motion Blur", "Nametags", "No Fog", "No Hurt Cam", "No Pumpkin Blur", "Numeric Tab Ping", "Overlays",
-    "Particles", "Screen Colours", "Sound Volumes", "Time Changer", "Toggle Sneak", "Trails", "Weather", "Zoom",
-  ],
-};
+export type ModuleEntry = { id: string; name: string; cat: "PvP" | "HUD" | "Utility & visuals"; text: string };
+export const MODULE_LIST = MODULES_JSON as ModuleEntry[];
+
+export const MODULES: Record<ModuleEntry["cat"], string[]> = { PvP: [], HUD: [], "Utility & visuals": [] };
+for (const m of MODULE_LIST) MODULES[m.cat].push(m.name);
 
 export const MODULE_COUNT = Object.values(MODULES).reduce((n, l) => n + l.length, 0);
 

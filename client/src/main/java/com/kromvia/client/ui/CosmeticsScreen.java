@@ -135,7 +135,7 @@ public class CosmeticsScreen extends KScreen {
 	@Override
 	protected void drawBackground(Gfx g, int mouseX, int mouseY, float delta) {
 		if (minecraft.level == null) drawPanorama(g, delta);
-		g.fill(0, 0, width, height, 0xC80B0D11);
+		UiStyle.dim(g, width, height, 1);
 		UiStyle.panel(g, 8, 30, split - 16, height - 66);
 	}
 

@@ -1,18 +1,17 @@
 import { useEffect } from "react";
 import type { SkinViewer } from "skinview3d";
-import { capeTexture, type CapeStyle } from "./capes";
+import { capeFor } from "./capes";
 import { wearDevCape } from "./devCape";
 import { boxItem, wearBox } from "./procedural";
 import { wear, wearable } from "./wear";
 
-export type Worn = { models?: string[]; items?: string[]; cape?: boolean; style?: string; colors?: Record<string, number>; dev?: boolean };
-
-const STYLES: CapeStyle[] = ["kromvia", "ember", "frost"];
+export type Worn = { models?: string[]; items?: string[]; cape?: boolean; style?: string; art?: string; colors?: Record<string, number>; dev?: boolean };
 
 export function useWorn(viewer: SkinViewer | null, worn: Worn | undefined) {
   const models = (worn?.models ?? []).filter(wearable);
   const items = (worn?.items ?? []).filter((id) => boxItem(id)?.pieces.length);
-  const style = STYLES.includes(worn?.style as CapeStyle) ? (worn!.style as CapeStyle) : "kromvia";
+  const style = worn?.style;
+  const art = worn?.style === "custom" ? worn.art : undefined;
   const wings = models.some((id) => id.startsWith("wings")) || items.some((id) => boxItem(id)?.slot === "back");
   const cape = !!worn?.cape && !wings;
   const dev = cape && !!worn?.dev;
@@ -26,9 +25,9 @@ export function useWorn(viewer: SkinViewer | null, worn: Worn | undefined) {
         viewer.loadCape(null);
       };
     }
-    if (cape) viewer.loadCape(capeTexture(style));
+    if (cape) viewer.loadCape(capeFor(style, art));
     else viewer.loadCape(null);
-  }, [viewer, !!worn, cape, dev, style]);
+  }, [viewer, !!worn, cape, dev, style, art]);
 
   const modelKey = models.join(",");
   useEffect(() => {

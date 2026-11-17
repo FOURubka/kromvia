@@ -4,7 +4,7 @@ import { language, useI18n } from "../i18n";
 import { formatBytes } from "../lib/launcher";
 import { Empty } from "../ui/Empty";
 
-type Run = { started: number; seconds: number; ramAvgMb: number; ramPeakMb: number; cpuAvg: number; mods: string[] };
+type Run = { started: number; seconds: number; ramAvgMb: number; ramPeakMb: number; cpuAvg: number; mods: string[]; fpsAvg?: number | null; fpsLow?: number | null };
 
 const W = 560;
 const H = 180;
@@ -67,6 +67,11 @@ export function Metrics({ instanceId }: { instanceId: string }) {
           <strong>{last ? `${Math.round(last.cpuAvg)}%` : "-"}</strong>
         </div>
         <div className="metric-tile">
+          <span className="muted">{t("metrics.fps")}</span>
+          <strong>{last?.fpsAvg ? Math.round(last.fpsAvg) : "-"}</strong>
+          {last?.fpsLow ? <span className="muted">{t("metrics.low", { v: Math.round(last.fpsLow) })}</span> : null}
+        </div>
+        <div className="metric-tile">
           <span className="muted">{t("metrics.disk")}</span>
           <strong>{disk !== null ? formatBytes(disk) : "-"}</strong>
         </div>
@@ -106,6 +111,11 @@ export function Metrics({ instanceId }: { instanceId: string }) {
               <span>
                 {t("metrics.cpu")}: {Math.round(tip.run.cpuAvg)}%
               </span>
+              {tip.run.fpsAvg ? (
+                <span>
+                  {t("metrics.fps")}: {Math.round(tip.run.fpsAvg)} · {t("metrics.low", { v: Math.round(tip.run.fpsLow ?? 0) })}
+                </span>
+              ) : null}
               {tip.added.length > 0 && <span>+ {tip.added.slice(0, 3).join(", ")}{tip.added.length > 3 ? ` +${tip.added.length - 3}` : ""}</span>}
               {tip.removed.length > 0 && <span>− {tip.removed.slice(0, 3).join(", ")}{tip.removed.length > 3 ? ` +${tip.removed.length - 3}` : ""}</span>}
             </div>

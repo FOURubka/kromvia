@@ -1,0 +1,13 @@
+PackageIdentifier: Kromvia.Kromvia
+PackageVersion: @VERSION@
+InstallerType: nullsoft
+Scope: user
+UpgradeBehavior: install
+Protocols:
+  - kromvia
+Installers:
+  - Architecture: x64
+    InstallerUrl: @EXE_URL@
+    InstallerSha256: @EXE_SHA256@
+ManifestType: installer
+ManifestVersion: 1.9.0

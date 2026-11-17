@@ -1,0 +1,18 @@
+pkgname=kromvia-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="Minecraft launcher with a built-in client"
+arch=('x86_64')
+url="https://kromvia.com"
+license=('LicenseRef-Kromvia')
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator')
+provides=('kromvia')
+conflicts=('kromvia')
+options=('!strip' '!debug')
+source=("Kromvia_${pkgver}_amd64.deb::@DEB_URL@")
+sha256sums=('@DEB_SHA256@')
+
+package() {
+  tar -xzf data.tar.gz -C "$pkgdir"
+  touch "$pkgdir/usr/lib/Kromvia/package-managed"
+}

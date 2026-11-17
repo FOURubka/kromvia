@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BeeCards } from "@/components/BeeCard";
 import { Glyph } from "@/components/Glyph";
-import { content, FORGE_VERSIONS, MODULE_COUNT, MODULES, VERSIONS } from "@/lib/content";
+import { ModuleSearch } from "@/components/ModuleSearch";
+import { content, FORGE_VERSIONS, MODULE_COUNT, MODULE_LIST, VERSIONS } from "@/lib/content";
 import { getLang } from "@/lib/i18n";
 import s from "./features.module.css";
 
@@ -14,6 +15,7 @@ const T = {
     launcher: "Launcher", client: "Built-in client",
     clientNote: `Runs on Fabric and Quilt for Minecraft ${VERSIONS}, and on Forge and NeoForge for ${FORGE_VERSIONS}. Press Right Shift in any instance to open it.`,
     download: "Download Kromvia",
+    search: "Search modules", none: "No module matches that.",
   },
   uk: {
     meta: { title: "Можливості", description: `Усе в лаунчері Kromvia і його вбудованому клієнті: ${MODULE_COUNT}+ модулів, будь-яка версія, будь-який лоадер.` },
@@ -22,6 +24,7 @@ const T = {
     launcher: "Лаунчер", client: "Вбудований клієнт",
     clientNote: `Працює на Fabric і Quilt для Minecraft ${VERSIONS.replace(" to ", " до ")}, а на Forge і NeoForge для ${FORGE_VERSIONS.replace(" to ", "–")}. Натисни Right Shift у будь-якій збірці, щоб відкрити.`,
     download: "Завантажити Kromvia",
+    search: "Пошук модулів", none: "Такого модуля нема.",
   },
 };
 
@@ -56,20 +59,7 @@ export default async function Features() {
         <h2>{t.client}</h2>
         <p className="muted">{t.clientNote}</p>
         <BeeCards cards={CLIENT} />
-        <div className={s.modules}>
-          {Object.entries(MODULES).map(([cat, list]) => (
-            <div key={cat} className={`block ${s.cat}`}>
-              <h3>
-                {CATEGORIES[cat] ?? cat} <span className="dim">{list.length}</span>
-              </h3>
-              <ul>
-                {list.map((m) => (
-                  <li key={m}>{m}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+        <ModuleSearch modules={MODULE_LIST} cats={CATEGORIES} placeholder={t.search} empty={t.none} />
       </section>
 
       <div className={s.cta}>

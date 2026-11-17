@@ -55,7 +55,7 @@ fn payload(method: &str, path: &str, time: &str, body: &[u8]) -> String {
     format!("{method}\n{path}\n{time}\n{hash}")
 }
 
-fn signed(method: &str, path: &str, body: &[u8]) -> Result<[(&'static str, String); 3], String> {
+pub(crate) fn signed(method: &str, path: &str, body: &[u8]) -> Result<[(&'static str, String); 3], String> {
     let key = device_key()?;
     let time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis().to_string();
     let sig = key.sign(payload(method, path, &time, body).as_bytes());
@@ -85,7 +85,7 @@ async fn call(method: Method, path: &str, body: Option<Value>) -> Result<Value, 
     }
 }
 
-async fn send(method: Method, path: &str, body: Option<Value>) -> Result<Value, String> {
+pub(crate) async fn send(method: Method, path: &str, body: Option<Value>) -> Result<Value, String> {
     call(method, path, body).await.map_err(|(_, e)| e)
 }
 
@@ -214,6 +214,18 @@ pub async fn party_room(room: Option<&str>) -> Result<Value, String> {
     send(Method::PUT, "/v1/party/room", Some(json!({ "room": room }))).await
 }
 
+pub async fn room_mods_put(mods: Value) -> Result<Value, String> {
+    send(Method::PUT, "/v1/me/room-mods", Some(json!({ "mods": mods }))).await
+}
+
+pub async fn room_mods_clear() -> Result<Value, String> {
+    send(Method::DELETE, "/v1/me/room-mods", None).await
+}
+
+pub async fn room_mods(friend: &str) -> Result<Value, String> {
+    send(Method::GET, &format!("/v1/friends/{}/room-mods", id(friend)?), None).await
+}
+
 fn sync_key(key: &str) -> Result<&str, String> {
     if !key.is_empty() && key.len() <= 64 && key.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b)) {
         Ok(key)
@@ -274,6 +286,12 @@ pub async fn shared(code: &str) -> Result<Value, String> {
     send(Method::GET, &format!("/share/{code}"), None).await
 }
 
+pub fn norm_host(raw: &str) -> String {
+    let h = raw.trim().to_ascii_lowercase();
+    let h = h.strip_suffix(":25565").unwrap_or(&h);
+    h.strip_suffix('.').unwrap_or(h).to_string()
+}
+
 #[derive(Default)]
 pub struct Live(Mutex<Option<UnboundedSender<String>>>, Arc<Mutex<Option<String>>>);
 
@@ -295,6 +313,11 @@ impl Live {
         if let Some(tx) = slot.as_ref() {
             let _ = tx.send(msg);
         }
+    }
+
+    pub fn host(&self) -> Option<String> {
+        let msg = self.1.lock().unwrap_or_else(|e| e.into_inner()).clone()?;
+        serde_json::from_str::<Value>(&msg).ok()?["host"].as_str().map(norm_host)
     }
 
     pub fn send(&self, msg: Value) -> Result<(), String> {

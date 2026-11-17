@@ -10,7 +10,7 @@ import net.minecraft.world.item.Items;
 
 public class EffectsModule extends Module {
 	public EffectsModule() {
-		super("effects", "Potion Effects", Category.PVP, Corner.TOP_RIGHT, true);
+		super("effects", "Potion Effects", Category.PVP, Corner.TOP_RIGHT, false);
 		icon(Items.POTION);
 	}
 

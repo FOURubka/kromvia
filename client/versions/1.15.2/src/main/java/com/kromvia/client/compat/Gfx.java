@@ -94,16 +94,21 @@ public final class Gfx {
 	}
 
 	public void drawCenteredString(Font font, String text, int x, int y, int color) {
-		TEXT.drawCenteredString(font, text, x, y, color);
+		drawString(font, text, x - font.width(text) / 2, y, color, false);
 	}
 
 	public void drawCenteredString(Font font, Component text, int x, int y, int color) {
-		TEXT.drawCenteredString(font, text.getColoredString(), x, y, color);
+		drawCenteredString(font, text.getColoredString(), x, y, color);
 	}
 
 	public void renderItem(ItemStack stack, int x, int y) {
 		RenderSystem.enableDepthTest();
 		Minecraft.getInstance().getItemRenderer().renderGuiItem(stack, x, y);
+	}
+
+	public void itemDecorations(ItemStack stack, int x, int y) {
+		RenderSystem.enableDepthTest();
+		Minecraft.getInstance().getItemRenderer().renderGuiItemDecorations(Minecraft.getInstance().font, stack, x, y);
 	}
 
 	public void blit(ResourceLocation texture, int x, int y, float u, float v, int w, int h, int regionW, int regionH, int texW, int texH, int color) {
@@ -202,5 +207,9 @@ public final class Gfx {
 		static void draw(int x1, int y1, int x2, int y2, int top, int bottom) {
 			new Gradient().fillGradient(x1, y1, x2, y2, top, bottom);
 		}
+	}
+
+	public Object raw() {
+		return null;
 	}
 }

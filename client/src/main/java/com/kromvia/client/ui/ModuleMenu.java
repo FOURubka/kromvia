@@ -105,6 +105,8 @@ public class ModuleMenu extends KScreen {
 		addRenderableWidget(new KButton(px + 8, py + ph - 78 + lift, SIDEBAR - 16, 20, Component.literal("Edit HUD"),
 				b -> Mc.setScreen(new HudEditor(this))).appear(200));
 		if (lift == 0) {
+			addRenderableWidget(new KButton(px + 8, py + ph - 126, SIDEBAR - 16, 20, Component.literal("Get mods"),
+					b -> Mc.setScreen(new ModsScreen(this))).appear(120));
 			addRenderableWidget(new KButton(px + 8, py + ph - 54, SIDEBAR - 16, 20, Component.literal("Wardrobe"),
 					b -> Mc.setScreen(new CosmeticsScreen(this))).appear(240));
 		}
@@ -132,7 +134,7 @@ public class ModuleMenu extends KScreen {
 			});
 			KButton gear = null;
 			if (!m.settings.isEmpty()) {
-				gear = new KButton(0, 0, 14, 14, Component.literal("⚙"), b -> Mc.setScreen(new ModuleSettingsScreen(this, m)));
+				gear = new KButton(0, 0, 14, 14, Component.literal("⚙"), b -> Mc.setScreen(new ModuleSettingsScreen(this, m))).plain();
 				addWidget(gear);
 			}
 			KButton star = new KButton(0, 0, 14, 14, Component.literal(starLabel(m)), b -> {
@@ -254,20 +256,19 @@ public class ModuleMenu extends KScreen {
 		g.pose().pushMatrix();
 		zoom(g, t);
 		UiStyle.panel(g, px, py, pw, ph);
-		g.fill(px + SIDEBAR, py + 1, px + SIDEBAR + 1, py + ph - 1, UiStyle.LINE);
+		g.fill(px + SIDEBAR, py + 12, px + SIDEBAR + 1, py + ph - 12, 0x22FFFFFF);
 
 		int sx = px + SIDEBAR + 10, sw = pw - SIDEBAR - 20;
 		boolean focused = search != null && search.isFocused();
-		g.fill(sx, py + 8, sx + sw, py + 28, 0xFF0D1014);
-		g.fill(sx, py + 27, sx + sw, py + 28, focused ? UiStyle.FRONT : UiStyle.LINE);
-		g.drawString(font, "⌕", sx + 6, py + 14, focused ? UiStyle.FRONT : UiStyle.MUTED, false);
+		UiStyle.plain(g, sx, py + 8, sw, 20, 8, 0x9A18181D, focused ? 0xB08B5CF6 : 0x16FFFFFF, 1);
+		g.drawString(font, "⌕", sx + 6, py + 14, UiStyle.MUTED, false);
 
 		int sel = favOnly ? CATEGORY_NAMES.length : category == null ? 0 : category.ordinal() + 1;
 		float target = py + 40 + sel * TAB;
 		marker = marker < 0 ? target : Mth.lerp(0.3F, marker, target);
 		int my = Math.round(marker);
-		g.fill(px + 8, my, px + SIDEBAR - 8, my + TAB - 2, 0xFF1C1633);
-		g.fill(px + 8, my, px + 10, my + TAB - 2, UiStyle.FRONT);
+		UiStyle.plain(g, px + 8, my, SIDEBAR - 16, TAB - 2, 8, 0x1CFFFFFF, 0x10FFFFFF, 1);
+		UiStyle.round(g, px + 8, my + 5, px + 10, my + TAB - 7, 1, UiStyle.FRONT);
 		g.pose().popMatrix();
 	}
 
@@ -298,25 +299,24 @@ public class ModuleMenu extends KScreen {
 			hoverSince = System.currentTimeMillis();
 		}
 
-		g.fillGradient(px + SIDEBAR + 1, gridTop(), px + pw - 1, gridTop() + 8, 0xF6090B0E, 0x00090B0E);
-		g.fillGradient(px + SIDEBAR + 1, gridBottom() - 8, px + pw - 1, gridBottom(), 0x00090B0E, 0xF6090B0E);
 		int max = maxScroll();
 		if (max > 0) {
 			int track = gridBottom() - gridTop();
 			int bar = Math.max(16, track * track / (track + max));
 			int by = gridTop() + Math.round((track - bar) * (scroll / max));
-			g.fill(px + pw - 4, by, px + pw - 2, by + bar, 0x668B5CF6);
+			UiStyle.round(g, px + pw - 5, by, px + pw - 2, by + bar, 1.5F, 0x998B5CF6);
 		}
 
 		UiStyle.logo(g, px + 8, py + 9, 18);
 		g.drawString(font, "KROMVIA", px + 30, py + 11, UiStyle.TEXT, false);
-		g.drawString(font, "client", px + 30, py + 21, UiStyle.SIDE, false);
+		g.drawString(font, "client", px + 30, py + 21, UiStyle.MUTED, false);
 		int on = 0;
 		for (Card c : cards) if (c.module.enabled) on++;
 		String count = on + " / " + cards.size() + " enabled";
 		g.drawString(font, count, px + 10, py + 40 + TABS * TAB + 6, UiStyle.MUTED, false);
-		g.fill(px + 10, py + 40 + TABS * TAB + 18, px + 10 + Math.round((SIDEBAR - 20) * on / (float) cards.size()),
-				py + 40 + TABS * TAB + 20, UiStyle.FRONT);
+		int barY = py + 40 + TABS * TAB + 18;
+		UiStyle.round(g, px + 10, barY, px + SIDEBAR - 10, barY + 3, 1.5F, 0x22FFFFFF);
+		UiStyle.round(g, px + 10, barY, px + 10 + Math.max(3, Math.round((SIDEBAR - 20) * on / (float) cards.size())), barY + 3, 1.5F, UiStyle.FRONT);
 		g.pose().popMatrix();
 		if (hovered != null && System.currentTimeMillis() - hoverSince > 350) tooltip(g, ModuleInfo.description(hovered.module), mouseX, mouseY);
 	}
@@ -339,9 +339,7 @@ public class ModuleMenu extends KScreen {
 		for (String l : lines) w = Math.max(w, font.width(l));
 		int h = lines.size() * 10 + 6;
 		int x = Math.min(mouseX + 10, width - w - 12), y = Math.min(mouseY + 12, height - h - 4);
-		g.fill(x - 1, y - 1, x + w + 9, y + h + 1, UiStyle.LINE);
-		g.fill(x, y, x + w + 8, y + h, 0xFF0B0D11);
-		g.fill(x, y, x + 2, y + h, UiStyle.FRONT);
+		UiStyle.plain(g, x, y, w + 8, h, 6, 0xF0121216, 0x20FFFFFF, 1);
 		for (int i = 0; i < lines.size(); i++) g.drawString(font, lines.get(i), x + 6, y + 4 + i * 10, UiStyle.TEXT, false);
 	}
 

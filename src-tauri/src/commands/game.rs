@@ -120,8 +120,46 @@ pub fn game_launch(
     join: Option<String>,
     world: Option<String>,
     room: Option<bool>,
+    safe: Option<bool>,
 ) -> Result<u64, String> {
-    launch::start(&app, &jobs, instance_id, username, account_id, LaunchOptions { join, world, room: room.unwrap_or(false) })
+    launch::start(&app, &jobs, instance_id, username, account_id, LaunchOptions { join, world, room: room.unwrap_or(false), safe: safe.unwrap_or(false), ..LaunchOptions::default() })
+}
+
+#[tauri::command]
+pub fn instance_regression(id: String) -> Option<crate::engine::metrics::Regression> {
+    crate::engine::metrics::regression(&crate::engine::metrics::list(&id))
+}
+
+#[tauri::command]
+pub async fn instance_history(id: String) -> Result<Vec<crate::engine::history::Entry>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::engine::history::snapshot(&id, "change")?;
+        Ok(crate::engine::history::list(&id))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn instance_history_restore(games: State<'_, Games>, id: String, commit: Option<String>, mod_set: Option<String>) -> Result<(), String> {
+    if games.list().iter().any(|r| r.instance_id == id) {
+        return Err("stop the game first".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let commit = match (commit, mod_set) {
+            (Some(c), _) => c,
+            (None, Some(set)) => crate::engine::history::find_set(&id, &set).ok_or("no saved point has those mods")?,
+            _ => return Err("nothing to restore".into()),
+        };
+        crate::engine::history::restore(&id, &commit)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub fn game_room_join(app: AppHandle, jobs: State<'_, Jobs>, instance_id: String, friend: String, room: String, username: String, account_id: Option<String>) -> Result<u64, String> {
+    launch::room_join(&app, &jobs, instance_id, friend, room, username, account_id)
 }
 
 #[tauri::command]
@@ -135,8 +173,8 @@ pub fn game_stop(games: State<'_, Games>, run_id: u64) -> bool {
 }
 
 #[tauri::command]
-pub fn game_toast(games: State<'_, Games>, title: String, text: String) {
-    games.toast(&title, &text);
+pub fn game_toast(games: State<'_, Games>, title: String, text: String, action: Option<serde_json::Value>) {
+    games.toast(&title, &text, action);
 }
 
 #[tauri::command]
@@ -165,6 +203,30 @@ pub fn crash_reports_get() -> bool {
 }
 
 #[tauri::command]
+pub fn perf_reports_get() -> bool {
+    crate::engine::perf::enabled()
+}
+
+#[tauri::command]
+pub fn perf_reports_set(on: bool) -> Result<(), String> {
+    crate::engine::perf::set_enabled(on)
+}
+
+#[tauri::command]
+pub async fn content_titles(ids: Vec<String>) -> Result<std::collections::HashMap<String, String>, String> {
+    let ids: Vec<String> = ids.into_iter().filter(|i| i.len() <= 64 && i.bytes().all(|b| b.is_ascii_alphanumeric())).take(20).collect();
+    crate::engine::content::modrinth::titles(&ids).await
+}
+
+#[tauri::command]
+pub async fn mod_insight(instance_id: String, project: String) -> Result<serde_json::Value, String> {
+    if project.len() > 64 || !project.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_') {
+        return Err("bad project".into());
+    }
+    crate::engine::perf::insight(&instance_id, &project).await
+}
+
+#[tauri::command]
 pub fn crash_reports_set(on: bool) -> Result<(), String> {
     crate::engine::game::report::set_enabled(on)
 }
@@ -173,4 +235,17 @@ pub fn crash_reports_set(on: bool) -> Result<(), String> {
 pub async fn crash_report_send(reports: State<'_, crate::engine::game::report::Reports>, instance_id: String) -> Result<(), String> {
     let report = reports.take(&instance_id).ok_or("this crash report is gone, restart the game to get a new one")?;
     crate::engine::game::report::send(&report).await
+}
+
+#[tauri::command]
+pub async fn bug_report_send(note: String) -> Result<(), String> {
+    if note.trim().is_empty() {
+        return Err("describe the bug first".into());
+    }
+    crate::engine::game::report::send(&crate::engine::game::report::bug(&note)).await
+}
+
+#[tauri::command]
+pub async fn support_report_send(instance_id: String, log: String, note: String) -> Result<(), String> {
+    crate::engine::game::report::send(&crate::engine::game::report::support(&instance_id, &log, &note)).await
 }

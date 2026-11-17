@@ -1,14 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import { wearable } from "../art/wear";
 import { boxItem } from "../art/procedural";
-import { capeTexture, type CapeStyle } from "../art/capes";
+import { capeFor, type CapeStyle } from "../art/capes";
 import type { Worn } from "../art/worn";
 
 export const OUTFIT_KEY = "kromvia.outfit";
 
 export type Back = "none" | "cape" | "elytra";
 export type OutfitSlot = "head" | "face" | "neck" | "back" | "weapon" | "body" | "feet" | "effect";
-export type Outfit = { equipped: Partial<Record<OutfitSlot, string>>; back: Back; style: CapeStyle; colors?: Record<string, number>; dev?: boolean };
+export type OutfitStyle = CapeStyle | "custom";
+export type Outfit = { equipped: Partial<Record<OutfitSlot, string>>; back: Back; style: OutfitStyle; art?: string; colors?: Record<string, number>; dev?: boolean };
 
 export const OUTFIT_EVENT = "kromvia-outfit";
 
@@ -27,8 +28,8 @@ export function storeOutfit(o: Outfit) {
   window.dispatchEvent(new Event(OUTFIT_EVENT));
 }
 
-function gameCape(style: CapeStyle) {
-  const src = capeTexture(style);
+function gameCape(style: OutfitStyle, art?: string) {
+  const src = capeFor(style, art);
   const c = document.createElement("canvas");
   c.width = 64;
   c.height = 32;
@@ -43,14 +44,14 @@ function gameCape(style: CapeStyle) {
 
 export function outfitWorn(o: Outfit): Worn {
   const ids = Object.values(o.equipped).filter((id): id is string => !!id);
-  return { models: ids.filter((id) => wearable(id)), items: ids.filter((id) => boxItem(id)), cape: o.back === "cape", style: o.style, colors: o.colors, dev: o.dev };
+  return { models: ids.filter((id) => wearable(id)), items: ids.filter((id) => boxItem(id)), cape: o.back === "cape", style: o.style, ...(o.style === "custom" && o.art ? { art: o.art } : {}), colors: o.colors, dev: o.dev };
 }
 
 export function pushOutfit(o = savedOutfit()) {
   const w = outfitWorn(o);
   return invoke("wardrobe_push", {
     wardrobe: o,
-    capePng: o.back === "cape" ? gameCape(o.style) : null,
+    capePng: o.back === "cape" ? gameCape(o.style, o.art) : null,
     models: w.models,
     items: w.items,
   });

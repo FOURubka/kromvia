@@ -1,0 +1,674 @@
+[
+ {
+  "id": "old-animations",
+  "name": "1.7 Animations",
+  "cat": "PvP",
+  "text": "Brings back the 1.7 swing, block and eat animations."
+ },
+ {
+  "id": "ambience",
+  "name": "Ambience",
+  "cat": "Utility & visuals",
+  "text": "Tints the sky and fog."
+ },
+ {
+  "id": "armor",
+  "name": "Armor Status",
+  "cat": "PvP",
+  "text": "Shows your armour and held item with durability."
+ },
+ {
+  "id": "armor-alert",
+  "name": "Armour Break Alert",
+  "cat": "PvP",
+  "text": "Warns you when a piece of armour is about to break."
+ },
+ {
+  "id": "attack-indicator",
+  "name": "Attack Indicator",
+  "cat": "PvP",
+  "text": "A clearer attack cooldown indicator, per weapon."
+ },
+ {
+  "id": "auto-gg",
+  "name": "Auto GG",
+  "cat": "Utility & visuals",
+  "text": "Says gg for you when a game ends. Knows the big servers, and you can add your own trigger words."
+ },
+ {
+  "id": "auto-respawn",
+  "name": "Auto Respawn",
+  "cat": "Utility & visuals",
+  "text": "Respawns you after you die. Never in hardcore."
+ },
+ {
+  "id": "behind-you",
+  "name": "Behind You (hold V / B)",
+  "cat": "Utility & visuals",
+  "text": "Hold V to look behind you, B for the front view."
+ },
+ {
+  "id": "better-chat",
+  "name": "Better Chat",
+  "cat": "Utility & visuals",
+  "text": "Stacks repeated messages, keeps chat between worlds, slide-in and a nicer background."
+ },
+ {
+  "id": "biome",
+  "name": "Biome",
+  "cat": "HUD",
+  "text": "Shows the biome you are standing in."
+ },
+ {
+  "id": "block-outline",
+  "name": "Block Outline",
+  "cat": "Utility & visuals",
+  "text": "Changes the colour and thickness of the block outline."
+ },
+ {
+  "id": "bobbing",
+  "name": "Bobbing",
+  "cat": "Utility & visuals",
+  "text": "Turns screen and hand bobbing on or off one by one."
+ },
+ {
+  "id": "bow-charge",
+  "name": "Bow Charge",
+  "cat": "PvP",
+  "text": "Shows how far your bow or crossbow is drawn."
+ },
+ {
+  "id": "camera",
+  "name": "Camera",
+  "cat": "Utility & visuals",
+  "text": "Third person distance and FOV changes for sprint, flying and bows."
+ },
+ {
+  "id": "chat-filter",
+  "name": "Chat Filter",
+  "cat": "Utility & visuals",
+  "text": "Hides or highlights messages with the words you pick."
+ },
+ {
+  "id": "chat-history",
+  "name": "Chat History",
+  "cat": "Utility & visuals",
+  "text": "Keeps your sent messages after you restart the game."
+ },
+ {
+  "id": "chat-macros",
+  "name": "Chat Macros (F6-F9)",
+  "cat": "Utility & visuals",
+  "text": "Send a message or command with F6 to F9."
+ },
+ {
+  "id": "chat-time",
+  "name": "Chat Timestamps",
+  "cat": "Utility & visuals",
+  "text": "Adds the time to every chat message."
+ },
+ {
+  "id": "chat-tools",
+  "name": "Chat Tools",
+  "cat": "Utility & visuals",
+  "text": "Copy or delete messages, preview images and safer clickable commands."
+ },
+ {
+  "id": "china-hat",
+  "name": "China Hat",
+  "cat": "Utility & visuals",
+  "text": "A see-through cone hat over your head."
+ },
+ {
+  "id": "clear-weather",
+  "name": "Clear Weather",
+  "cat": "Utility & visuals",
+  "text": "Hides rain and snow on your screen. The server still has weather."
+ },
+ {
+  "id": "clock",
+  "name": "Clock",
+  "cat": "HUD",
+  "text": "Shows the real time on your computer."
+ },
+ {
+  "id": "colour-filter",
+  "name": "Colour Blind Filter",
+  "cat": "Utility & visuals",
+  "text": "Shifts colours so reds, greens or blues you can't tell apart stand out from each other."
+ },
+ {
+  "id": "combo",
+  "name": "Combo Counter",
+  "cat": "PvP",
+  "text": "Counts hits in a row without getting hit back."
+ },
+ {
+  "id": "compass",
+  "name": "Compass",
+  "cat": "HUD",
+  "text": "A compass strip at the top of the screen."
+ },
+ {
+  "id": "confirm-disconnect",
+  "name": "Confirm Disconnect",
+  "cat": "Utility & visuals",
+  "text": "Asks before you leave a server."
+ },
+ {
+  "id": "coords",
+  "name": "Coordinates",
+  "cat": "HUD",
+  "text": "Shows your X, Y and Z position and the way you are facing."
+ },
+ {
+  "id": "cps",
+  "name": "CPS",
+  "cat": "PvP",
+  "text": "Shows how many times you click per second, left and right."
+ },
+ {
+  "id": "crash-patch",
+  "name": "Crash Patch",
+  "cat": "Utility & visuals",
+  "text": "If the game crashes in a world, it takes you to a menu instead of closing."
+ },
+ {
+  "id": "crosshair",
+  "name": "Crosshair",
+  "cat": "PvP",
+  "text": "Your own crosshair: style, size, gap and colour."
+ },
+ {
+  "id": "custom-fov",
+  "name": "Custom FOV",
+  "cat": "Utility & visuals",
+  "text": "Sets your field of view past the vanilla limit."
+ },
+ {
+  "id": "damage-tint",
+  "name": "Damage Tint by Type",
+  "cat": "PvP",
+  "text": "Tints the hurt flash by what hurt you: fire, fall, poison and so on."
+ },
+ {
+  "id": "day",
+  "name": "Day Counter",
+  "cat": "HUD",
+  "text": "Shows which in-game day the world is on."
+ },
+ {
+  "id": "death-coords",
+  "name": "Death Coordinates",
+  "cat": "Utility & visuals",
+  "text": "Posts where you died in chat so you can find your things."
+ },
+ {
+  "id": "armor-bar",
+  "name": "Detailed Armour Bar",
+  "cat": "HUD",
+  "text": "A clearer armour bar, with the exact number if you want it."
+ },
+ {
+  "id": "durability",
+  "name": "Durability Alert",
+  "cat": "PvP",
+  "text": "Warns you when your held tool or weapon is low on durability."
+ },
+ {
+  "id": "easy-place",
+  "name": "Easy Place",
+  "cat": "Utility & visuals",
+  "text": "Place blocks on doors, trapdoors, chests and other usable blocks without sneaking."
+ },
+ {
+  "id": "effect-bars",
+  "name": "Effect Bars",
+  "cat": "HUD",
+  "text": "Draws a draining bar under each vanilla effect icon."
+ },
+ {
+  "id": "effect-timers",
+  "name": "Effect Timers",
+  "cat": "HUD",
+  "text": "Puts the time left on the vanilla effect icons."
+ },
+ {
+  "id": "elytra",
+  "name": "Elytra HUD",
+  "cat": "HUD",
+  "text": "While gliding: speed, pitch, elytra durability and how many rockets you have."
+ },
+ {
+  "id": "saturation",
+  "name": "Food & Saturation",
+  "cat": "HUD",
+  "text": "Shows your hunger and hidden saturation."
+ },
+ {
+  "id": "fps",
+  "name": "FPS",
+  "cat": "HUD",
+  "text": "Shows your frames per second."
+ },
+ {
+  "id": "free-slots",
+  "name": "Free Slots",
+  "cat": "HUD",
+  "text": "Shows how many inventory slots are empty, or only warns when you run low."
+ },
+ {
+  "id": "freecam",
+  "name": "Freecam",
+  "cat": "Utility & visuals",
+  "text": "Fly the camera away from your player, great for screenshots. Off on servers unless you allow it."
+ },
+ {
+  "id": "freelook",
+  "name": "Freelook (hold Alt)",
+  "cat": "PvP",
+  "text": "Hold Alt to look around without turning your player."
+ },
+ {
+  "id": "dimension-gamma",
+  "name": "Gamma per Dimension",
+  "cat": "Utility & visuals",
+  "text": "A brightness level for each dimension."
+ },
+ {
+  "id": "glint",
+  "name": "Glint Colour",
+  "cat": "Utility & visuals",
+  "text": "Changes the colour of the enchantment glint."
+ },
+ {
+  "id": "hand-position",
+  "name": "Hand Position",
+  "cat": "Utility & visuals",
+  "text": "Moves and resizes your hand in first person."
+ },
+ {
+  "id": "hand-sway",
+  "name": "Hand Sway",
+  "cat": "Utility & visuals",
+  "text": "Changes how much your hand sways when you turn."
+ },
+ {
+  "id": "health",
+  "name": "Health",
+  "cat": "PvP",
+  "text": "Shows your exact health, with absorption if you want it."
+ },
+ {
+  "id": "held-count",
+  "name": "Held Item Count",
+  "cat": "PvP",
+  "text": "Counts how many of the item in your hand you have in total, handy for blocks."
+ },
+ {
+  "id": "hide-scoreboard",
+  "name": "Hide Scoreboard",
+  "cat": "Utility & visuals",
+  "text": "Hides the sidebar scoreboard."
+ },
+ {
+  "id": "hit-bubbles",
+  "name": "Hit Bubbles",
+  "cat": "PvP",
+  "text": "Pops coloured bubbles where your hit lands."
+ },
+ {
+  "id": "hit-color",
+  "name": "Hit Colour",
+  "cat": "PvP",
+  "text": "Changes the red flash on mobs and players you hit."
+ },
+ {
+  "id": "particle-color",
+  "name": "Hit Particle Colour",
+  "cat": "PvP",
+  "text": "Recolours crit and sharpness particles."
+ },
+ {
+  "id": "hit-particles",
+  "name": "Hit Particles",
+  "cat": "PvP",
+  "text": "Adds more particles when you hit."
+ },
+ {
+  "id": "hit-sound",
+  "name": "Hit Sound",
+  "cat": "PvP",
+  "text": "Plays a sound when you hit someone."
+ },
+ {
+  "id": "hitboxes",
+  "name": "Hitboxes",
+  "cat": "PvP",
+  "text": "Shows entity hitboxes, by type of entity."
+ },
+ {
+  "id": "inventory",
+  "name": "Inventory",
+  "cat": "Utility & visuals",
+  "text": "Inventory tweaks: blur behind it, click outside to close, keep the cursor."
+ },
+ {
+  "id": "inventory-scale",
+  "name": "Inventory Scale",
+  "cat": "Utility & visuals",
+  "text": "A separate GUI scale for chests and other containers."
+ },
+ {
+  "id": "irl-weather",
+  "name": "IRL Weather",
+  "cat": "Utility & visuals",
+  "text": "Matches the in-game weather to the weather where you live."
+ },
+ {
+  "id": "item-counter",
+  "name": "Item Counter",
+  "cat": "PvP",
+  "text": "Counts items in your inventory, like pearls, gapples or arrows."
+ },
+ {
+  "id": "item-tips",
+  "name": "Item Tooltips",
+  "cat": "Utility & visuals",
+  "text": "Adds durability as a number to tooltips and shows what is inside shulker boxes and on maps."
+ },
+ {
+  "id": "jump-circles",
+  "name": "Jump Circles",
+  "cat": "Utility & visuals",
+  "text": "Draws a ring on the ground when you jump."
+ },
+ {
+  "id": "keystrokes",
+  "name": "Keystrokes",
+  "cat": "PvP",
+  "text": "Shows WASD, jump and mouse buttons as you press them."
+ },
+ {
+  "id": "kromvia-players",
+  "name": "Kromvia Players",
+  "cat": "Utility & visuals",
+  "text": "Shows the capes and cosmetics of other Kromvia players."
+ },
+ {
+  "id": "light-level",
+  "name": "Light Level",
+  "cat": "HUD",
+  "text": "Shows the block light level where you stand, handy for mob-proofing."
+ },
+ {
+  "id": "looking-at",
+  "name": "Looking At",
+  "cat": "HUD",
+  "text": "Names the block or mob you are looking at."
+ },
+ {
+  "id": "low-fire",
+  "name": "Low Fire",
+  "cat": "Utility & visuals",
+  "text": "Makes the fire overlay smaller so you can see."
+ },
+ {
+  "id": "low-health",
+  "name": "Low HP Warning",
+  "cat": "PvP",
+  "text": "Tints the screen red when your health gets low."
+ },
+ {
+  "id": "lyrics",
+  "name": "Lyrics",
+  "cat": "HUD",
+  "text": "Shows synced lyrics for the song you are playing."
+ },
+ {
+  "id": "memory",
+  "name": "Memory",
+  "cat": "HUD",
+  "text": "Shows how much RAM the game is using."
+ },
+ {
+  "id": "motion-blur",
+  "name": "Motion Blur",
+  "cat": "Utility & visuals",
+  "text": "Blurs the screen when you move the camera."
+ },
+ {
+  "id": "move-status",
+  "name": "Movement Status",
+  "cat": "HUD",
+  "text": "Shows if you are sprinting, sneaking, swimming, gliding or flying."
+ },
+ {
+  "id": "music",
+  "name": "Music",
+  "cat": "HUD",
+  "text": "Shows the song you are playing. Press M for the music menu."
+ },
+ {
+  "id": "nametags",
+  "name": "Nametags",
+  "cat": "Utility & visuals",
+  "text": "Restyles nametags, shows your own and can hide your nick."
+ },
+ {
+  "id": "nearby",
+  "name": "Nearby Players",
+  "cat": "HUD",
+  "text": "Lists the players near you and how far away they are."
+ },
+ {
+  "id": "nether-coords",
+  "name": "Nether Coords",
+  "cat": "HUD",
+  "text": "Shows where you would come out in the other dimension."
+ },
+ {
+  "id": "no-fog",
+  "name": "No Fog",
+  "cat": "Utility & visuals",
+  "text": "Removes distance fog."
+ },
+ {
+  "id": "no-hurt-cam",
+  "name": "No Hurt Cam",
+  "cat": "Utility & visuals",
+  "text": "Stops the screen shaking when you take damage."
+ },
+ {
+  "id": "no-pumpkin",
+  "name": "No Pumpkin Blur",
+  "cat": "Utility & visuals",
+  "text": "Removes the pumpkin overlay when you wear one."
+ },
+ {
+  "id": "tab-ping",
+  "name": "Numeric Tab Ping",
+  "cat": "Utility & visuals",
+  "text": "Shows ping as a number in the player list."
+ },
+ {
+  "id": "overlays",
+  "name": "Overlays",
+  "cat": "Utility & visuals",
+  "text": "Fire, shield, water, portal and spyglass overlays: lower, see-through or hidden."
+ },
+ {
+  "id": "pack-display",
+  "name": "Pack Display",
+  "cat": "HUD",
+  "text": "Shows which resource packs are on."
+ },
+ {
+  "id": "particles",
+  "name": "Particles",
+  "cat": "Utility & visuals",
+  "text": "Fewer particles, and hides block breaking or explosions if you want."
+ },
+ {
+  "id": "ping",
+  "name": "Ping",
+  "cat": "HUD",
+  "text": "Shows your latency to the server."
+ },
+ {
+  "id": "player-count",
+  "name": "Player Count",
+  "cat": "HUD",
+  "text": "Shows how many players are online."
+ },
+ {
+  "id": "effects",
+  "name": "Potion Effects",
+  "cat": "PvP",
+  "text": "Lists your active potion effects with time left."
+ },
+ {
+  "id": "reach",
+  "name": "Reach Display",
+  "cat": "PvP",
+  "text": "Shows the distance of your last hit."
+ },
+ {
+  "id": "rotation",
+  "name": "Rotation",
+  "cat": "HUD",
+  "text": "Shows your exact yaw and pitch."
+ },
+ {
+  "id": "scoreboard",
+  "name": "Scoreboard",
+  "cat": "HUD",
+  "text": "Restyles the sidebar scoreboard: size, position, background."
+ },
+ {
+  "id": "screen-colours",
+  "name": "Screen Colours",
+  "cat": "Utility & visuals",
+  "text": "Saturation, brightness, contrast and hue for the whole screen."
+ },
+ {
+  "id": "server",
+  "name": "Server Address",
+  "cat": "HUD",
+  "text": "Shows the address of the server you are playing on."
+ },
+ {
+  "id": "tps",
+  "name": "Server TPS",
+  "cat": "HUD",
+  "text": "Estimates the server's ticks per second, so you can tell server lag from your own."
+ },
+ {
+  "id": "session",
+  "name": "Session Time",
+  "cat": "HUD",
+  "text": "Shows how long you have been playing this session."
+ },
+ {
+  "id": "welcome-guide",
+  "name": "Show Welcome Guide",
+  "cat": "Utility & visuals",
+  "text": "Opens the first-launch guide again."
+ },
+ {
+  "id": "snaplook",
+  "name": "Snaplook (hold V)",
+  "cat": "PvP",
+  "text": "Hold V to look at yourself from the front."
+ },
+ {
+  "id": "sounds",
+  "name": "Sound Volumes",
+  "cat": "Utility & visuals",
+  "text": "A volume slider for each kind of sound."
+ },
+ {
+  "id": "speed",
+  "name": "Speed",
+  "cat": "HUD",
+  "text": "Shows how fast you are moving in blocks per second."
+ },
+ {
+  "id": "timer",
+  "name": "Stopwatch & Timer",
+  "cat": "HUD",
+  "text": "A stopwatch that starts when you switch it on, or a countdown. Switch it off and on to restart."
+ },
+ {
+  "id": "stretched",
+  "name": "Stretched 4:3",
+  "cat": "PvP",
+  "text": "Stretches the game to a 4:3 look."
+ },
+ {
+  "id": "target-hud",
+  "name": "Target HUD",
+  "cat": "PvP",
+  "text": "Shows the health and armour of whoever you are fighting."
+ },
+ {
+  "id": "target-marker",
+  "name": "Target Marker",
+  "cat": "PvP",
+  "text": "Draws a marker over the player you are fighting."
+ },
+ {
+  "id": "time-changer",
+  "name": "Time Changer",
+  "cat": "Utility & visuals",
+  "text": "Sets the time of day for you only."
+ },
+ {
+  "id": "toggle-sneak",
+  "name": "Toggle Sneak",
+  "cat": "Utility & visuals",
+  "text": "Press sneak once to stay sneaking."
+ },
+ {
+  "id": "totem-pops",
+  "name": "Totem Pop Counter",
+  "cat": "PvP",
+  "text": "Tells you when someone pops a Totem of Undying, and how many times."
+ },
+ {
+  "id": "trails",
+  "name": "Trails",
+  "cat": "Utility & visuals",
+  "text": "Leaves a coloured trail behind you."
+ },
+ {
+  "id": "vanilla-hud",
+  "name": "Vanilla HUD",
+  "cat": "HUD",
+  "text": "Resizes or hides titles, the action bar and boss bars."
+ },
+ {
+  "id": "visible-damage",
+  "name": "Visible Damage",
+  "cat": "PvP",
+  "text": "Shows the damage of each hit as a number."
+ },
+ {
+  "id": "weather",
+  "name": "Weather",
+  "cat": "Utility & visuals",
+  "text": "Controls rain, snow, lightning and the fishing line."
+ },
+ {
+  "id": "world-time",
+  "name": "World Time",
+  "cat": "HUD",
+  "text": "Shows the in-game time of day as a clock."
+ },
+ {
+  "id": "xp",
+  "name": "XP Level",
+  "cat": "HUD",
+  "text": "Shows your level and how far you are to the next one."
+ }
+]

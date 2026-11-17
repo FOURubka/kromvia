@@ -9,6 +9,7 @@ import { Progress } from "../ui/Progress";
 import { Glyph } from "../ui/Glyph";
 import { usePaged } from "../ui/Pager";
 import { Empty } from "../ui/Empty";
+import { Select } from "../ui/Select";
 
 type World = {
   folder: string;
@@ -21,7 +22,11 @@ type World = {
   icon: string | null;
 };
 type SavedServer = { name: string; address: string; icon: string | null; pinned: boolean };
-type Screenshot = { name: string; path: string; taken: number };
+type Place = { kind: "world" | "server"; name: string };
+type Screenshot = { name: string; path: string; taken: number; place: Place | null };
+type Period = "all" | "day" | "week" | "month";
+const PERIOD_DAYS: Record<Period, number> = { all: 0, day: 1, week: 7, month: 30 };
+const placeKey = (p: Place | null) => (p ? `${p.kind}:${p.name}` : "");
 type Info = {
   stats: { playSeconds: number; launches: number; lastPlayed: number };
   usage: { total: number; saves: number; mods: number; screenshots: number; junk: number };
@@ -273,7 +278,13 @@ export function Screenshots({ inst }: { inst: Instance }) {
     refresh();
   }, [inst.id]);
   const act = (p: Promise<unknown>) => p.then(refresh, (e) => setError(String(e)));
-  const paged = usePaged(shots ?? [], 12);
+  const [where, setWhere] = useState("all");
+  const [period, setPeriod] = useState<Period>("all");
+  useEffect(() => setWhere("all"), [inst.id]);
+  const places = [...new Map((shots ?? []).filter((s) => s.place).map((s) => [placeKey(s.place), s.place!])).entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
+  const since = PERIOD_DAYS[period] ? Date.now() / 1000 - PERIOD_DAYS[period] * 86400 : 0;
+  const shown = (shots ?? []).filter((s) => s.taken >= since && (where === "all" || placeKey(s.place) === where));
+  const paged = usePaged(shown, 12);
 
   return (
     <section className="card">
@@ -288,6 +299,26 @@ export function Screenshots({ inst }: { inst: Instance }) {
         <Empty bee="empty-shots">{t("shots.empty")}</Empty>
       ) : (
         <>
+          <div className="installed-tools">
+            {places.length > 0 && (
+              <Select
+                value={where}
+                options={[
+                  { value: "all", label: t("shots.everywhere") },
+                  ...places.map(([key, p]) => ({ value: key, label: `${p.name} (${t(p.kind === "server" ? "shots.kind.server" : "shots.kind.world")})` })),
+                ]}
+                onChange={setWhere}
+              />
+            )}
+            <div className="segmented">
+              {(["all", "day", "week", "month"] as Period[]).map((p) => (
+                <button key={p} aria-pressed={period === p} onClick={() => setPeriod(p)}>
+                  {t(`shots.period.${p}` as MessageKey)}
+                </button>
+              ))}
+            </div>
+          </div>
+          {shown.length === 0 && <p className="muted">{t("shots.noneHere")}</p>}
           <ul className="shots">
             {paged.items.map((s) => (
               <li key={s.name}>
@@ -295,7 +326,10 @@ export function Screenshots({ inst }: { inst: Instance }) {
                   <img src={convertFileSrc(s.path)} alt={s.name} loading="lazy" />
                 </button>
                 <div className="shot-bar">
-                  <span className="muted small">{new Date(s.taken * 1000).toLocaleString()}</span>
+                  <span className="muted small" title={s.place?.name}>
+                    {new Date(s.taken * 1000).toLocaleString()}
+                    {s.place && ` · ${s.place.name}`}
+                  </span>
                   <button className="btn btn-ghost" title={t("shots.share")} aria-label={t("shots.share")} onClick={() => share(s.name)}>
                     <Glyph name={shared === s.name ? "check" : "copy"} />
                   </button>

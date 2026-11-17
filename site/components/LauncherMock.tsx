@@ -78,7 +78,6 @@ function useDemo(stage: React.RefObject<HTMLDivElement | null>, win: React.RefOb
 export function LauncherMock() {
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number | null>(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const win = useRef<HTMLDivElement>(null);
   useDemo(box, win, scale !== null);
 
@@ -89,21 +88,15 @@ export function LauncherMock() {
     return () => ro.disconnect();
   }, []);
 
-  const move = (e: React.PointerEvent) => {
-    if (e.pointerType !== "mouse") return;
-    const r = box.current!.getBoundingClientRect();
-    setTilt({ x: (e.clientX - r.left) / r.width - 0.5, y: (e.clientY - r.top) / r.height - 0.5 });
-  };
-
   return (
-    <div ref={box} className={s.stage} style={{ height: H * (scale ?? 1), opacity: scale === null ? 0 : 1, transition: "opacity 400ms" }} onPointerMove={move} onPointerLeave={() => setTilt({ x: 0, y: 0 })}>
+    <div ref={box} className={s.stage} style={{ height: H * (scale ?? 1), opacity: scale === null ? 0 : 1, transition: "opacity 400ms" }}>
       <div
         ref={win}
         className={s.window}
         style={{
           width: W,
           height: H,
-          transform: `scale(${scale ?? 1}) perspective(2200px) rotateY(${-13 + tilt.x * 6}deg) rotateX(${4 - tilt.y * 4}deg)`,
+          transform: `scale(${scale ?? 1})`,
         }}
         aria-label="The Kromvia launcher"
         role="img"

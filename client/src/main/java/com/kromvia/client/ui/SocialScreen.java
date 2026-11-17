@@ -84,7 +84,7 @@ public class SocialScreen extends KScreen {
 			int side = (invite ? 24 : 0) + (f.room != null ? 36 : 0);
 			addRenderableWidget(new KButton(x, y, LEFT_W - side, ROW - 2, Component.literal(label), b -> Social.open(f.id),
 					() -> f.id.equals(Social.chatWith())));
-			if (f.room != null) addRenderableWidget(new KButton(x + LEFT_W - side + 2, y, 34, ROW - 2, Component.literal("Join"), b -> join(f.room)));
+			if (f.room != null) addRenderableWidget(new KButton(x + LEFT_W - side + 2, y, 34, ROW - 2, Component.literal("Join"), b -> joinFriend(f.id, f.room)));
 			if (invite) addRenderableWidget(new KButton(x + LEFT_W - 22, y, 22, ROW - 2, Component.literal("+"), b -> Social.invite(f.id)).flat());
 		}
 
@@ -94,7 +94,7 @@ public class SocialScreen extends KScreen {
 			String room = Social.room();
 			int bw = room != null && !Social.leads() ? (rw - 4) / 2 : rw;
 			addRenderableWidget(new KButton(rx, TOP + 26, bw, 20, Component.literal("Leave party"), b -> Social.leave()));
-			if (room != null && !Social.leads()) addRenderableWidget(new KButton(rx + bw + 4, TOP + 26, bw, 20, Component.literal("Join room"), b -> join(room)));
+			if (room != null && !Social.leads()) addRenderableWidget(new KButton(rx + bw + 4, TOP + 26, bw, 20, Component.literal("Join room"), b -> joinFriend(Social.leader(), room)));
 		}
 		int iy = TOP + (Social.inParty() ? 50 : 30);
 		for (Social.Invite inv : Social.invites()) {
@@ -134,9 +134,15 @@ public class SocialScreen extends KScreen {
 		input.setValue("");
 	}
 
-	private void join(String room) {
+	private void joinFriend(String friend, String room) {
+		if (friend != null && com.kromvia.client.Launcher.PRESENT && com.kromvia.client.Accounts.sender != null) Social.joinFriend(friend);
+		else connect(this, room);
+	}
+
+	public static void connect(net.minecraft.client.gui.screens.Screen parent, String room) {
+		net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
 		ServerData data = new ServerData("Kromvia room", room, ServerData.Type.OTHER);
-		ConnectScreen.startConnecting(this, minecraft, ServerAddress.parseString(data.ip), data, false, null);
+		ConnectScreen.startConnecting(parent, mc, ServerAddress.parseString(data.ip), data, false, null);
 	}
 
 	@Override
@@ -171,6 +177,8 @@ public class SocialScreen extends KScreen {
 	@Override
 	protected void drawBackground(Gfx g, int mouseX, int mouseY, float delta) {
 		UiStyle.dim(g, width, height, 1);
+		UiStyle.panel(g, left() - 8, TOP - 10, LEFT_W + 12, bottom() - TOP + 18);
+		UiStyle.panel(g, right() - 8, TOP - 10, rightW() + 16, bottom() - TOP + 18);
 	}
 
 	@Override

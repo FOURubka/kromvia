@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { LANGUAGES, language, setLanguage, useI18n } from "./i18n";
 import { Select } from "./ui/Select";
@@ -17,6 +18,8 @@ import { Rooms } from "./rooms/Rooms";
 import { LauncherProvider, useLauncher } from "./lib/launcher";
 import { JavaSettings } from "./settings/JavaSettings";
 import { Storage } from "./settings/Storage";
+import { Downloads } from "./settings/Downloads";
+import { BugReport } from "./settings/BugReport";
 import { UpdatePrompt, Updates, useUpdate } from "./settings/Updates";
 import { Palette } from "./ui/Palette";
 import { Legal } from "./settings/Legal";
@@ -26,22 +29,23 @@ import { HotkeyHelp, needsOnboarding, Onboarding } from "./home/Onboarding";
 import { Intro } from "./home/Intro";
 import { Wardrobe } from "./skins/Wardrobe";
 import { useTheme, type ThemePref } from "./theme";
-import { Icon, type IconName } from "./ui/Icon";
-import { Glyph } from "./ui/Glyph";
+import { Glyph, type GlyphName } from "./ui/Glyph";
 import { Recover } from "./ui/Recover";
 import { MiniPlayer, miniPlayerOn, setMiniPlayerOn } from "./ui/MiniPlayer";
+import { NoteSources, Notes, NotesBadge } from "./notes/Notes";
 
-type Page = "home" | "profile" | "rooms" | "friends" | "builds" | "content" | "skins" | "accounts" | "settings";
-const PAGES: Page[] = ["home", "profile", "rooms", "friends", "builds", "content", "skins", "accounts", "settings"];
-const ICONS: Record<Page, IconName> = {
+type Page = "home" | "profile" | "rooms" | "friends" | "builds" | "content" | "skins" | "accounts" | "notes" | "settings";
+const PAGES: Page[] = ["home", "profile", "rooms", "friends", "builds", "content", "skins", "accounts", "notes", "settings"];
+const ICONS: Record<Page, GlyphName> = {
   home: "home",
-  profile: "profile",
-  rooms: "rooms",
-  friends: "friends",
-  builds: "library",
-  content: "content",
-  skins: "wardrobe",
-  accounts: "accounts",
+  profile: "user",
+  rooms: "broadcast",
+  friends: "users-group",
+  builds: "layout-grid",
+  content: "package",
+  skins: "shirt",
+  accounts: "user-check",
+  notes: "bell",
   settings: "settings",
 };
 const THEMES: ThemePref[] = ["system", "light", "dark"];
@@ -50,6 +54,33 @@ const HIDEABLE = PAGES.filter((p) => p !== "home" && p !== "settings");
 function App() {
   const { t } = useI18n();
   const [page, setPage] = useState<Page>("home");
+  const [slim, setSlimState] = useState(() => {
+    try {
+      return localStorage.getItem("kromvia.railSlim") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setSlim = (v: boolean) => {
+    setSlimState(v);
+    try {
+      localStorage.setItem("kromvia.railSlim", v ? "1" : "0");
+    } catch {}
+  };
+  const [dropped, setDropped] = useState<string[]>();
+  const pageRef = useRef(page);
+  pageRef.current = page;
+  useEffect(() => {
+    // The Builds page takes drops itself; from any other page, go there with the files.
+    const off = getCurrentWebview().onDragDropEvent(({ payload }) => {
+      if (payload.type !== "drop" || pageRef.current === "builds" || payload.paths.length === 0) return;
+      setDropped(payload.paths);
+      setPage("builds");
+    });
+    return () => {
+      off.then((f) => f());
+    };
+  }, []);
   const [palette, setPalette] = useState(false);
   const [contentTab, setContentTab] = useState<Kind>("mod");
   const [theme, setTheme] = useTheme();
@@ -117,9 +148,11 @@ function App() {
     <LauncherProvider onNeedAccount={() => setPage("accounts")}>
       <SocialProvider>
         {background && <img className="app-bg" src={background} alt="" aria-hidden />}
-        <div className="shell">
-          <nav className="rail" aria-label="Kromvia">
-            <img className="rail-logo" src="/logo.svg" alt="Kromvia" width="34" height="34" />
+        <div className="shell" data-bg={background ? "" : undefined} data-slim={slim || undefined}>
+          <nav className="rail" aria-label="Kromvia" data-slim={slim || undefined}>
+            <button className="rail-logo" title={t(slim ? "nav.expand" : "nav.collapse")} aria-label={t(slim ? "nav.expand" : "nav.collapse")} onClick={() => setSlim(!slim)}>
+              <img src="/logo.svg" alt="" width="34" height="34" />
+            </button>
             <div className="rail-items" style={{ "--nav-index": pages.indexOf(page) } as CSSProperties}>
               <div className="rail-marker" aria-hidden="true" />
               {pages.map((p) => (
@@ -129,10 +162,11 @@ function App() {
                   aria-current={page === p ? "page" : undefined}
                   onClick={() => setPage(p)}
                 >
-                  <Icon name={ICONS[p]} size={18} />
+                  <Glyph name={ICONS[p]} size={19} />
                   <span className="rail-label">{t(`nav.${p}` as MessageKey)}</span>
                   {p === "friends" && <UnreadBadge />}
                   {p === "settings" && <UpdateBadge />}
+                  {p === "notes" && <NotesBadge />}
                 </button>
               ))}
             </div>
@@ -147,6 +181,7 @@ function App() {
                 {page === "friends" && <Friends />}
                 {page === "builds" && (
                   <Builds
+                    dropped={dropped}
                     onAccounts={() => setPage("accounts")}
                     onAddContent={(kind) => {
                       setContentTab(kind);
@@ -157,6 +192,7 @@ function App() {
                 {page === "content" && <Content initialTab={contentTab} />}
                 {page === "skins" && <Wardrobe />}
                 {page === "accounts" && <Accounts />}
+                {page === "notes" && <Notes onPage={(p) => PAGES.includes(p as Page) && setPage(p as Page)} />}
                 {page === "settings" && <Settings theme={theme} setTheme={setTheme} />}
               </Recover>
             </div>
@@ -177,6 +213,7 @@ function App() {
         {!intro && <UpdatePrompt />}
         {palette && <Palette pages={pages} onPage={setPage} onClose={() => setPalette(false)} />}
         <LaunchKeys onPage={setPage} />
+        <NoteSources />
       </SocialProvider>
     </LauncherProvider>
   );
@@ -287,7 +324,9 @@ function Settings({ theme, setTheme }: { theme: ThemePref; setTheme: (t: ThemePr
       <UiEditor pages={HIDEABLE} />
       <JavaSettings />
       <Storage />
+      <Downloads />
       <SettingsBackup />
+      <BugReport />
       <div className="actions">
         <button className="btn btn-ghost" onClick={() => invoke("launcher_log_open")}>
           <Glyph name="folder" /> {t("settings.launcherLog")}

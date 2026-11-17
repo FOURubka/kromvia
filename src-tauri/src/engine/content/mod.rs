@@ -66,10 +66,32 @@ pub struct InstalledFile {
     pub project_id: Option<String>,
     pub size: u64,
     pub modified: u64,
+    pub locked: bool,
 }
 
 fn index_path(instance_id: &str) -> Result<PathBuf, String> {
     Ok(instances::dir(instance_id)?.join("content.json"))
+}
+
+fn locks_path(instance_id: &str) -> Result<PathBuf, String> {
+    Ok(instances::dir(instance_id)?.join("content-locks.json"))
+}
+
+/// Files the user pinned to their current version, as `folder/file`; updates skip them.
+fn read_locks(instance_id: &str) -> std::collections::BTreeSet<String> {
+    locks_path(instance_id).ok().and_then(|p| std::fs::read(p).ok()).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()
+}
+
+pub fn set_locked(instance_id: &str, folder: &str, file: &str, locked: bool) -> Result<(), String> {
+    let mut locks = read_locks(instance_id);
+    let key = format!("{folder}/{file}");
+    if locked {
+        locks.insert(key);
+    } else {
+        locks.remove(&key);
+    }
+    let json = serde_json::to_vec_pretty(&locks).map_err(|e| e.to_string())?;
+    std::fs::write(locks_path(instance_id)?, json).map_err(|e| e.to_string())
 }
 
 pub fn read_index(instance_id: &str) -> Vec<ContentEntry> {
@@ -91,6 +113,7 @@ pub const BUILT_IN_CLIENT: &str = "kromvia-client.jar";
 pub fn list(instance_id: &str) -> Result<Vec<InstalledFile>, String> {
     let game = instances::game_dir(instance_id)?;
     let index = read_index(instance_id);
+    let locks = read_locks(instance_id);
     let mut out = Vec::new();
     for folder in FOLDERS {
         let Ok(entries) = std::fs::read_dir(game.join(folder)) else { continue };
@@ -111,6 +134,7 @@ pub fn list(instance_id: &str) -> Result<Vec<InstalledFile>, String> {
                 folder: folder.to_string(),
                 title: known.map_or_else(|| file.clone(), |e| e.title.clone()),
                 project_id: known.map(|e| e.project_id.clone()),
+                locked: locks.contains(&format!("{folder}/{file}")),
                 file,
                 enabled,
             });
@@ -125,7 +149,10 @@ fn folder_for(path: &std::path::Path) -> Option<&'static str> {
     match ext.as_str() {
         "jar" => Some("mods"),
         "zip" => {
-            let archive = zip::ZipArchive::new(std::fs::File::open(path).ok()?).ok()?;
+            let mut archive = zip::ZipArchive::new(std::fs::File::open(path).ok()?).ok()?;
+            if crate::engine::worlds::zip_world_root(&mut archive).is_some() {
+                return Some("saves");
+            }
             let shader = archive.file_names().any(|n| n.is_ok_and(|n| n.starts_with("shaders/")));
             Some(if shader { "shaderpacks" } else { "resourcepacks" })
         }
@@ -138,6 +165,10 @@ pub fn add_files(instance_id: &str, paths: &[PathBuf]) -> Result<Vec<String>, St
     let mut added = Vec::new();
     for path in paths {
         let Some(folder) = folder_for(path) else { continue };
+        if folder == "saves" {
+            added.push(format!("saves/{}", crate::engine::worlds::import_zip(instance_id, path)?));
+            continue;
+        }
         let Some(name) = path.file_name() else { continue };
         let dir = game.join(folder);
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
@@ -188,6 +219,32 @@ pub fn set_enabled(instance_id: &str, file: &str, enabled: bool) -> Result<(), S
     let off = checked_file(instance_id, "mods", &format!("{file}{DISABLED}"))?;
     let (from, to) = if enabled { (off, on) } else { (on, off) };
     std::fs::rename(from, to).map_err(|e| e.to_string())
+}
+
+const SAFE_MODE: &str = "safe-mode.json";
+
+/// Turns every enabled mod off for one run. The list is written first, so `end_safe_mode` can put them back
+/// even if the launcher dies mid-run.
+pub fn start_safe_mode(instance_id: &str) -> Result<(), String> {
+    end_safe_mode(instance_id);
+    let off: Vec<String> = list(instance_id)?.into_iter().filter(|f| f.folder == "mods" && f.enabled).map(|f| f.file).collect();
+    let json = serde_json::to_vec(&off).map_err(|e| e.to_string())?;
+    std::fs::write(instances::dir(instance_id)?.join(SAFE_MODE), json).map_err(|e| e.to_string())?;
+    for file in &off {
+        set_enabled(instance_id, file, false)?;
+    }
+    Ok(())
+}
+
+pub fn end_safe_mode(instance_id: &str) {
+    let Ok(path) = instances::dir(instance_id).map(|d| d.join(SAFE_MODE)) else { return };
+    let Ok(bytes) = std::fs::read(&path) else { return };
+    let files: Vec<String> = serde_json::from_slice(&bytes).unwrap_or_default();
+    for file in files {
+        // The user may have removed or re-enabled a mod meanwhile.
+        let _ = set_enabled(instance_id, &file, true);
+    }
+    let _ = std::fs::remove_file(path);
 }
 
 pub fn remove(instance_id: &str, folder: &str, file: &str) -> Result<(), String> {

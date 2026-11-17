@@ -1,0 +1,138 @@
+.stage {
+  --t: 14s;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 16px;
+  background: #07080b;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.45);
+}
+
+.frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform-origin: 57% 21%;
+  animation: var(--t) cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.launcher {
+  animation-name: launcher;
+}
+
+.title {
+  object-position: 0 0;
+  transform-origin: 30% 50%;
+  animation-name: title;
+}
+
+.menu {
+  object-position: 50% 50%;
+  animation-name: menu;
+}
+
+@keyframes launcher {
+  0% { opacity: 1; transform: scale(1); }
+  20% { opacity: 1; transform: scale(1); }
+  32% { opacity: 1; transform: scale(1.9); }
+  38% { opacity: 1; transform: scale(1.95); }
+  42% { opacity: 0; transform: scale(2.2); }
+  96% { opacity: 0; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes title {
+  0%, 38% { opacity: 0; transform: scale(1.12); }
+  44% { opacity: 1; transform: scale(1.06); }
+  66% { opacity: 1; transform: scale(1); }
+  70% { opacity: 0; transform: scale(0.98); }
+  100% { opacity: 0; }
+}
+
+@keyframes menu {
+  0%, 66% { opacity: 0; transform: scale(0.94); }
+  72% { opacity: 1; transform: scale(1); }
+  92% { opacity: 1; transform: scale(1.03); }
+  97% { opacity: 0; transform: scale(1.03); }
+  100% { opacity: 0; }
+}
+
+.cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.5));
+  animation: cursor var(--t) cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes cursor {
+  0% { left: 80%; top: 78%; opacity: 0; transform: scale(1); }
+  5% { opacity: 1; }
+  20%, 34% { left: 57.5%; top: 22%; opacity: 1; transform: scale(1); }
+  36% { left: 57.5%; top: 22%; transform: scale(0.8); }
+  38% { left: 57.5%; top: 22%; opacity: 1; transform: scale(1); }
+  42%, 100% { left: 57.5%; top: 22%; opacity: 0; }
+}
+
+.ring {
+  position: absolute;
+  left: 57.5%;
+  top: 22%;
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  opacity: 0;
+  animation: ring var(--t) ease-out infinite;
+}
+
+@keyframes ring {
+  0%, 35% { opacity: 0; transform: scale(0.3); }
+  36% { opacity: 0.9; transform: scale(0.3); }
+  41% { opacity: 0; transform: scale(1.6); }
+  100% { opacity: 0; }
+}
+
+.key {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  padding: 8px 16px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 10px;
+  background: rgb(20 18 28 / 0.75);
+  color: #fff;
+  font: 600 16px/1 var(--font-sans), sans-serif;
+  opacity: 0;
+  transform: translateX(-50%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  animation: key var(--t) ease-out infinite;
+}
+
+@keyframes key {
+  0%, 56% { opacity: 0; transform: translate(-50%, 10px); }
+  60% { opacity: 1; transform: translate(-50%, 0); }
+  64% { opacity: 1; transform: translate(-50%, 2px) scale(0.94); }
+  66% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  72% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame,
+  .cursor,
+  .ring,
+  .key {
+    animation: none;
+  }
+
+  .launcher {
+    opacity: 1;
+  }
+}

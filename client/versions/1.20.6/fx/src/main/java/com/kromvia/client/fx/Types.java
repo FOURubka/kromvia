@@ -3,11 +3,9 @@ package com.kromvia.client.fx;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 final class Types {
@@ -26,10 +24,6 @@ final class Types {
 
 	static RenderType model(ResourceLocation texture) {
 		return RenderType.entityCutoutNoCull(texture);
-	}
-
-	static void toast(Minecraft mc, SystemToast.SystemToastId id, Component title, Component text) {
-		mc.getToasts().addToast(SystemToast.multiline(mc, id, title, text));
 	}
 
 	static void vertex(VertexConsumer b, PoseStack.Pose p, double x, double y, double z, int argb) {

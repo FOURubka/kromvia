@@ -12,7 +12,7 @@ const T = {
   en: {
     nav: [
       { label: "Launcher", bee: "menu-launcher", title: "Launcher", links: [
-        { href: "/download", label: "Download" }, { href: "/features", label: "Features" }, { href: "/changelog", label: "Changelog" }, { href: "/faq", label: "FAQ" },
+        { href: "/download", label: "Download" }, { href: "/features", label: "Features" }, { href: "/changelog", label: "Changelog" }, { href: "/roadmap", label: "Roadmap" }, { href: "/faq", label: "FAQ" },
       ] },
       { label: "Client", bee: "menu-client", title: "Built-in client", links: [
         { href: "/features#client", label: "Modules" }, { href: "/cosmetics", label: "Cosmetics" },
@@ -26,7 +26,7 @@ const T = {
   uk: {
     nav: [
       { label: "Лаунчер", bee: "menu-launcher", title: "Лаунчер", links: [
-        { href: "/download", label: "Завантажити" }, { href: "/features", label: "Можливості" }, { href: "/changelog", label: "Зміни" }, { href: "/faq", label: "FAQ" },
+        { href: "/download", label: "Завантажити" }, { href: "/features", label: "Можливості" }, { href: "/changelog", label: "Зміни" }, { href: "/roadmap", label: "Роадмап" }, { href: "/faq", label: "FAQ" },
       ] },
       { label: "Клієнт", bee: "menu-client", title: "Вбудований клієнт", links: [
         { href: "/features#client", label: "Модулі" }, { href: "/cosmetics", label: "Косметика" },

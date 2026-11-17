@@ -318,7 +318,7 @@ public final class Features {
 		protected String text(Minecraft mc) {
 			if (mc.player == null) return "";
 			StringBuilder b = new StringBuilder();
-			Object[][] items = {{Items.TOTEM_OF_UNDYING, "Totem"}, {Items.GOLDEN_APPLE, "Gap"}, {Items.ENDER_PEARL, "Pearl"}, {Items.ARROW, "Arrow"}};
+			Object[][] items = {{Items.TOTEM_OF_UNDYING, "Totem"}, {Items.GOLDEN_APPLE, "Gap"}, {Items.ENDER_PEARL, "Pearl"}, {Items.ARROW, "Arrow"}, {Items.SPLASH_POTION, "Splash"}, {Items.POTION, "Potion"}};
 			for (Object[] it : items) {
 				int n = count(mc, (Item) it[0]);
 				if (n > 0) b.append(it[1]).append(' ').append(n).append("  ");

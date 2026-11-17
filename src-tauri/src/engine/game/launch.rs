@@ -41,6 +41,7 @@ struct Running {
     stdin: UnboundedSender<String>,
     restart: LaunchOptions,
     offline: Option<String>,
+    player: (Option<String>, String),
 }
 
 struct Switch {
@@ -93,8 +94,8 @@ impl Games {
         }
     }
 
-    pub fn toast(&self, title: &str, text: &str) {
-        let line = serde_json::json!({ "toast": { "title": title, "text": text } }).to_string() + "\n";
+    pub fn toast(&self, title: &str, text: &str, action: Option<serde_json::Value>) {
+        let line = serde_json::json!({ "toast": { "title": title, "text": text, "action": action } }).to_string() + "\n";
         for r in self.running.lock().unwrap().values() {
             let _ = r.stdin.send(line.clone());
         }
@@ -110,6 +111,23 @@ impl Games {
 
     pub fn social(&self, state: &serde_json::Value) {
         let line = serde_json::json!({ "social": state }).to_string() + "\n";
+        for r in self.running.lock().unwrap().values() {
+            let _ = r.stdin.send(line.clone());
+        }
+    }
+
+    pub fn toast_run(&self, run_id: u64, title: &str, text: &str) {
+        if let Some(r) = self.running.lock().unwrap().get(&run_id) {
+            let _ = r.stdin.send(serde_json::json!({ "toast": { "title": title, "text": text } }).to_string() + "\n");
+        }
+    }
+
+    pub fn ping(&self, msg: &serde_json::Value, here: Option<String>) {
+        let Some(host) = msg["host"].as_str() else { return };
+        if here.as_deref() != Some(host) {
+            return;
+        }
+        let line = serde_json::json!({ "ping": { "name": msg["name"], "dim": msg["dim"], "x": msg["x"], "y": msg["y"], "z": msg["z"] } }).to_string() + "\n";
         for r in self.running.lock().unwrap().values() {
             let _ = r.stdin.send(line.clone());
         }
@@ -204,6 +222,12 @@ pub struct LaunchOptions {
     pub join: Option<String>,
     pub world: Option<String>,
     pub room: bool,
+    /// One run with every mod in `mods/` off; they come back when the game exits.
+    pub safe: bool,
+    /// A restart the game asked for: skip `join`/`world` where this version cannot do them.
+    pub resume: bool,
+    /// A friend whose room mods are copied into the instance before it starts.
+    pub sync_from: Option<String>,
 }
 
 pub fn valid_address(addr: &str) -> bool {
@@ -220,6 +244,13 @@ pub async fn launch<R: Runtime>(
     opts: LaunchOptions,
     job: Arc<Job>,
 ) -> Result<(), String> {
+    crate::engine::content::end_safe_mode(&inst.id);
+    if inst.shared_options {
+        crate::engine::shared_options::apply(&instances::game_dir(&inst.id)?)?;
+    }
+    if !inst.no_client {
+        crate::engine::menu_media::apply(&instances::game_dir(&inst.id)?)?;
+    }
     let mut prepared = prepare(&inst, &session, &job).await?;
     if job.is_cancelled() {
         return Err("cancelled".into());
@@ -237,7 +268,7 @@ pub async fn launch<R: Runtime>(
             prepared.args.extend(["--server".into(), host, "--port".into(), port.to_string()]);
         }
     }
-    if let Some(world) = opts.world {
+    if let Some(world) = opts.world.filter(|_| prepared.quick_play || !opts.resume) {
         if !prepared.quick_play {
             return Err("opening a world from the launcher needs Minecraft 1.20 or newer".into());
         }
@@ -263,7 +294,76 @@ pub async fn launch<R: Runtime>(
         env.extend(gpu_env(gpu));
         set_gpu_preference(&prepared.java, gpu);
     }
-    spawn(app, &inst.id, &prepared.java, &prepared.args, &prepared.game_dir, &env, who)
+    let hooks = inst.hooks.clone().unwrap_or_default();
+    if !hooks.pre_launch.is_empty() {
+        job.progress("pre-launch", 0, None);
+        let mut vars = hook_vars(&inst)?;
+        vars.push(("INST_JAVA".into(), prepared.java.to_string_lossy().into_owned()));
+        run_hook("pre-launch", &hooks.pre_launch, &prepared.game_dir, &vars).await?;
+        if job.is_cancelled() {
+            return Err("cancelled".into());
+        }
+    }
+    let user_env = hooks.env_pairs();
+    env.extend(user_env.iter().map(|(k, v)| (k.as_str(), v.as_str())));
+    let (program, args) = wrap(&hooks.wrapper, &prepared.java, prepared.args);
+    if opts.safe {
+        crate::engine::content::start_safe_mode(&inst.id).inspect_err(|_| crate::engine::content::end_safe_mode(&inst.id))?;
+    }
+    spawn(app, &inst.id, &program, &args, &prepared.game_dir, &env, who).inspect_err(|_| crate::engine::content::end_safe_mode(&inst.id))
+}
+
+/// Puts the game behind a wrapper program such as `gamemoderun` or `prime-run`. Split on spaces, no quoting.
+fn wrap(wrapper: &str, java: &Path, args: Vec<String>) -> (PathBuf, Vec<String>) {
+    let mut parts = wrapper.split_whitespace();
+    match parts.next() {
+        Some(program) => (PathBuf::from(program), parts.map(String::from).chain([java.to_string_lossy().into_owned()]).chain(args).collect()),
+        None => (java.to_path_buf(), args),
+    }
+}
+
+fn hook_vars(inst: &Instance) -> Result<Vec<(String, String)>, String> {
+    Ok(vec![
+        ("INST_ID".into(), inst.id.clone()),
+        ("INST_NAME".into(), inst.name.clone()),
+        ("INST_DIR".into(), instances::dir(&inst.id)?.to_string_lossy().into_owned()),
+        ("INST_MC_DIR".into(), instances::game_dir(&inst.id)?.to_string_lossy().into_owned()),
+        ("INST_MC_VERSION".into(), inst.mc_version.clone()),
+    ])
+}
+
+fn shell(command: &str) -> Command {
+    #[cfg(windows)]
+    {
+        let mut c = Command::new("cmd");
+        c.arg("/C").arg(command).creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+        c
+    }
+    #[cfg(not(windows))]
+    {
+        let mut c = Command::new("sh");
+        c.arg("-c").arg(command);
+        c
+    }
+}
+
+async fn run_hook(what: &str, command: &str, dir: &Path, vars: &[(String, String)]) -> Result<(), String> {
+    let mut cmd = shell(command);
+    cmd.current_dir(dir).envs(vars.iter().map(|(k, v)| (k, v))).stdin(Stdio::null());
+    for (key, value) in crate::engine::opener::host_env() {
+        match value {
+            Some(v) => cmd.env(key, v),
+            None => cmd.env_remove(key),
+        };
+    }
+    let out = cmd.output().await.map_err(|e| format!("{what} command did not start: {e}"))?;
+    if out.status.success() {
+        return Ok(());
+    }
+    let err = String::from_utf8_lossy(&out.stderr);
+    let err = err.trim();
+    let tail: String = err.chars().rev().take(300).collect::<Vec<_>>().into_iter().rev().collect();
+    Err(format!("{what} command failed ({}){}{tail}", out.status, if tail.is_empty() { "" } else { ": " }))
 }
 
 fn gpu_env(gpu: &str) -> &'static [(&'static str, &'static str)] {
@@ -333,12 +433,65 @@ pub fn start<R: Runtime>(
             (None, None) => unreachable!(),
         };
         add_resourcify(&inst, &job).await;
+        let snap_id = inst.id.clone();
+        if let Ok(Err(e)) = tauri::async_runtime::spawn_blocking(move || crate::engine::history::snapshot(&snap_id, "launch")).await {
+            crate::engine::core::crashlog::write("history", &e);
+        }
+        if let Some(friend) = opts.sync_from.as_deref() {
+            sync_room_mods(&inst.id, friend, &job).await?;
+        }
         if opts.room {
             modrinth::install(&inst.id, "e4mc", None, ContentKind::Mod, &job).await?;
         } else {
             add_e4mc(&inst, &job).await;
         }
         launch(handle, inst, session, opts, job).await
+    })
+}
+
+pub struct Synced {
+    pub added: Vec<String>,
+    pub failed: Vec<String>,
+}
+
+pub async fn sync_room_mods(instance_id: &str, friend: &str, job: &Arc<Job>) -> Result<Synced, String> {
+    job.progress("room-mods", 0, None);
+    let host = crate::engine::social::room_mods(friend).await?;
+    let mine: std::collections::HashSet<String> = modrinth::installed_mods(instance_id).await?.into_iter().map(|v| v.project_id).collect();
+    let wanted: Vec<(String, String)> = host["mods"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|m| Some((m["p"].as_str()?.to_string(), m["v"].as_str()?.to_string())))
+        .filter(|(p, _)| !mine.contains(p))
+        .collect();
+    let mut out = Synced { added: vec![], failed: vec![] };
+    for (i, (project, version)) in wanted.iter().enumerate() {
+        job.progress("room-mods", i as u64, Some(wanted.len() as u64));
+        match modrinth::install(instance_id, project, Some(version), ContentKind::Mod, job).await {
+            Ok(_) => out.added.push(modrinth::title(project).await),
+            Err(e) => out.failed.push(format!("{}: {e}", modrinth::title(project).await)),
+        }
+    }
+    Ok(out)
+}
+
+pub fn room_join<R: Runtime>(app: &AppHandle<R>, jobs: &Jobs, instance_id: String, friend: String, room: String, username: String, account_id: Option<String>) -> Result<u64, String> {
+    if !valid_address(&room) {
+        return Err("bad room address".into());
+    }
+    let running = app.state::<Games>().running.lock().unwrap().values().find(|r| r.instance_id == instance_id).map(|r| r.stdin.clone());
+    let Some(stdin) = running else {
+        return start(app, jobs, instance_id, username, account_id, LaunchOptions { join: Some(room), sync_from: Some(friend), ..LaunchOptions::default() });
+    };
+    jobs.spawn(app, format!("room-sync-{instance_id}"), move |job| async move {
+        let synced = sync_room_mods(&instance_id, &friend, &job).await;
+        let msg = match &synced {
+            Ok(s) => serde_json::json!({ "room": { "join": room, "restart": !s.added.is_empty(), "added": s.added, "failed": s.failed } }),
+            Err(e) => serde_json::json!({ "room": { "join": room, "restart": false, "error": e } }),
+        };
+        let _ = stdin.send(msg.to_string() + "\n");
+        synced.map(|_| ())
     })
 }
 
@@ -508,7 +661,13 @@ fn prepare_from(inst: &Instance, session: &Session, version: VersionJson, java_b
         let path = log_config_path(&log.file.id)?;
         jvm_extra.push(log.argument.replace("${path}", &path.to_string_lossy()));
     }
-    jvm_extra.extend(client_flag(inst, paths::client_jar(&inst.mc_version).map(|j| pinned_client(&j)).transpose()?));
+    let client = client_flag(inst, paths::client_jar(&inst.mc_version).map(|j| pinned_client(&j)).transpose()?);
+    if client.is_some() {
+        if let Some(dir) = paths::backgrounds_dir() {
+            jvm_extra.push(format!("-Dkromvia.backgrounds={}", dir.display()));
+        }
+    }
+    jvm_extra.extend(client);
     sync_forge_client(inst, &game_dir)?;
     for file in crate::engine::content::conflicts::drop_superseded(&game_dir.join("mods")) {
         crate::engine::core::crashlog::write("launch", &format!("removed {file}: conflicts with an installed mod"));
@@ -668,7 +827,14 @@ fn spawn<R: Runtime>(
     who: Who,
 ) -> Result<(), String> {
     let mut cmd = Command::new(java);
-    cmd.args(args).envs(env.iter().copied()).current_dir(game_dir).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    cmd.args(args).current_dir(game_dir).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    for (key, value) in crate::engine::opener::host_env() {
+        match value {
+            Some(v) => cmd.env(key, v),
+            None => cmd.env_remove(key),
+        };
+    }
+    cmd.envs(env.iter().copied());
     #[cfg(windows)]
     cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
     let mut child = cmd.spawn().map_err(|e| format!("failed to start Java: {e}"))?;
@@ -698,6 +864,7 @@ fn spawn<R: Runtime>(
                 kill: Some(kill_tx),
                 stdin: stdin_tx.clone(),
                 offline: who.id.is_none().then(|| who.name.clone()),
+                player: (who.id.clone(), who.name.clone()),
                 restart: who.restart,
             },
         );
@@ -716,11 +883,11 @@ fn spawn<R: Runtime>(
     let _ = app.emit("game-started", RunInfo { run_id, instance_id: instance_id.to_string() });
 
     let tail = Arc::new(Mutex::new(VecDeque::new()));
-    let out = tauri::async_runtime::spawn(pump(app.clone(), run_id, who.name.clone(), child.stdout.take().unwrap(), tail.clone()));
-    let err = tauri::async_runtime::spawn(pump(app.clone(), run_id, who.name.clone(), child.stderr.take().unwrap(), tail.clone()));
+    let out = tauri::async_runtime::spawn(pump(app.clone(), run_id, instance_id.to_string(), who.name.clone(), child.stdout.take().unwrap(), tail.clone()));
+    let err = tauri::async_runtime::spawn(pump(app.clone(), run_id, instance_id.to_string(), who.name.clone(), child.stderr.take().unwrap(), tail.clone()));
     let instance_id = instance_id.to_string();
     instances::record_start(&instance_id);
-    let metrics = child.id().map(|pid| crate::engine::metrics::watch(instance_id.clone(), pid));
+    let (metrics, measured) = child.id().map(|pid| crate::engine::metrics::watch(instance_id.clone(), pid)).unzip();
     tauri::async_runtime::spawn(watch_mods(app.clone(), run_id, instance_id.clone()));
     let started = Instant::now();
     tauri::async_runtime::spawn(async move {
@@ -737,6 +904,13 @@ fn spawn<R: Runtime>(
         let _ = out.await;
         let _ = err.await;
         instances::record_play(&instance_id, started.elapsed().as_secs());
+        crate::engine::content::end_safe_mode(&instance_id);
+        crate::engine::worlds::mark_place(&instance_id, None);
+        if let Some(dir) = instances::get(&instance_id).ok().filter(|i| i.shared_options).and_then(|i| instances::game_dir(&i.id).ok()) {
+            if let Err(e) = crate::engine::shared_options::collect(&dir) {
+                crate::engine::core::crashlog::write("shared-options", &e);
+            }
+        }
         let ended = app.state::<Games>().running.lock().unwrap().remove(&run_id);
         app.state::<Live>().set_playing(None);
         let code = status.and_then(|s| s.code());
@@ -758,6 +932,37 @@ fn spawn<R: Runtime>(
             }
             crash
         });
+        if let Some(measured) = measured {
+            let (app, id, crashed) = (app.clone(), instance_id.clone(), crash.is_some());
+            tauri::async_runtime::spawn(async move {
+                let Ok(Some(run)) = measured.await else { return };
+                if run.fps_low.is_some() {
+                    if let Some(reg) = crate::engine::metrics::regression(&crate::engine::metrics::list(&id)) {
+                        let _ = app.emit("perf-regression", serde_json::json!({ "instanceId": id, "regression": reg }));
+                    }
+                }
+                if !crashed && crate::engine::perf::enabled() {
+                    if let Err(e) = crate::engine::perf::send(&id, &run).await {
+                        crate::engine::core::crashlog::write("perf-report", &e);
+                    }
+                }
+            });
+        }
+        if let Some(inst) = instances::get(&instance_id).ok().filter(|i| i.hooks.as_ref().is_some_and(|h| !h.post_exit.is_empty())) {
+            tauri::async_runtime::spawn(async move {
+                let ran = match (hook_vars(&inst), instances::game_dir(&inst.id)) {
+                    (Ok(mut vars), Ok(dir)) => {
+                        vars.push(("INST_EXIT_CODE".into(), code.map_or_else(String::new, |c| c.to_string())));
+                        run_hook("post-exit", &inst.hooks.unwrap_or_default().post_exit, &dir, &vars).await
+                    }
+                    (Err(e), _) | (_, Err(e)) => Err(e),
+                };
+                if let Err(e) = ran {
+                    crate::engine::core::crashlog::write("post-exit", &e);
+                }
+            });
+        }
+        crate::engine::relay::on_exit(app.clone(), &instance_id);
         let _ = app.emit("game-exit", ExitEvent { run_id, instance_id, code, crash });
         let switch = app.state::<Games>().switching.lock().unwrap().remove(&run_id);
         if let (Some(switch), Some(ended)) = (switch, ended) {
@@ -936,6 +1141,30 @@ fn playing<R: Runtime>(app: &AppHandle<R>, run_id: u64, text: &str) {
         install_onboarding(app, run_id, wanted);
         return;
     }
+    if v["frames"].is_object() {
+        if let Some(id) = app.state::<Games>().running.lock().unwrap().get(&run_id).map(|r| r.instance_id.clone()) {
+            let f = &v["frames"];
+            crate::engine::metrics::frames(&id, f["avg"].as_f64().unwrap_or(-1.0), f["low"].as_f64().unwrap_or(-1.0), f["n"].as_f64().unwrap_or(0.0));
+            crate::engine::metrics::gpu(&id, f["gpu"].as_str().unwrap_or_default());
+        }
+        return;
+    }
+    if v["ghost"].is_object() {
+        ghost(app, run_id, &v["ghost"]);
+        return;
+    }
+    if v["restart"].is_object() {
+        restart_game(app, run_id, &v["restart"]);
+        return;
+    }
+    if v["mods"].is_object() {
+        game_mods(app, run_id, &v["mods"]);
+        return;
+    }
+    if v["ping"].is_object() {
+        party_ping(app, run_id, &v["ping"]);
+        return;
+    }
     if v["lookup"].is_array() {
         let _ = app.state::<Live>().send(serde_json::json!({ "type": "lookup", "names": v["lookup"] }));
         return;
@@ -943,6 +1172,89 @@ fn playing<R: Runtime>(app: &AppHandle<R>, run_id: u64, text: &str) {
     let at = v["host"].as_str().zip(v["nick"].as_str());
     app.state::<Live>().set_playing(at);
     let _ = app.emit("game-server", serde_json::json!({ "runId": run_id, "host": at.map(|a| a.0) }));
+}
+
+fn ghost<R: Runtime>(app: &AppHandle<R>, run_id: u64, v: &serde_json::Value) {
+    let Some(stdin) = app.state::<Games>().running.lock().unwrap().get(&run_id).map(|r| r.stdin.clone()) else { return };
+    let v = v.clone();
+    tauri::async_runtime::spawn(async move {
+        let reply = if v["share"].is_object() {
+            match crate::engine::social::share("ghost", v["share"].clone()).await {
+                Ok(code) => serde_json::json!({ "code": code }),
+                Err(e) => serde_json::json!({ "error": e }),
+            }
+        } else if let Some(code) = v["load"].as_str() {
+            match crate::engine::social::shared(code).await {
+                Ok(s) if s["kind"] == "ghost" => serde_json::json!({ "data": s["data"], "from": s["from"]["name"] }),
+                Ok(_) => serde_json::json!({ "error": "That code is not a ghost." }),
+                Err(e) => serde_json::json!({ "error": e }),
+            }
+        } else {
+            return;
+        };
+        let _ = stdin.send(serde_json::json!({ "ghost": reply }).to_string() + "\n");
+    });
+}
+
+fn restart_game<R: Runtime>(app: &AppHandle<R>, run_id: u64, v: &serde_json::Value) {
+    let games = app.state::<Games>();
+    let mut running = games.running.lock().unwrap();
+    let Some(r) = running.get_mut(&run_id) else { return };
+    let join = v["join"].as_str().filter(|a| valid_address(a)).map(String::from);
+    let world = if join.is_none() && v["world"].as_bool() == Some(true) { crate::engine::worlds::open_world_folder(&r.instance_id) } else { None };
+    r.restart = LaunchOptions { join, world, resume: true, ..LaunchOptions::default() };
+    let (id, name) = r.player.clone();
+    games.switching.lock().unwrap().insert(run_id, Switch { id, name });
+}
+
+fn mods_reply(stdin: &UnboundedSender<String>, v: serde_json::Value) {
+    let _ = stdin.send(serde_json::json!({ "mods": v }).to_string() + "\n");
+}
+
+fn game_mods<R: Runtime>(app: &AppHandle<R>, run_id: u64, v: &serde_json::Value) {
+    let Some((instance_id, stdin)) = app.state::<Games>().running.lock().unwrap().get(&run_id).map(|r| (r.instance_id.clone(), r.stdin.clone())) else {
+        return;
+    };
+    let inst = match instances::get(&instance_id) {
+        Ok(i) if i.loader.is_some() => i,
+        Ok(_) => return mods_reply(&stdin, serde_json::json!({ "error": "This instance has no mod loader. Add Fabric in the launcher first." })),
+        Err(e) => return mods_reply(&stdin, serde_json::json!({ "error": e })),
+    };
+    if let Some(q) = v["q"].as_str() {
+        let q: String = q.chars().take(80).collect();
+        tauri::async_runtime::spawn(async move {
+            let reply = match modrinth::search(&q, ContentKind::Mod, Some(&inst), 0, &Default::default()).await {
+                Ok(r) => serde_json::json!({ "q": q, "hits": r.hits.iter().take(12).map(|h| serde_json::json!({
+                    "id": h.project_id, "title": h.title, "description": h.description, "author": h.author, "downloads": h.downloads,
+                })).collect::<Vec<_>>() }),
+                Err(e) => serde_json::json!({ "q": q, "error": e }),
+            };
+            mods_reply(&stdin, reply);
+        });
+    } else if let Some(id) = v["install"].as_str().filter(|id| !id.is_empty() && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')) {
+        let id = id.to_string();
+        let _ = app.state::<Jobs>().spawn(app, format!("game-install-{instance_id}"), move |job| async move {
+            let reply = match modrinth::install(&inst.id, &id, None, ContentKind::Mod, &job).await {
+                Ok(files) => serde_json::json!({ "installed": id, "files": files }),
+                Err(e) => serde_json::json!({ "installed": id, "error": e }),
+            };
+            mods_reply(&stdin, reply);
+            Ok(())
+        });
+    }
+}
+
+fn party_ping<R: Runtime>(app: &AppHandle<R>, run_id: u64, p: &serde_json::Value) {
+    let live = app.state::<Live>();
+    let host = p["host"].as_str().map(crate::engine::social::norm_host).or_else(|| live.host());
+    let coords: Option<Vec<f64>> = ["x", "y", "z"].iter().map(|k| p[*k].as_f64().filter(|n| n.is_finite() && n.abs() < 3.0e7)).collect();
+    let (Some(host), Some(c)) = (host, coords) else {
+        return app.state::<Games>().toast_run(run_id, "Ping not sent", "Pings work on servers and in rooms, not in singleplayer.");
+    };
+    let dim = p["dim"].as_str().unwrap_or_default().chars().take(64).collect::<String>();
+    if live.send(serde_json::json!({ "type": "ping", "host": host, "dim": dim, "x": c[0], "y": c[1], "z": c[2] })).is_err() {
+        app.state::<Games>().toast_run(run_id, "Ping not sent", "The launcher is not connected to Kromvia.");
+    }
 }
 
 fn room_domain(text: &str) -> Option<&str> {
@@ -961,9 +1273,23 @@ fn scene_of(text: &str) -> Option<&'static str> {
     }
 }
 
-async fn pump<R: Runtime>(app: AppHandle<R>, run_id: u64, nick: String, stream: impl AsyncRead + Unpin, tail: Arc<Mutex<VecDeque<String>>>) {
+/// Keys of client messages that are not presence updates; see `playing`.
+const NOT_PRESENCE: [&str; 14] = ["switch", "social", "wardrobe", "discord_screenshot", "share_screenshot", "media", "install", "lookup", "value", "ping", "restart", "mods", "frames", "ghost"];
+
+/// `Some(host)` for a presence update from the client: the server it joined, or `None` when it is on none.
+fn presence_host(text: &str) -> Option<Option<String>> {
+    let v: serde_json::Value = serde_json::from_str(text).ok()?;
+    let o = v.as_object()?;
+    if NOT_PRESENCE.iter().any(|k| o.contains_key(*k)) {
+        return None;
+    }
+    Some(o.get("host").and_then(|h| h.as_str()).map(String::from))
+}
+
+async fn pump<R: Runtime>(app: AppHandle<R>, run_id: u64, instance_id: String, nick: String, stream: impl AsyncRead + Unpin, tail: Arc<Mutex<VecDeque<String>>>) {
     let mut lines = BufReader::new(stream).lines();
     let mut parser = LogParser::default();
+    let mut on_server = false;
     while let Ok(Some(line)) = lines.next_line().await {
         if let Some(line) = parser.push(&line) {
             {
@@ -974,8 +1300,24 @@ async fn pump<R: Runtime>(app: AppHandle<R>, run_id: u64, nick: String, stream: 
                 tail.push_back(line.text.clone());
             }
             if line.logger == PRESENCE_LOGGER {
+                match presence_host(&line.text) {
+                    Some(Some(host)) => {
+                        on_server = true;
+                        crate::engine::worlds::mark_place(&instance_id, Some(crate::engine::worlds::Place { kind: "server".into(), name: host }));
+                    }
+                    Some(None) if on_server => {
+                        on_server = false;
+                        crate::engine::worlds::mark_place(&instance_id, None);
+                    }
+                    _ => {}
+                }
                 playing(&app, run_id, &line.text);
             } else if let Some(scene) = scene_of(&line.text) {
+                match scene {
+                    "singleplayer" => crate::engine::worlds::mark_place(&instance_id, crate::engine::worlds::open_world(&instance_id)),
+                    "menu" => crate::engine::worlds::mark_place(&instance_id, None),
+                    _ => {}
+                }
                 match scene {
                     "room" => app.state::<Live>().set_playing(room_domain(&line.text).map(|d| (d, nick.as_str()))),
                     "menu" => app.state::<Live>().set_playing(None),
@@ -1014,6 +1356,8 @@ mod tests {
             group: None,
             icon: None,
             no_client: false,
+            shared_options: false,
+            hooks: None,
         };
         assert_eq!(client_flag(&inst, jar.clone()).as_deref(), Some("-Dfabric.addMods=/r/kromvia-client.jar"));
         inst.no_client = true;
@@ -1244,7 +1588,7 @@ mod window_tests {
         let mut child = std::process::Command::new(&p.java)
             .args(&p.args)
             .current_dir(&p.game_dir)
-            .env("KROMVIA_AUDIT_MIXINS", "1")
+            .env("KROMVIA_AUDIT_MIXINS", std::env::var("KROMVIA_TEST_AUDIT").unwrap_or_else(|_| "1".into()))
             .stdout(log.try_clone().unwrap())
             .stderr(log)
             .spawn()

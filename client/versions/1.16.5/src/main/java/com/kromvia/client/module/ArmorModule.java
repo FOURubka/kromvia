@@ -12,7 +12,7 @@ public class ArmorModule extends Module {
 	private static final EquipmentSlot[] SLOTS = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET, EquipmentSlot.MAINHAND};
 
 	public ArmorModule() {
-		super("armor", "Armor Status", Category.PVP, Corner.TOP_RIGHT, true);
+		super("armor", "Armor Status", Category.PVP, Corner.TOP_RIGHT, false);
 		icon(Items.DIAMOND_CHESTPLATE);
 	}
 

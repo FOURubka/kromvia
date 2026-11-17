@@ -9,7 +9,7 @@ const T = {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  return T[await getLang()].meta;
+  return { ...T[await getLang()].meta, alternates: { types: { "application/rss+xml": "/changelog/rss.xml" } } };
 }
 
 export default async function Changelog() {

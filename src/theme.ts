@@ -11,16 +11,25 @@ function initialTheme(): ThemePref {
   return "dark";
 }
 
+const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+function apply(theme: ThemePref) {
+  document.documentElement.dataset.theme = theme === "system" ? (systemDark.matches ? "dark" : "light") : theme;
+}
+
+apply(initialTheme());
+
 export function useTheme() {
   const [theme, setTheme] = useState<ThemePref>(initialTheme);
 
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "system") delete root.dataset.theme;
-    else root.dataset.theme = theme;
+    apply(theme);
+    const onSystem = () => apply(theme);
+    systemDark.addEventListener("change", onSystem);
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {}
+    return () => systemDark.removeEventListener("change", onSystem);
   }, [theme]);
 
   return [theme, setTheme] as const;

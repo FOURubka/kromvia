@@ -86,6 +86,11 @@ pub fn modpack_install(app: AppHandle, jobs: State<'_, Jobs>, project_id: String
 }
 
 #[tauri::command]
+pub async fn modpack_update_check(instance_id: String) -> Result<Option<crate::engine::content::packref::PackUpdate>, String> {
+    crate::engine::content::packref::check_update(&instance_id).await
+}
+
+#[tauri::command]
 pub fn modpack_import(app: AppHandle, jobs: State<'_, Jobs>, path: String) -> Result<u64, String> {
     jobs.spawn(&app, format!("modpack-file-{path}"), move |job| async move {
         let path = std::path::Path::new(&path);
@@ -193,6 +198,11 @@ pub async fn content_icon(instance_id: String, folder: String, file: String) -> 
 #[tauri::command]
 pub fn content_set_enabled(instance_id: String, file: String, enabled: bool) -> Result<(), String> {
     content::set_enabled(&instance_id, &file, enabled)
+}
+
+#[tauri::command]
+pub fn content_set_locked(instance_id: String, folder: String, file: String, locked: bool) -> Result<(), String> {
+    content::set_locked(&instance_id, &folder, &file, locked)
 }
 
 #[tauri::command]

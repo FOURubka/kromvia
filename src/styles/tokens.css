@@ -1,4 +1,6 @@
+
 :root {
+  --frost-blur: blur(22px) saturate(160%);
   --font-sans: "Manrope Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: "Unbounded", "Manrope Variable", system-ui, sans-serif;
   --font-mono: ui-monospace, "JetBrains Mono", "Cascadia Code", monospace;
@@ -27,8 +29,8 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --nav-row: 48px;
   --rail-width: 200px;
-  --bevel-top: rgb(255 255 255 / 0.07);
-  --bevel-side: rgb(0 0 0 / 0.45);
+  --bevel-top: rgb(255 255 255 / 0.8);
+  --bevel-side: rgb(16 18 24 / 0.14);
 
   --bg: #f4f5f7;
   --surface: #ffffff;
@@ -41,51 +43,27 @@
   --accent-2: #2f6fe0;
   --accent-text: #ffffff;
   --accent-grad: linear-gradient(var(--accent), var(--accent));
-  --page-glow: radial-gradient(ellipse 70% 55% at 0% 0%, rgb(109 74 232 / 0.1), transparent 70%),
-    radial-gradient(ellipse 60% 50% at 100% 100%, rgb(47 111 224 / 0.08), transparent 70%);
   --danger: #c93a3a;
   --warn: #a8661a;
   --accent-glow: rgb(139 92 246 / 0.25);
   --accent-deep: #3f2a9a;
   --glass: rgb(255 255 255 / 0.7);
+  --frost: rgb(255 255 255 / 0.62);
+  --well: #e3e6ec;
+  --well-shade: rgb(16 18 24 / 0.08);
+  --rail: rgb(16 18 24 / 0.04);
+  --frost-edge: rgb(255 255 255 / 0.7);
   --on-danger: #ffffff;
-  --shadow: 0 1px 2px rgb(16 18 24 / 0.06), 0 4px 12px rgb(16 18 24 / 0.06);
+  --shadow: 0 3px 0 rgb(16 18 24 / 0.1);
 
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #06050b;
-    --surface: #100e19;
-    --surface-2: #1a1726;
-    --border: #322c48;
-    --text: #f3f1fa;
-    --text-muted: #c3bdd6;
-    --accent: #8b5cf6;
-    --accent-hover: #a78bfa;
-    --accent-deep: #3b1f86;
-    --accent-2: #1f63d6;
-    --accent-text: #ffffff;
-    --accent-glow: rgb(139 92 246 / 0.3);
-    --accent-grad: linear-gradient(var(--accent), var(--accent));
-    --page-glow: radial-gradient(ellipse 55% 45% at 55% 0%, rgb(0 92 198 / 0.2), transparent 70%),
-      radial-gradient(ellipse 50% 50% at 0% 100%, rgb(191 111 140 / 0.12), transparent 70%),
-      radial-gradient(ellipse 50% 50% at 100% 100%, rgb(135 87 153 / 0.14), transparent 70%);
-    --danger: #e45c5c;
-    --warn: #f2b33d;
-    --glass: rgb(16 14 25 / 0.8);
-    --shadow: 0 2px 0 rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.4);
-
-    color-scheme: dark;
-  }
 }
 
 :root[data-theme="dark"] {
   --bg: #06050b;
   --surface: #100e19;
   --surface-2: #1a1726;
-  --border: #322c48;
+  --border: #4a4168;
   --text: #f3f1fa;
   --text-muted: #c3bdd6;
   --accent: #8b5cf6;
@@ -95,13 +73,17 @@
   --accent-text: #ffffff;
   --accent-glow: rgb(139 92 246 / 0.3);
   --accent-grad: linear-gradient(var(--accent), var(--accent));
-  --page-glow: radial-gradient(ellipse 55% 45% at 55% 0%, rgb(0 92 198 / 0.2), transparent 70%),
-      radial-gradient(ellipse 50% 50% at 0% 100%, rgb(191 111 140 / 0.12), transparent 70%),
-      radial-gradient(ellipse 50% 50% at 100% 100%, rgb(135 87 153 / 0.14), transparent 70%);
   --danger: #e45c5c;
   --warn: #f2b33d;
   --glass: rgb(16 14 25 / 0.8);
-  --shadow: 0 2px 0 rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.4);
+  --frost: rgb(20 18 30 / 0.58);
+  --bevel-top: rgb(255 255 255 / 0.07);
+  --bevel-side: rgb(0 0 0 / 0.45);
+  --well: #050506;
+  --well-shade: rgb(0 0 0 / 0.5);
+  --rail: rgb(0 0 0 / 0.25);
+  --frost-edge: rgb(255 255 255 / 0.1);
+  --shadow: 0 4px 0 rgb(0 0 0 / 0.45);
 
   color-scheme: dark;
 }

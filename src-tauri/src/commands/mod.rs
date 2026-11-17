@@ -4,6 +4,7 @@ pub mod desktop;
 pub mod game;
 pub mod java;
 pub mod jobs;
+pub mod relay;
 pub mod servers;
 pub mod storage;
 pub mod worlds;

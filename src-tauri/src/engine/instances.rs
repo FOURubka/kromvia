@@ -33,6 +33,60 @@ pub struct Instance {
     pub icon: Option<String>,
     #[serde(default)]
     pub no_client: bool,
+    /// Uses the launcher-wide `options.txt` (key binds, video settings) instead of its own.
+    #[serde(default)]
+    pub shared_options: bool,
+    /// Local only: never copied into templates, shares or exports.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hooks: Option<Hooks>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Hooks {
+    /// Runs in the game folder before Java starts; a non-zero exit stops the launch.
+    #[serde(default)]
+    pub pre_launch: String,
+    /// Runs in the game folder after the game exits; not waited for.
+    #[serde(default)]
+    pub post_exit: String,
+    /// Program the game is started through, e.g. `gamemoderun` or `prime-run`.
+    #[serde(default)]
+    pub wrapper: String,
+    /// `KEY=value` per line.
+    #[serde(default)]
+    pub env: String,
+}
+
+impl Hooks {
+    pub fn env_pairs(&self) -> Vec<(String, String)> {
+        self.env
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty() && !l.starts_with('#'))
+            .filter_map(|l| l.split_once('='))
+            .map(|(k, v)| (k.trim().to_string(), v.trim().to_string()))
+            .collect()
+    }
+
+    fn check(&self) -> Result<(), String> {
+        for line in self.env.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
+            let Some((key, _)) = line.split_once('=') else { return Err(format!("environment line \"{line}\" needs KEY=value")) };
+            let key = key.trim();
+            let ok = key.chars().next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_') && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+            if !ok {
+                return Err(format!("bad environment variable name \"{key}\""));
+            }
+        }
+        if [&self.pre_launch, &self.post_exit, &self.wrapper, &self.env].iter().any(|s| s.len() > 4000) {
+            return Err("launch commands are at most 4000 characters".into());
+        }
+        Ok(())
+    }
+
+    fn is_empty(&self) -> bool {
+        [&self.pre_launch, &self.post_exit, &self.wrapper, &self.env].iter().all(|s| s.trim().is_empty())
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -57,6 +111,11 @@ pub struct Settings {
     pub group: Option<String>,
     #[serde(default)]
     pub no_client: Option<bool>,
+    /// `None` keeps the current hooks.
+    #[serde(default)]
+    pub hooks: Option<Hooks>,
+    #[serde(default)]
+    pub shared_options: Option<bool>,
 }
 
 pub fn dir(id: &str) -> Result<PathBuf, String> {
@@ -140,6 +199,8 @@ pub fn create(name: &str, mc_version: &str, loader: Option<Loader>) -> Result<In
         created: now(),
         icon: None,
         no_client: false,
+        shared_options: false,
+        hooks: None,
     };
     std::fs::create_dir_all(game_dir(&id)?).map_err(|e| e.to_string())?;
     std::fs::write(game_dir(&id)?.join("options.txt"), "guiScale:2\n").map_err(|e| e.to_string())?;
@@ -165,6 +226,9 @@ pub fn update(id: &str, s: Settings) -> Result<Instance, String> {
     if let Some(args) = &s.jvm_args {
         tuning::check_jvm_args(args)?;
     }
+    if let Some(h) = &s.hooks {
+        h.check()?;
+    }
     let trimmed = |v: Option<String>| v.map(|v| v.trim().to_string()).filter(|v| !v.is_empty());
     inst.name = check_name(&s.name)?.to_string();
     inst.mc_version = s.mc_version;
@@ -177,6 +241,13 @@ pub fn update(id: &str, s: Settings) -> Result<Instance, String> {
     inst.group = trimmed(s.group);
     if let Some(off) = s.no_client {
         inst.no_client = off;
+    }
+    if let Some(on) = s.shared_options {
+        inst.shared_options = on;
+    }
+    if let Some(h) = s.hooks {
+        let h = Hooks { pre_launch: h.pre_launch.trim().into(), post_exit: h.post_exit.trim().into(), wrapper: h.wrapper.trim().into(), env: h.env.trim().into() };
+        inst.hooks = (!h.is_empty()).then_some(h);
     }
     save(&inst)?;
     Ok(inst)
@@ -435,6 +506,8 @@ mod tests {
             gpu: None,
             group: Some("  PvP ".into()),
             no_client: None,
+            hooks: None,
+            shared_options: None,
         };
         assert!(update(&a.id, s("Pack", Some(100))).is_err());
         let u = update(&a.id, s("Renamed", Some(4096))).unwrap();
@@ -450,5 +523,15 @@ mod tests {
         assert_eq!(get(&b.id).unwrap().resolution, u.resolution);
         delete(&a.id).unwrap();
         delete(&b.id).unwrap();
+    }
+
+    #[test]
+    fn hooks_env_lines() {
+        let h = Hooks { env: "MANGOHUD=1\n# note\n\n  A_B = x=y ".into(), ..Default::default() };
+        assert!(h.check().is_ok());
+        assert_eq!(h.env_pairs(), [("MANGOHUD".to_string(), "1".to_string()), ("A_B".to_string(), "x=y".to_string())]);
+        assert!(Hooks { env: "NOEQUALS".into(), ..Default::default() }.check().is_err());
+        assert!(Hooks { env: "1BAD=x".into(), ..Default::default() }.check().is_err());
+        assert!(Hooks { env: "BAD-NAME=x".into(), ..Default::default() }.check().is_err());
     }
 }

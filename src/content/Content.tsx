@@ -39,7 +39,7 @@ const LOADERS: [string, string][] = [
   ["neoforge", "NeoForge"],
   ["quilt", "Quilt"],
 ];
-export type Installed = { folder: string; file: string; enabled: boolean; title: string; projectId: string | null; size: number; modified: number };
+export type Installed = { folder: string; file: string; enabled: boolean; title: string; projectId: string | null; size: number; modified: number; locked: boolean };
 
 const TABS: Tab[] = ["mod", "modpack", "resourcepack", "shader", "datapack", "installed"];
 const TARGET_KEY = "kromvia.contentTarget";
@@ -524,6 +524,12 @@ export function InstalledList({ files, instanceId, onChange }: { files: Installe
   };
   const setEnabled = (list: Installed[], enabled: boolean) =>
     act(Promise.all(list.filter((f) => f.folder === "mods" && f.enabled !== enabled).map((f) => invoke("content_set_enabled", { instanceId, file: f.file, enabled }))));
+  const [copied, setCopied] = useState(false);
+  const copyList = () => {
+    const rows = files.filter((f) => f.folder === "mods" && f.enabled).map((f) => (f.projectId && !/^\d+$/.test(f.projectId) ? `- [${f.title}](https://modrinth.com/mod/${f.projectId})` : `- ${f.title}`));
+    navigator.clipboard.writeText(rows.join("\n"));
+    setCopied(true);
+  };
   const toggle = (f: Installed) =>
     setSelected((s) => {
       const next = new Set(s);
@@ -567,6 +573,11 @@ export function InstalledList({ files, instanceId, onChange }: { files: Installe
         <button className="btn btn-ghost" onClick={() => setSelected(picked.length === visible.length ? new Set() : new Set(visible.map(key)))}>
           {t(picked.length === visible.length && visible.length > 0 ? "installed.selectNone" : "installed.selectAll")}
         </button>
+        {mods && (
+          <button className="btn btn-ghost" onClick={copyList}>
+            <Glyph name="copy" /> {copied ? t("console.copied") : t("installed.copyList")}
+          </button>
+        )}
       </div>
       {picked.length > 0 && (
         <div className="installed-bulk">
@@ -606,6 +617,15 @@ export function InstalledList({ files, instanceId, onChange }: { files: Installe
               </span>
             </div>
             <div className="row-tools">
+              <button
+                className="btn btn-ghost"
+                aria-pressed={f.locked}
+                title={t(f.locked ? "installed.unlock" : "installed.lock")}
+                aria-label={t(f.locked ? "installed.unlock" : "installed.lock")}
+                onClick={(e) => (e.stopPropagation(), act(invoke("content_set_locked", { instanceId, folder: f.folder, file: f.file, locked: !f.locked })))}
+              >
+                <Glyph name="lock" />
+              </button>
               <button
                 className="btn btn-ghost"
                 title={t("instance.delete")}

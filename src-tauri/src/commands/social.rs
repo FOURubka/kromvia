@@ -100,6 +100,12 @@ pub fn social_connect(app: AppHandle, live: State<'_, Live>) {
         if msg["type"] == "worn" {
             return app.state::<Games>().worn(&msg);
         }
+        if msg["type"] == "ping" {
+            return app.state::<Games>().ping(&msg, app.state::<Live>().host());
+        }
+        if msg["type"] == "ping.error" {
+            return app.state::<Games>().toast("Ping not sent", msg["error"].as_str().unwrap_or_default(), None);
+        }
         let _ = app.emit("social", msg);
     });
 }
@@ -110,7 +116,21 @@ pub fn social_chat(live: State<'_, Live>, to: String, text: String) -> Result<()
 }
 
 #[tauri::command]
-pub fn social_room(live: State<'_, Live>, room: Option<String>, mc: Option<String>) -> Result<(), String> {
+pub fn social_room(live: State<'_, Live>, room: Option<String>, mc: Option<String>, instance: Option<String>) -> Result<(), String> {
+    let hosting = room.is_some();
+    tauri::async_runtime::spawn(async move {
+        match instance.filter(|_| hosting) {
+            Some(id) => {
+                if let Ok(list) = crate::engine::content::modrinth::installed_mods(&id).await {
+                    let mods: Vec<Value> = list.iter().map(|v| serde_json::json!({ "p": v.project_id, "v": v.id })).collect();
+                    let _ = social::room_mods_put(Value::Array(mods)).await;
+                }
+            }
+            None => {
+                let _ = social::room_mods_clear().await;
+            }
+        }
+    });
     live.send(serde_json::json!({ "type": "room", "room": room, "mc": mc }))
 }
 
@@ -238,7 +258,10 @@ pub async fn wardrobe_push(
     crate::engine::wardrobe::save(&wardrobe, cape_png.as_deref())?;
     app.state::<Games>().wardrobe_changed();
     let w = crate::engine::wardrobe::load().unwrap_or_default();
-    let worn = serde_json::json!({ "models": models, "items": items, "cape": w["back"] == "cape", "style": w["style"], "colors": w["colors"] });
+    let mut worn = serde_json::json!({ "models": models, "items": items, "cape": w["back"] == "cape", "style": w["style"], "colors": w["colors"] });
+    if w["style"] == "custom" {
+        worn["art"] = w["art"].clone();
+    }
     tauri::async_runtime::spawn(async move {
         let _ = social::set_cosmetics(worn).await;
     });

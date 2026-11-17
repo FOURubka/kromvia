@@ -20,6 +20,9 @@ public final class Assets {
 				"post_effect/motion_blur_low.json",
 				"post_effect/motion_blur_medium.json",
 				"post_effect/motion_blur_high.json"));
+		out.add("shaders/post/daltonize.fsh");
+		out.add("shaders/post/daltonize.json");
+		for (int n = 1; n <= 3; n++) out.add("post_effect/daltonize_" + n + ".json");
 		for (String name : new String[] {"saturation", "brightness", "contrast", "hue"}) {
 			out.add("shaders/post/" + name + ".fsh");
 			out.add("shaders/post/" + name + ".json");

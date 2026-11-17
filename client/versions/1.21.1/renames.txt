@@ -40,3 +40,4 @@ getDeltaTracker -> getTimer
 mc.schedule( -> mc.tell(
 # Kromvia CrashPatch leaves the world the way this version can.
 mc.level.disconnect(ClientLevel.DEFAULT_QUIT_MESSAGE) -> mc.level.disconnect()
+com.mojang.blaze3d.systems.RenderSystem.getDevice().getRenderer() -> com.mojang.blaze3d.platform.GlUtil.getRenderer()

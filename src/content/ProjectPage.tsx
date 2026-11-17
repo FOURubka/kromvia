@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ModInsight } from "./ModInsight";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useI18n } from "../i18n";
@@ -112,6 +113,7 @@ export function ProjectPage({
             </div>
           </header>
 
+          {kind === "mod" && inst && <ModInsight instanceId={inst.id} projectId={projectId} />}
           <div className="project-install">
             {versions === null ? (
               <span className="muted">{t("common.loading")}</span>

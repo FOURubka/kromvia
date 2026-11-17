@@ -16,6 +16,7 @@ import com.google.gson.JsonParseException;
 import com.kromvia.client.cosmetic.Cosmetic;
 import com.kromvia.client.cosmetic.Wardrobe;
 import com.kromvia.client.module.Module;
+import net.minecraft.network.chat.Component;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +58,7 @@ public final class Config {
 			if (data == null) return;
 			for (Module m : KromviaClient.MODULES) {
 				String id = stored(data, m);
+				if (id == null) continue;
 				Boolean on = data.modules == null ? null : data.modules.get(id);
 				if (on != null) m.enabled = on;
 				Integer key = data.keys == null ? null : data.keys.get(id);
@@ -84,9 +86,13 @@ public final class Config {
 		}
 	}
 
+	/** The config key `m` reads from, or `null` when its key still holds a renamed module's old entry. */
 	private static String stored(Data data, Module m) {
-		String old = LEGACY_IDS.get(m.id);
 		boolean fresh = data.modules != null && data.modules.containsKey(m.id);
+		for (Module other : KromviaClient.MODULES) {
+			if (other != m && m.id.equals(LEGACY_IDS.get(other.id)) && !(data.modules != null && data.modules.containsKey(other.id))) return null;
+		}
+		String old = LEGACY_IDS.get(m.id);
 		return old == null || fresh ? m.id : old;
 	}
 
@@ -137,12 +143,17 @@ public final class Config {
 		return name.matches("[A-Za-z0-9 _-]{1,32}");
 	}
 
+	public static String currentServer(net.minecraft.client.Minecraft mc) {
+		net.minecraft.client.multiplayer.ServerData s = mc.level == null || mc.isLocalServer() ? null : mc.getCurrentServer();
+		return s == null ? null : s.ip.trim().toLowerCase(java.util.Locale.ROOT);
+	}
+
 	public static java.util.List<String> profiles() {
 		java.util.List<String> out = new java.util.ArrayList<>();
 		try (java.util.stream.Stream<Path> files = Files.list(PROFILES)) {
 			files.forEach(p -> {
 				String n = p.getFileName().toString();
-				if (n.endsWith(".json")) out.add(n.substring(0, n.length() - 5));
+				if (n.endsWith(".json") && !n.startsWith(BEFORE)) out.add(n.substring(0, n.length() - 5));
 			});
 		} catch (IOException ignored) {
 		}
@@ -173,6 +184,66 @@ public final class Config {
 			return;
 		}
 		load();
+	}
+
+	/** Profile name -> server address it loads on. Not a `.json`, so it is not listed as a profile. */
+	private static final Path SERVER_PROFILES = PROFILES.resolve("servers.map");
+	/** The setup from before a server's profile was loaded, put back when the player leaves. */
+	private static final String BEFORE = "_before-server";
+	private static String activeServer;
+
+	public static Map<String, String> serverProfiles() {
+		Map<String, String> out = new TreeMap<>();
+		try {
+			for (String line : Files.readAllLines(SERVER_PROFILES, StandardCharsets.UTF_8)) {
+				int tab = line.indexOf('\t');
+				if (tab > 0 && validProfile(line.substring(tab + 1))) out.put(line.substring(0, tab), line.substring(tab + 1));
+			}
+		} catch (IOException ignored) {
+		}
+		return out;
+	}
+
+	/** Loads `profile` whenever the player joins `server`; `null` stops that. */
+	public static void bindServer(String server, String profile) {
+		Map<String, String> all = serverProfiles();
+		if (profile == null) all.remove(server);
+		else all.put(server, profile);
+		StringBuilder b = new StringBuilder();
+		all.forEach((s, p) -> b.append(s).append('\t').append(p).append('\n'));
+		try {
+			Files.createDirectories(PROFILES);
+			Files.write(SERVER_PROFILES, b.toString().getBytes(StandardCharsets.UTF_8));
+		} catch (IOException e) {
+			LOG.warn("Could not save server profiles", e);
+		}
+	}
+
+	/** Called every tick with the server the player is on, or `null`. Swaps in that server's profile and back. */
+	public static void serverChanged(net.minecraft.client.Minecraft mc, String server) {
+		if (java.util.Objects.equals(server, activeServer)) return;
+		Map<String, String> bound = serverProfiles();
+		if (activeServer != null) {
+			String mine = bound.get(activeServer);
+			if (mine != null) saveProfile(mine);
+			apply(mc, BEFORE);
+			deleteProfile(BEFORE);
+			activeServer = null;
+		}
+		String profile = server == null ? null : bound.get(server);
+		if (profile == null || !profiles().contains(profile)) return;
+		saveProfile(BEFORE);
+		apply(mc, profile);
+		activeServer = server;
+		com.kromvia.client.compat.Mc.actionbar(Component.literal("Profile: " + profile));
+	}
+
+	/** Loads a profile and switches off what it turns off, the way the menu does. */
+	public static void apply(net.minecraft.client.Minecraft mc, String name) {
+		java.util.Set<Module> wasOn = new java.util.HashSet<>();
+		for (Module m : KromviaClient.MODULES) if (m.enabled) wasOn.add(m);
+		loadProfile(name);
+		for (Module m : wasOn) if (!m.enabled) m.disable(mc);
 	}
 
 	public static void deleteProfile(String name) {

@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
@@ -78,8 +79,33 @@ public final class Cosmetics {
 		cape = null;
 	}
 
+	public static final String CUSTOM = "custom:";
+	private static final int MAX_CUSTOM = 64;
+	private static final Map<String, Cosmetic> CUSTOMS = new java.util.LinkedHashMap<>(16, 0.75F, true) {
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<String, Cosmetic> e) {
+			return size() > MAX_CUSTOM;
+		}
+	};
+
+	public static String customStyle(String style, String art) {
+		return "custom".equals(style) && CapeArt.decode(art) != null ? CUSTOM + art : style;
+	}
+
 	public static Cosmetic styled(String style) {
 		if (DEV_STYLE.equals(style)) return dev();
+		if (style != null && style.startsWith(CUSTOM)) {
+			String art = style.substring(CUSTOM.length());
+			synchronized (CUSTOMS) {
+				Cosmetic c = CUSTOMS.get(art);
+				if (c == null) {
+					Piece p = new Piece(KROMVIA_CAPE + "_custom_" + Integer.toHexString(art.hashCode()), Shapes.cape(CapeArt.FRAMES, () -> CapeArt.custom(art)), Anchor.BODY, 0xFFFFFFFF, false, capeSwing());
+					c = new Cosmetic(KROMVIA_CAPE, "Own Cape", Slot.BACK, 0xFFFFFFFF, List.of(p));
+					CUSTOMS.put(art, c);
+				}
+				return c;
+			}
+		}
 		for (int i = 0; i < CAPE_STYLES.length; i++) {
 			if (!CAPE_STYLES[i].equals(style)) continue;
 			if (STYLED[i] == null) STYLED[i] = capeOf(KROMVIA_CAPE + "_" + style, style);

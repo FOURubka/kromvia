@@ -61,6 +61,7 @@ export function AppearanceExtras() {
   const [hasBackground, setHasBackground] = useState(false);
   const [autostart, setAutostart] = useState(false);
   const [crashReports, setCrashReports] = useState(true);
+  const [perfReports, setPerfReports] = useState(true);
   const [status, setStatus] = useState<{ error: boolean; text: string } | null>(null);
   const fail = (e: unknown) => setStatus({ error: true, text: String(e) });
 
@@ -72,6 +73,7 @@ export function AppearanceExtras() {
     load();
     invoke<boolean>("autostart_get").then(setAutostart, () => {});
     invoke<boolean>("crash_reports_get").then(setCrashReports, () => {});
+    invoke<boolean>("perf_reports_get").then(setPerfReports, () => {});
   }, []);
 
   const pick = (id: string) => {
@@ -96,6 +98,7 @@ export function AppearanceExtras() {
     invoke("background_set", { image }).then(() => (setHasBackground(!!image), changed()), fail);
 
   const toggleAutostart = (on: boolean) => invoke("autostart_set", { on }).then(() => setAutostart(on), fail);
+  const togglePerfReports = (on: boolean) => invoke("perf_reports_set", { on }).then(() => setPerfReports(on), fail);
   const toggleCrashReports = (on: boolean) => invoke("crash_reports_set", { on }).then(() => setCrashReports(on), fail);
 
   return (
@@ -142,14 +145,59 @@ export function AppearanceExtras() {
           )}
         </div>
       </div>
-      <label className="muted">
-        <input type="checkbox" checked={autostart} onChange={(e) => toggleAutostart(e.currentTarget.checked)} /> {t("settings.autostart")}
-      </label>
-      <label className="muted">
-        <input type="checkbox" checked={crashReports} onChange={(e) => toggleCrashReports(e.currentTarget.checked)} /> {t("settings.crashReports")}
-      </label>
+      <MenuMedia />
+      <div className="setting-checks">
+        <label className="muted">
+          <input type="checkbox" checked={autostart} onChange={(e) => toggleAutostart(e.currentTarget.checked)} /> {t("settings.autostart")}
+        </label>
+        <label className="muted">
+          <input type="checkbox" checked={crashReports} onChange={(e) => toggleCrashReports(e.currentTarget.checked)} /> {t("settings.crashReports")}
+        </label>
+        <label className="muted">
+          <input type="checkbox" checked={perfReports} onChange={(e) => togglePerfReports(e.currentTarget.checked)} /> {t("settings.perfReports")}
+        </label>
+      </div>
       {status && <p className={status.error ? "error" : "muted"}>{status.text}</p>}
     </>
+  );
+}
+
+type Media = { images: string[]; music: string[] };
+
+function MenuMedia() {
+  const { t } = useI18n();
+  const [media, setMedia] = useState<Media>({ images: [], music: [] });
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    invoke<Media>("menu_media_list").then(setMedia, () => {});
+  }, []);
+  const done = (p: Promise<Media>) => (setError(null), p.then(setMedia, (e) => setError(String(e))));
+  const add = async () => {
+    const paths = await open({ multiple: true, filters: [{ name: "PNG, OGG", extensions: ["png", "ogg"] }] });
+    if (paths?.length) done(invoke<Media>("menu_media_add", { paths }));
+  };
+  const list = (kind: keyof Media) =>
+    media[kind].map((name) => (
+      <span key={kind + name} className="media-chip">
+        {name}
+        <button className="media-chip-x" title={t("menuMedia.remove")} aria-label={t("menuMedia.remove")} onClick={() => done(invoke<Media>("menu_media_remove", { kind, name }))}>
+          <Glyph name="x" />
+        </button>
+      </span>
+    ));
+  return (
+    <div className="field">
+      <span>{t("menuMedia.title")}</span>
+      <div className="actions">
+        <button className="btn btn-ghost" onClick={add}>
+          <Glyph name="file-import" /> {t("menuMedia.add")}
+        </button>
+        {list("images")}
+        {list("music")}
+      </div>
+      <span className="muted">{t("menuMedia.hint")}</span>
+      {error && <p className="error">{error}</p>}
+    </div>
   );
 }
 

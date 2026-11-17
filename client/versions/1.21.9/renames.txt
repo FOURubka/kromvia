@@ -10,3 +10,6 @@ model/player/PlayerModel -> model/PlayerModel
 org.jspecify.annotations.Nullable -> org.jetbrains.annotations.Nullable
 getIdentifier -> getLocation
 mc.screen.resize(w.getGuiScaledWidth(), w.getGuiScaledHeight()); -> mc.screen.resize(mc, w.getGuiScaledWidth(), w.getGuiScaledHeight());
+s.init(w, h); -> s.init(Minecraft.getInstance(), w, h);
+cam.xRot() -> cam.getXRot()
+cam.yRot() -> cam.getYRot()

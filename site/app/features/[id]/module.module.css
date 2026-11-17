@@ -1,0 +1,49 @@
+.back {
+  display: inline-block;
+  margin: 24px 0 8px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--text);
+}
+
+.how {
+  max-width: 640px;
+  margin-bottom: 48px;
+}
+
+.more h2 {
+  margin-bottom: 12px;
+  font-size: 20px;
+}
+
+.more ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 64px;
+  padding: 0;
+  list-style: none;
+}
+
+.more a {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.more a:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.cta {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 80px;
+}

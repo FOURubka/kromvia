@@ -37,7 +37,7 @@ public final class Text {
 	}
 
 	public static Module cps() {
-		return new TextModule("cps", "CPS", Module.Category.PVP, true) {
+		return new TextModule("cps", "CPS", Module.Category.PVP, false) {
 			final ChoiceSetting buttons = add(new ChoiceSetting("buttons", "Buttons", 0, "Left | Right", "Left only"));
 
 			@Override
@@ -53,7 +53,7 @@ public final class Text {
 	}
 
 	public static Module ping() {
-		return new TextModule("ping", "Ping", Module.Category.HUD, true) {
+		return new TextModule("ping", "Ping", Module.Category.HUD, false) {
 			final ChoiceSetting format = add(new ChoiceSetting("format", "Format", 0, "42 ms", "Ping: 42"));
 
 			@Override

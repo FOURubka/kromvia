@@ -15,7 +15,11 @@
   // Per client network (IP, or /64 for IPv6), checked on every request.
   "ratelimits": [{ "name": "LIMIT", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } }],
   // Shared screenshots, under screenshots/<share code>.
-  "r2_buckets": [{ "binding": "SHOTS", "bucket_name": "kromvia-shots" }],
+  "r2_buckets": [
+    { "binding": "SHOTS", "bucket_name": "kromvia-shots" },
+    // Shared worlds (B9), under relays/<id>/<version>.
+    { "binding": "WORLDS", "bucket_name": "kromvia-worlds" }
+  ],
   "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],
   "routes": [{ "pattern": "api.kromvia.com", "custom_domain": true }],

@@ -71,11 +71,11 @@ public final class Onboarding extends KScreen {
 
 	@Override
 	protected void init() {
-		pw = Math.min(width - 40, 360);
-		ph = Math.min(height - 30, 240);
+		pw = Math.min(width - 40, 380);
+		ph = Math.min(height - 30, 250);
 		px = (width - pw) / 2;
 		py = (height - ph) / 2;
-		int x = px + 16, w = pw - 32, y = py + 58;
+		int x = px + 20, w = pw - 40, y = py + 64;
 
 		switch (PAGES[page]) {
 			case "Look" -> {
@@ -128,13 +128,13 @@ public final class Onboarding extends KScreen {
 			default -> {}
 		}
 
-		int by = py + ph - 28;
-		if (page > 0) addRenderableWidget(new KButton(px + 16, by, 90, 20, Component.literal("Back"), b -> go(page - 1)).flat());
+		int by = py + ph - 34;
+		if (page > 0) addRenderableWidget(new KButton(px + 20, by, 84, 20, Component.literal("Back"), b -> go(page - 1)));
 		boolean last = page == PAGES.length - 1;
-		addRenderableWidget(new KButton(px + pw - 106, by, 90, 20, Component.literal(last ? "Play" : "Next"), b -> {
+		addRenderableWidget(new KButton(px + pw - 104, by, 84, 20, Component.literal(last ? "Let's play" : "Next"), b -> {
 			if (last) onClose();
 			else go(page + 1);
-		}));
+		}).primary());
 	}
 
 	private void toggle(Module m, String label, int x, int y, int w) {
@@ -147,9 +147,9 @@ public final class Onboarding extends KScreen {
 	}
 
 	private void allNone(int right, Runnable all, Runnable none) {
-		int y = py + 40;
-		addRenderableWidget(new KButton(right - 80, y, 38, 14, Component.literal("All"), b -> all.run()).flat());
-		addRenderableWidget(new KButton(right - 38, y, 38, 14, Component.literal("None"), b -> none.run()).flat());
+		int y = py + 44;
+		addRenderableWidget(new KButton(right - 84, y, 40, 14, Component.literal("All"), b -> all.run()).flat());
+		addRenderableWidget(new KButton(right - 40, y, 40, 14, Component.literal("None"), b -> none.run()).flat());
 	}
 
 	private void setAll(List<Module> list, boolean on) {
@@ -168,30 +168,29 @@ public final class Onboarding extends KScreen {
 
 	@Override
 	protected void drawBackground(Gfx g, int mouseX, int mouseY, float delta) {
-		UiStyle.dim(g, width, height, 1);
-		UiStyle.panel(g, px, py, pw, ph);
+		drawPanorama(g, delta);
+		g.fill(0, 0, width, height, 0x400B0D11);
+		UiStyle.glass(g, px, py, pw, ph, 14, 0xA0101219, UiStyle.GLASS_RIM);
 	}
 
 	@Override
 	protected void draw(Gfx g, int mouseX, int mouseY, float delta) {
 		super.draw(g, mouseX, mouseY, delta);
-		g.drawString(font, PAGES[page], px + 16, py + 14, UiStyle.TEXT, false);
-		g.drawString(font, (page + 1) + " / " + PAGES.length, px + pw - 40, py + 14, UiStyle.MUTED, false);
-		for (int i = 0; i < PAGES.length; i++) g.fill(px + 16 + i * 14, py + 28, px + 26 + i * 14, py + 30, i <= page ? UiStyle.FRONT : UiStyle.LINE);
-		String[] text = switch (PAGES[page]) {
-			case "Welcome" -> new String[] {"Kromvia is built into this game.", "A few quick choices and you are in.", "Everything here can be changed later: Right Shift."};
-			case "Look" -> new String[] {"Interface size"};
-			case "Controls" -> new String[] {"How you move"};
-			case "HUD" -> new String[] {"What the HUD shows"};
-			case "Visuals" -> new String[] {"", "", "", "Motion blur"};
-			case "Mods" -> new String[] {Accounts.sender == null ? "Mods from Modrinth (needs the Kromvia launcher)" : "Mods from Modrinth, installed for your next start"};
-			default -> new String[] {"All set.", "Right Shift opens every module in game."};
+		String[] head = switch (PAGES[page]) {
+			case "Welcome" -> new String[] {"Welcome to Kromvia", "It's already in your game. Six quick choices and you're in."};
+			case "Look" -> new String[] {"How big should things be?", "Pick the interface size that reads well on your screen."};
+			case "Controls" -> new String[] {"Moving around", "Small things that save your fingers."};
+			case "HUD" -> new String[] {"What do you want on screen?", "You can drag these around later in the HUD editor."};
+			case "Visuals" -> new String[] {"A bit of polish", "Outline the block you look at, and how much motion blur."};
+			case "Mods" -> new String[] {"Mods worth having", Accounts.sender == null ? "Needs the Kromvia launcher to install them." : "Picked ones are installed before your next start."};
+			default -> new String[] {"You're set", "Right Shift opens every module, any time."};
 		};
-		int y = PAGES[page].equals("Welcome") || PAGES[page].equals("Done") ? py + 58 : py + 44;
-		for (String line : text) {
-			g.drawString(font, line, px + 16, y, UiStyle.MUTED, false);
-			y += 12;
-		}
+		g.drawString(font, head[0], px + 20, py + 20, UiStyle.TEXT, false);
+		g.drawString(font, head[1], px + 20, py + 34, UiStyle.MUTED, false);
+		int bar = pw - 40, done = Math.round(bar * (page + 1) / (float) PAGES.length);
+		UiStyle.round(g, px + 20, py + ph - 44, px + 20 + bar, py + ph - 42, 1, 0x26FFFFFF);
+		UiStyle.round(g, px + 20, py + ph - 44, px + 20 + done, py + ph - 42, 1, UiStyle.TEXT);
+		if (PAGES[page].equals("Visuals")) g.drawString(font, "Motion blur", px + 20, py + 64 + 36, UiStyle.MUTED, false);
 	}
 
 	@Override

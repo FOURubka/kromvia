@@ -67,6 +67,8 @@ pub struct Version {
     #[serde(default)]
     pub loaders: Vec<String>,
     pub version_type: String,
+    #[serde(default, skip_serializing)]
+    pub changelog: Option<String>,
     pub files: Vec<VersionFile>,
     #[serde(default)]
     pub dependencies: Vec<Dependency>,
@@ -479,6 +481,7 @@ mod tests {
             game_versions: vec![],
             loaders: vec![],
             version_type: "release".into(),
+            changelog: None,
             files: vec![],
             dependencies: incompatible
                 .iter()

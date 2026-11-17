@@ -17,6 +17,7 @@ public class GameRendererMixin {
 	private void kromvia$zoom(Camera camera, float delta, boolean useFovSetting, CallbackInfoReturnable<Float> cir) {
 		float f = Toggles.Zoom.factor();
 		if (f != 1) cir.setReturnValue(cir.getReturnValue() * f);
+		if (useFovSetting) com.kromvia.client.module.Info.fov = (float) cir.getReturnValue();
 	}
 
 	@Inject(method = "bobHurt", at = @At("HEAD"), cancellable = true)

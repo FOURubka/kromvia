@@ -37,6 +37,57 @@ pub fn world_dir(instance_id: &str, folder: &str) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+/// Where `level.dat` sits inside a world zip: `""` for the root or `"Name/"`. `None` if it is not a world.
+pub fn zip_world_root(archive: &mut zip::ZipArchive<std::fs::File>) -> Option<String> {
+    archive
+        .file_names()
+        .filter_map(|n| n.ok())
+        .filter(|n| n == "level.dat" || n.ends_with("/level.dat"))
+        .map(|n| n.trim_end_matches("level.dat").to_string())
+        .filter(|root| root.matches('/').count() <= 1)
+        .min_by_key(|root| root.len())
+}
+
+/// Unpacks a world zip into `saves/`, under a folder name that is free. Returns that name.
+pub fn import_zip(instance_id: &str, path: &Path) -> Result<String, String> {
+    let mut archive = zip::ZipArchive::new(std::fs::File::open(path).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    let root = zip_world_root(&mut archive).ok_or("this zip has no level.dat")?;
+    let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let base: String = root.trim_end_matches('/').to_string();
+    let base = if base.is_empty() { stem } else { base };
+    let base: String = base.chars().filter(|c| !matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')).collect::<String>().trim().trim_start_matches('.').to_string();
+    let base = if base.is_empty() { "World".to_string() } else { base };
+    let saves = saves(instance_id)?;
+    std::fs::create_dir_all(&saves).map_err(|e| e.to_string())?;
+    let mut name = base.clone();
+    let mut n = 2;
+    while saves.join(&name).exists() {
+        name = format!("{base} ({n})");
+        n += 1;
+    }
+    let dest = saves.join(&name);
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
+        let Some(rel) = entry.enclosed_name() else { continue };
+        let Ok(rel) = rel.strip_prefix(&root) else { continue };
+        let out = dest.join(rel);
+        if entry.is_dir() {
+            std::fs::create_dir_all(&out).map_err(|e| e.to_string())?;
+            continue;
+        }
+        if let Some(parent) = out.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let mut file = std::fs::File::create(&out).map_err(|e| e.to_string())?;
+        std::io::copy(&mut entry, &mut file).map_err(|e| e.to_string())?;
+    }
+    if !dest.join("level.dat").is_file() {
+        let _ = std::fs::remove_dir_all(&dest);
+        return Err("this zip has no level.dat".into());
+    }
+    Ok(name)
+}
+
 pub fn dir_size(dir: &Path) -> u64 {
     walk(dir, "").iter().filter_map(|(_, p)| std::fs::metadata(p).ok()).map(|m| m.len()).sum()
 }
@@ -148,6 +199,71 @@ pub struct Screenshot {
     pub name: String,
     pub path: String,
     pub taken: u64,
+    /// The world or server the game was in when the file was written, if the launcher saw it.
+    pub place: Option<Place>,
+}
+
+#[derive(Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Place {
+    /// `world` or `server`.
+    pub kind: String,
+    pub name: String,
+}
+
+#[derive(Serialize, serde::Deserialize)]
+struct Mark {
+    at: u64,
+    place: Option<Place>,
+}
+
+const MAX_MARKS: usize = 2000;
+
+fn places_path(instance_id: &str) -> Result<PathBuf, String> {
+    Ok(instances::dir(instance_id)?.join("places.json"))
+}
+
+fn read_marks(instance_id: &str) -> Vec<Mark> {
+    places_path(instance_id).ok().and_then(|p| std::fs::read(p).ok()).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()
+}
+
+/// Remembers where the game is from now on, so screenshots can be filtered by world or server later.
+pub fn mark_place(instance_id: &str, place: Option<Place>) {
+    let mut marks = read_marks(instance_id);
+    if marks.last().is_some_and(|m| m.place == place) {
+        return;
+    }
+    let at = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+    marks.push(Mark { at, place });
+    let skip = marks.len().saturating_sub(MAX_MARKS);
+    if let (Ok(path), Ok(json)) = (places_path(instance_id), serde_json::to_vec(&marks[skip..])) {
+        let _ = std::fs::write(path, json);
+    }
+}
+
+/// The singleplayer world open right now: the one whose `session.lock` was written last.
+fn open_world_dir(instance_id: &str) -> Option<(String, PathBuf)> {
+    let saves = saves(instance_id).ok()?;
+    std::fs::read_dir(&saves)
+        .ok()?
+        .flatten()
+        .filter_map(|e| Some((e.metadata().ok()?.is_dir().then_some(())?, e)))
+        .filter_map(|(_, e)| Some((e.path().join("session.lock").metadata().ok()?.modified().ok()?, e)))
+        .max_by_key(|(t, _)| *t)
+        .map(|(_, e)| (e.file_name().to_string_lossy().into_owned(), e.path()))
+}
+
+pub fn open_world_folder(instance_id: &str) -> Option<String> {
+    open_world_dir(instance_id).map(|(folder, _)| folder)
+}
+
+pub fn open_world(instance_id: &str) -> Option<Place> {
+    let (folder, dir) = open_world_dir(instance_id)?;
+    let name = describe(folder.clone(), &dir).map_or(folder, |w| w.name);
+    Some(Place { kind: "world".into(), name })
+}
+
+fn place_at(marks: &[Mark], at: u64) -> Option<Place> {
+    marks.iter().rev().find(|m| m.at <= at).and_then(|m| m.place.clone())
 }
 
 fn screenshots(instance_id: &str) -> Result<PathBuf, String> {
@@ -165,9 +281,13 @@ pub fn list_screenshots(instance_id: &str) -> Result<Vec<Screenshot>, String> {
                 return None;
             }
             let taken = e.metadata().ok()?.modified().ok()?.duration_since(std::time::UNIX_EPOCH).ok()?.as_secs();
-            Some(Screenshot { path: e.path().to_string_lossy().into_owned(), name, taken })
+            Some(Screenshot { path: e.path().to_string_lossy().into_owned(), name, taken, place: None })
         })
         .collect();
+    let marks = read_marks(instance_id);
+    for s in &mut out {
+        s.place = place_at(&marks, s.taken);
+    }
     out.sort_by_key(|s| std::cmp::Reverse(s.taken));
     Ok(out)
 }
@@ -233,6 +353,8 @@ mod tests {
 
         delete(&inst.id, &copy).unwrap();
         assert_eq!(super::list(&inst.id).unwrap().len(), 1);
+        assert_eq!(import_zip(&inst.id, &zip_path).unwrap(), "New World (2)");
+        assert!(saves(&inst.id).unwrap().join("New World (2)/region/r.0.0.mca").is_file());
         let _ = std::fs::remove_file(zip_path);
         instances::delete(&inst.id).unwrap();
     }
@@ -242,5 +364,15 @@ mod tests {
         paths::init(std::env::temp_dir().join(format!("kromvia-shots-{}", std::process::id())));
         assert!(screenshot_path("x", "../a.png").is_err());
         assert!(screenshot_path("x", "a.txt").is_err());
+    }
+
+    #[test]
+    fn finds_the_place_a_screenshot_was_taken_in() {
+        let p = |n: &str| Some(Place { kind: "server".into(), name: n.into() });
+        let marks = [Mark { at: 10, place: p("a") }, Mark { at: 20, place: None }, Mark { at: 30, place: p("b") }];
+        assert_eq!(place_at(&marks, 5), None);
+        assert_eq!(place_at(&marks, 15), p("a"));
+        assert_eq!(place_at(&marks, 25), None);
+        assert_eq!(place_at(&marks, 99), p("b"));
     }
 }

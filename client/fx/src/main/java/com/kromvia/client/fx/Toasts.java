@@ -10,13 +10,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.toasts.SystemToast;
-import net.minecraft.network.chat.Component;
+import com.kromvia.client.compat.Mc;
+import com.kromvia.client.ui.Notes;
+import com.kromvia.client.ui.SocialScreen;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 final class Toasts {
-	private static final SystemToast.SystemToastId ID = new SystemToast.SystemToastId(5000L);
 	private static final int MAX_TEXT = 200;
 
 	private static final Logger PRESENCE = LoggerFactory.getLogger("kromvia-presence");
@@ -30,6 +30,30 @@ final class Toasts {
 		t.start();
 	}
 
+	private static Notes.Note note(String title, String text, JsonObject action) {
+		String party = action != null && action.has("party") ? action.get("party").getAsString() : null;
+		String chat = action != null && action.has("chat") ? action.get("chat").getAsString() : null;
+		if (party != null) {
+			return new Notes.Note(title, text, Toasts::openSocial)
+					.button("Join", true, () -> Social.join(party))
+					.button("Decline", false, () -> Social.decline(party));
+		}
+		if (chat != null) {
+			return new Notes.Note(title, text, () -> {
+				Social.open(chat);
+				openSocial();
+			}).button("Reply", true, () -> {
+				Social.open(chat);
+				openSocial();
+			});
+		}
+		return new Notes.Note(title, text, null);
+	}
+
+	private static void openSocial() {
+		if (!(Mc.screen() instanceof SocialScreen)) Mc.setScreen(new SocialScreen(Mc.screen()));
+	}
+
 	private static void read() {
 		try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
 			for (String line; (line = in.readLine()) != null; ) {
@@ -39,6 +63,26 @@ final class Toasts {
 					JsonObject social = msg.getAsJsonObject("social");
 					if (social != null) {
 						Social.set(social);
+						continue;
+					}
+					JsonObject ghost = msg.getAsJsonObject("ghost");
+					if (ghost != null) {
+						com.kromvia.client.Ghosts.answer(ghost);
+						continue;
+					}
+					JsonObject room = msg.getAsJsonObject("room");
+					if (room != null) {
+						com.kromvia.client.ui.ModsScreen.room(room);
+						continue;
+					}
+					JsonObject mods = msg.getAsJsonObject("mods");
+					if (mods != null) {
+						com.kromvia.client.ui.ModsScreen.answer(mods);
+						continue;
+					}
+					JsonObject ping = msg.getAsJsonObject("ping");
+					if (ping != null) {
+						com.kromvia.client.module.Info.pinged(ping);
 						continue;
 					}
 					JsonObject accounts = msg.getAsJsonObject("accounts");
@@ -78,7 +122,8 @@ final class Toasts {
 					String title = toast.get("title").getAsString();
 					String text = toast.get("text").getAsString();
 					String shown = text.length() > MAX_TEXT ? text.substring(0, MAX_TEXT) + "…" : text;
-					if (mc != null) mc.execute(() -> Types.toast(mc, ID, Component.literal(title), Component.literal(shown)));
+					JsonObject action = toast.has("action") && toast.get("action").isJsonObject() ? toast.getAsJsonObject("action") : null;
+					if (mc != null) mc.execute(() -> Notes.add(note(title, shown, action)));
 				} catch (RuntimeException ignored) {
 				}
 			}

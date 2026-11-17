@@ -110,17 +110,24 @@ public final class Gfx {
 	}
 
 	public void drawCenteredString(Font font, String text, int x, int y, int color) {
-		GuiComponent.drawCenteredString(g, font, text, x, y, color);
+		drawString(font, text, x - font.width(text) / 2, y, color, false);
 	}
 
 	public void drawCenteredString(Font font, Component text, int x, int y, int color) {
-		GuiComponent.drawCenteredString(g, font, text, x, y, color);
+		drawString(font, text, x - font.width(text) / 2, y, color, false);
 	}
 
 	public void renderItem(ItemStack stack, int x, int y) {
 		RenderSystem.pushMatrix();
 		RenderSystem.multMatrix(g.last().pose());
 		Minecraft.getInstance().getItemRenderer().renderGuiItem(stack, x, y);
+		RenderSystem.popMatrix();
+	}
+
+	public void itemDecorations(ItemStack stack, int x, int y) {
+		RenderSystem.pushMatrix();
+		RenderSystem.multMatrix(g.last().pose());
+		Minecraft.getInstance().getItemRenderer().renderGuiItemDecorations(Minecraft.getInstance().font, stack, x, y);
 		RenderSystem.popMatrix();
 	}
 

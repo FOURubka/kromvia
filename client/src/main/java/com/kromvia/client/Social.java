@@ -185,6 +185,14 @@ public final class Social {
 		ask("url", "url", url);
 	}
 
+	public static String leader() {
+		return leader;
+	}
+
+	public static void joinFriend(String friend) {
+		ask("joinFriend", "id", friend);
+	}
+
 	public static void invite(String friend) {
 		ask("invite", "id", friend);
 	}

@@ -14,7 +14,6 @@ use crate::engine::core::paths::{self, safe_join};
 
 const MANIFEST_URL: &str = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
 const ASSETS_URL: &str = "https://resources.download.minecraft.net";
-const PARALLEL_DOWNLOADS: usize = 16;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Manifest {
@@ -162,7 +161,7 @@ pub async fn verify_files(mc: &str, version: &VersionJson, job: &Arc<Job>) -> Re
                 bad
             }
         })
-        .buffer_unordered(PARALLEL_DOWNLOADS);
+        .buffer_unordered(http::parallel());
     let mut broken = 0;
     while let Some(bad) = results.next().await {
         if job.is_cancelled() {
@@ -274,7 +273,7 @@ pub async fn download_all(tasks: Vec<FileTask>, job: &Arc<Job>) -> Result<(), St
                 .await
             }
         })
-        .buffer_unordered(PARALLEL_DOWNLOADS);
+        .buffer_unordered(http::parallel());
     while let Some(result) = results.next().await {
         result?;
     }

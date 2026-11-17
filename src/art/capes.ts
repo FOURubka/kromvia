@@ -117,3 +117,55 @@ export function capeTexture(style: CapeStyle) {
   }
   return c;
 }
+
+export const ART_W = 10;
+export const ART_H = 16;
+const ART_LEN = ART_W * ART_H * 4;
+
+export function decodeArt(art: string | undefined | null): Uint8ClampedArray | null {
+  if (!art) return null;
+  try {
+    const bin = atob(art);
+    if (bin.length !== ART_LEN) return null;
+    const out = new Uint8ClampedArray(ART_LEN);
+    for (let i = 0; i < ART_LEN; i++) out[i] = bin.charCodeAt(i);
+    for (let i = 3; i < ART_LEN; i += 4) out[i] = 255;
+    return out;
+  } catch {
+    return null;
+  }
+}
+
+export function encodeArt(px: Uint8ClampedArray) {
+  let bin = "";
+  for (let i = 0; i < ART_LEN; i++) bin += String.fromCharCode(i % 4 === 3 ? 255 : px[i]);
+  return btoa(bin);
+}
+
+export function artFrom(style: CapeStyle) {
+  return encodeArt(capeTexture(style).getContext("2d")!.getImageData(1, 1, ART_W, ART_H).data);
+}
+
+export function customCapeTexture(art: string) {
+  const px = decodeArt(art) ?? decodeArt(artFrom("kromvia"))!;
+  const c = document.createElement("canvas");
+  c.width = 64;
+  c.height = 32;
+  const g = c.getContext("2d")!;
+  const front = new ImageData(new Uint8ClampedArray(px), ART_W, ART_H);
+  const back = new ImageData(new Uint8ClampedArray(px.map((v, i) => (i % 4 === 3 ? v : v * 0.72))), ART_W, ART_H);
+  g.putImageData(front, 1, 1);
+  g.putImageData(back, 12, 1);
+  g.drawImage(c, 1, 1, ART_W, 1, 1, 0, ART_W, 1);
+  g.drawImage(c, 1, ART_H, ART_W, 1, 11, 0, ART_W, 1);
+  g.drawImage(c, 1, 1, 1, ART_H, 0, 1, 1, ART_H);
+  g.drawImage(c, ART_W, 1, 1, ART_H, 11, 1, 1, ART_H);
+  return c;
+}
+
+export const CAPE_STYLES: CapeStyle[] = ["kromvia", "ember", "frost"];
+
+export function capeFor(style: string | undefined, art?: string | null) {
+  if (style === "custom" && art) return customCapeTexture(art);
+  return capeTexture(CAPE_STYLES.includes(style as CapeStyle) ? (style as CapeStyle) : "kromvia");
+}

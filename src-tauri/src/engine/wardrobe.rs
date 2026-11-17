@@ -8,7 +8,8 @@ use crate::engine::core::paths;
 
 const SLOTS: [&str; 7] = ["head", "face", "neck", "back", "body", "feet", "effect"];
 const BACKS: [&str; 3] = ["none", "cape", "elytra"];
-const STYLES: [&str; 3] = ["kromvia", "ember", "frost"];
+const STYLES: [&str; 4] = ["kromvia", "ember", "frost", "custom"];
+const ART_LEN: usize = 10 * 16 * 4;
 const MAX_CAPE: usize = 64 * 1024;
 
 pub fn json_path() -> PathBuf {
@@ -21,6 +22,10 @@ pub fn cape_path() -> PathBuf {
 
 fn valid_id(id: &str) -> bool {
     (1..=40).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-')
+}
+
+pub fn valid_art(art: &str) -> bool {
+    base64::engine::general_purpose::STANDARD.decode(art).is_ok_and(|b| b.len() == ART_LEN)
 }
 
 pub fn clean(v: &Value) -> Result<Value, String> {
@@ -42,13 +47,22 @@ pub fn clean(v: &Value) -> Result<Value, String> {
     let pick = |key: &str, allowed: &[&str], default: &str| {
         Value::String(v[key].as_str().filter(|s| allowed.contains(s)).unwrap_or(default).into())
     };
-    Ok(serde_json::json!({
+    let art = v["art"].as_str().filter(|a| valid_art(a));
+    let mut style = pick("style", &STYLES, "kromvia");
+    if style == "custom" && art.is_none() {
+        style = Value::String("kromvia".into());
+    }
+    let mut out = serde_json::json!({
         "equipped": equipped,
         "colors": colors,
         "back": pick("back", &BACKS, "cape"),
-        "style": pick("style", &STYLES, "kromvia"),
+        "style": style,
         "dev": v["dev"].as_bool().unwrap_or(false),
-    }))
+    });
+    if let Some(art) = art {
+        out["art"] = Value::String(art.into());
+    }
+    Ok(out)
 }
 
 pub fn save(v: &Value, cape_png: Option<&str>) -> Result<(), String> {
@@ -99,5 +113,9 @@ mod tests {
         assert_eq!(c["colors"], serde_json::json!({ "top_hat": 4294967295u64 }));
         assert_eq!((c["back"].as_str(), c["style"].as_str()), (Some("cape"), Some("frost")));
         assert!(c.get("extra").is_none());
+        let art = base64::engine::general_purpose::STANDARD.encode([7u8; ART_LEN]);
+        let custom = clean(&serde_json::json!({ "style": "custom", "art": art })).unwrap();
+        assert_eq!((custom["style"].as_str(), custom["art"].as_str()), (Some("custom"), Some(art.as_str())));
+        assert_eq!(clean(&serde_json::json!({ "style": "custom", "art": "AAAA" })).unwrap()["style"], "kromvia");
     }
 }

@@ -35,6 +35,20 @@ pub fn save(instance_id: &str, pack: PackRef, files: Vec<PackPath>) -> Result<()
     std::fs::write(path(instance_id)?, json).map_err(|e| e.to_string())
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackUpdate {
+    pub project: String,
+    pub version: String,
+}
+
+/// A newer version of the Modrinth modpack this instance came from, if there is one.
+pub async fn check_update(instance_id: &str) -> Result<Option<PackUpdate>, String> {
+    let Some(saved) = load(instance_id).filter(|s| s.pack.source == "modrinth") else { return Ok(None) };
+    let latest = super::modrinth::latest_version(&saved.pack.project, super::ContentKind::Modpack, None).await?;
+    Ok((latest.id != saved.pack.file).then(|| PackUpdate { project: saved.pack.project, version: latest.version_number }))
+}
+
 pub fn load(instance_id: &str) -> Option<Saved> {
     serde_json::from_slice(&std::fs::read(path(instance_id).ok()?).ok()?).ok()
 }

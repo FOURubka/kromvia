@@ -9,7 +9,7 @@ import { useJobs } from "../lib/jobs";
 import { Progress } from "../ui/Progress";
 import { Select } from "../ui/Select";
 import { LaunchError } from "../ui/LaunchError";
-import { LOADER_NAMES, useLauncher, type Instance } from "../lib/launcher";
+import { LOADER_NAMES, useLauncher, type Instance, type Hooks } from "../lib/launcher";
 import { VersionPicker, versionReady, type VersionChoice } from "../home/VersionPicker";
 import { Glyph } from "../ui/Glyph";
 import { usePaged } from "../ui/Pager";
@@ -25,6 +25,7 @@ import { Conflicts } from "./Conflicts";
 import { LagCheck } from "./LagCheck";
 import { Memory } from "./Memory";
 import { Metrics } from "./Metrics";
+import { History } from "./History";
 
 type Preset = "auto" | "maxFps" | "balanced" | "quality";
 const PRESETS: Preset[] = ["auto", "maxFps", "balanced", "quality"];
@@ -46,9 +47,10 @@ const TAB_LABELS: Record<Tab, MessageKey> = {
   icon: "builds.icon",
 };
 
-export function Builds({ onAddContent, onAccounts }: { onAddContent: (kind: Kind) => void; onAccounts: () => void }) {
+export function Builds({ onAddContent, onAccounts, dropped }: { onAddContent: (kind: Kind) => void; onAccounts: () => void; dropped?: string[] }) {
   const { t } = useI18n();
   const [instances, setInstances] = useState<Instance[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export function Builds({ onAddContent, onAccounts }: { onAddContent: (kind: Kind
   const { selected, setSelected } = launcher;
   const refresh = () => {
     launcher.refresh();
-    return invoke<Instance[]>("instance_list").then(setInstances);
+    return invoke<Instance[]>("instance_list").then((list) => (setInstances(list), setLoaded(true)));
   };
   useEffect(() => {
     refresh();
@@ -106,6 +108,24 @@ export function Builds({ onAddContent, onAccounts }: { onAddContent: (kind: Kind
     if (inst) invoke<string | null>("instance_cover", { id: inst.id }).then(setCover, () => {});
   }, [inst?.id, coverRev]);
 
+  const [packUpdate, setPackUpdate] = useState<{ project: string; version: string } | null>(null);
+  const [packInstalling, setPackInstalling] = useState(false);
+  useEffect(() => {
+    setPackUpdate(null);
+    setPackInstalling(false);
+    if (inst) invoke<{ project: string; version: string } | null>("modpack_update_check", { instanceId: inst.id }).then(setPackUpdate, () => {});
+  }, [inst?.id]);
+  const packJobs = useJobs("modpack-", (key, e) => {
+    if (key.startsWith("modpack-file-")) return;
+    setPackInstalling(false);
+    setError(e);
+    if (!e) (setPackUpdate(null), refresh());
+  });
+  const installPackUpdate = (project: string) =>
+    invoke<number>("modpack_install", { projectId: project, source: null }).then(
+      (id) => (setPackInstalling(true), packJobs.started(`modpack-${project}`, id)),
+      (e) => setError(String(e)),
+    );
   const [broken, setBroken] = useState(0);
   useEffect(() => {
     setBroken(0);
@@ -118,30 +138,37 @@ export function Builds({ onAddContent, onAccounts }: { onAddContent: (kind: Kind
 
   const instRef = useRef(inst);
   instRef.current = inst;
+  const take = (paths: string[]) => {
+    const target = instRef.current;
+    const packs = paths.filter((p) => p.toLowerCase().endsWith(".mrpack"));
+    const files = target ? paths.filter((p) => !packs.includes(p)) : [];
+    packs.forEach((path) =>
+      invoke<number>("modpack_import", { path }).then(
+        (id) => imports.started(`modpack-file-${path}`, id),
+        (e) => setError(String(e)),
+      ),
+    );
+    if (files.length === 0 || !target) return;
+    setError(null);
+    setNotice(null);
+    invoke<string[]>("content_add_files", { instanceId: target.id, paths: files })
+      .then((added) => {
+        setNotice(t("builds.dropped", { n: String(added.length), name: target.name }));
+        setTab("content");
+        setContentRev((r) => r + 1);
+      })
+      .catch((e) => setError(String(e)));
+  };
+  const takeRef = useRef(take);
+  takeRef.current = take;
+  useEffect(() => {
+    if (dropped?.length && loaded) takeRef.current(dropped);
+  }, [dropped, loaded]);
   useEffect(() => {
     const off = getCurrentWebview().onDragDropEvent(({ payload }) => {
-      const target = instRef.current;
-      if (payload.type === "over" || payload.type === "enter") return setDropping(!!target);
+      if (payload.type === "over" || payload.type === "enter") return setDropping(!!instRef.current);
       setDropping(false);
-      if (payload.type !== "drop" || !target) return;
-      const packs = payload.paths.filter((p) => p.toLowerCase().endsWith(".mrpack"));
-      const files = payload.paths.filter((p) => !packs.includes(p));
-      packs.forEach((path) =>
-        invoke<number>("modpack_import", { path }).then(
-          (id) => imports.started(`modpack-file-${path}`, id),
-          (e) => setError(String(e)),
-        ),
-      );
-      if (files.length === 0) return;
-      setError(null);
-      setNotice(null);
-      invoke<string[]>("content_add_files", { instanceId: target.id, paths: files })
-        .then((added) => {
-          setNotice(t("builds.dropped", { n: String(added.length), name: target.name }));
-          setTab("content");
-          setContentRev((r) => r + 1);
-        })
-        .catch((e) => setError(String(e)));
+      if (payload.type === "drop") takeRef.current(payload.paths);
     });
     return () => {
       off.then((f) => f());
@@ -235,6 +262,19 @@ export function Builds({ onAddContent, onAccounts }: { onAddContent: (kind: Kind
       </div>
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
+      {packUpdate && inst && (
+        <div className="dupe-warning">
+          <p>{t("builds.packUpdate", { version: packUpdate.version })}</p>
+          <div className="actions">
+            <button className="btn" disabled={packInstalling} onClick={() => installPackUpdate(packUpdate.project)}>
+              <Glyph name="download" /> {packInstalling ? t("builds.packUpdating") : t("builds.packUpdateInstall")}
+            </button>
+            <button className="btn btn-ghost" onClick={() => setPackUpdate(null)}>
+              {t("common.cancel")}
+            </button>
+          </div>
+        </div>
+      )}
       {instances.length === 0 ? (
         <Empty bee="empty-builds">{t("builds.empty")}</Empty>
       ) : (
@@ -406,6 +446,7 @@ export function Builds({ onAddContent, onAccounts }: { onAddContent: (kind: Kind
                     )}
                   </section>
                   <Metrics instanceId={inst.id} />
+                  <History instanceId={inst.id} running={!!launcher.runOf(inst.id)} />
                 </>
               )}
               {tab === "icon" && (
@@ -443,9 +484,14 @@ function PlayButton({ inst }: { inst: Instance }) {
       </button>
     );
   return (
-    <button className="btn" onClick={() => l.play(inst)}>
-      <Glyph name="player-play" /> {t("game.play")}
-    </button>
+    <>
+      <button className="btn" onClick={() => l.play(inst)}>
+        <Glyph name="player-play" /> {t("game.play")}
+      </button>
+      <button className="btn btn-ghost" title={t("game.safeHint")} onClick={() => l.play(inst, { safe: true })}>
+        {t("game.safe")}
+      </button>
+    </>
   );
 }
 
@@ -461,6 +507,12 @@ function InstanceSettings({ inst, groups, onSaved }: { inst: Instance; groups: s
   const [jvmArgs, setJvmArgs] = useState(inst.jvmArgs ?? "");
   const [gpu, setGpu] = useState(inst.gpu);
   const [client, setClient] = useState(!inst.noClient);
+  const [shared, setShared] = useState(inst.sharedOptions);
+  const [hooks, setHooks] = useState<Hooks>(inst.hooks ?? { preLaunch: "", postExit: "", wrapper: "", env: "" });
+  const hook = (k: keyof Hooks) => (e: { currentTarget: { value: string } }) => {
+    const value = e.currentTarget.value;
+    setHooks((h) => ({ ...h, [k]: value }));
+  };
   const [group, setGroup] = useState(inst.group ?? "");
   const [width, setWidth] = useState(inst.resolution ? String(inst.resolution.width) : "");
   const [height, setHeight] = useState(inst.resolution ? String(inst.resolution.height) : "");
@@ -482,6 +534,8 @@ function InstanceSettings({ inst, groups, onSaved }: { inst: Instance; groups: s
         gpu,
         group,
         noClient: !client,
+        sharedOptions: shared,
+        hooks,
         resolution: w && h ? { width: w, height: h } : null,
       },
     }).then(
@@ -529,6 +583,10 @@ function InstanceSettings({ inst, groups, onSaved }: { inst: Instance; groups: s
           <span className="muted small">{t("builds.clientHint")}</span>
         </div>
       )}
+      <label className="field check">
+        <input type="checkbox" checked={shared} onChange={(e) => setShared(e.currentTarget.checked)} /> {t("builds.sharedOptions")}
+      </label>
+      <span className="muted small">{t("builds.sharedOptionsHint")}</span>
       <RendererChoice inst={inst} />
       {!navigator.userAgent.includes("Mac") && (
         <div className="field">
@@ -550,6 +608,26 @@ function InstanceSettings({ inst, groups, onSaved }: { inst: Instance; groups: s
           <input className="input" inputMode="numeric" value={height} placeholder="480" onChange={(e) => setHeight(e.currentTarget.value)} />
         </div>
       </div>
+      <details className="hooks" open={Object.values(hooks).some((v) => v.trim())}>
+        <summary>{t("builds.hooks")}</summary>
+        <p className="muted small">{t("builds.hooksHint")}</p>
+        <div className="field">
+          <span>{t("builds.preLaunch")}</span>
+          <input className="input mono" value={hooks.preLaunch} spellCheck={false} onChange={hook("preLaunch")} />
+        </div>
+        <div className="field">
+          <span>{t("builds.postExit")}</span>
+          <input className="input mono" value={hooks.postExit} spellCheck={false} onChange={hook("postExit")} />
+        </div>
+        <div className="field">
+          <span>{t("builds.wrapper")}</span>
+          <input className="input mono" value={hooks.wrapper} spellCheck={false} placeholder="gamemoderun" onChange={hook("wrapper")} />
+        </div>
+        <div className="field">
+          <span>{t("builds.env")}</span>
+          <textarea className="input mono" rows={3} value={hooks.env} spellCheck={false} placeholder={"MANGOHUD=1"} onChange={hook("env")} />
+        </div>
+      </details>
       {status && <p className={status.error ? "error" : "muted"}>{status.text}</p>}
       <div className="actions">
         <button className="btn" disabled={!versionReady(choice)} onClick={submit}>

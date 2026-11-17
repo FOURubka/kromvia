@@ -119,6 +119,7 @@ public final class Fx {
 		}
 
 		public void render(Minecraft mc, Object target, Object pool) {
+			COLOUR_FILTER.render(mc, target, pool);
 			if (!enabled) return;
 			pass(mc, target, pool, "saturation", amount.value(), 25, 100);
 			pass(mc, target, pool, "brightness", brightness.value(), 10, 100);
@@ -160,6 +161,38 @@ public final class Fx {
 			if (failed == 0) LOG.info("Screen colours load");
 		}
 	}
+
+	public static final class ColourFilter extends Flag {
+		final ChoiceSetting type = add(new ChoiceSetting("type", "Type", 1, "Protanopia", "Deuteranopia", "Tritanopia"));
+
+		ColourFilter() {
+			super("colour_filter", "Colour Blind Filter", Category.UTILITY);
+			icon(Items.SPYGLASS);
+		}
+
+		void render(Minecraft mc, Object target, Object pool) {
+			if (!enabled) return;
+			try {
+				BlurBackend.draw(mc, "daltonize_" + (type.index() + 1), new Matrix4f(), new Matrix4f(), Vec3.ZERO, target, pool);
+			} catch (RuntimeException e) {
+				LOG.warn("Colour blind filter failed, switching it off", e);
+				enabled = false;
+			}
+		}
+
+		public void audit(Minecraft mc) {
+			if (!BlurBackend.SUPPORTED) return;
+			for (int n = 1; n <= 3; n++) {
+				try {
+					if (BlurBackend.load(mc, "daltonize_" + n) == null) LOG.error("Colour blind filter {} does not load", n);
+				} catch (RuntimeException e) {
+					LOG.error("Colour blind filter {} does not load", n, e);
+				}
+			}
+		}
+	}
+
+	public static final ColourFilter COLOUR_FILTER = new ColourFilter();
 
 	public static final Saturation SATURATION = new Saturation();
 
@@ -480,6 +513,7 @@ public final class Fx {
 		List<Module> all = new ArrayList<>(List.of(AMBIENCE, OLD_ANIMATIONS, HAND, TRAILS, JUMP_CIRCLES, CHINA_HAT, TARGET_MARKER, HIT_BUBBLES, HITBOXES));
 		if (BlurBackend.SUPPORTED) all.add(0, MOTION_BLUR);
 		if (BlurBackend.SUPPORTED) all.add(1, SATURATION);
+		if (BlurBackend.SUPPORTED) all.add(2, COLOUR_FILTER);
 		if (com.kromvia.client.Launcher.PRESENT) all.add(0, PLAYERS);
 		all.addAll(Tweaks.modules());
 		all.addAll(More.modules());

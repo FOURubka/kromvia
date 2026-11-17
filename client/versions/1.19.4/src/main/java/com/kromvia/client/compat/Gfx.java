@@ -106,15 +106,19 @@ public final class Gfx {
 	}
 
 	public void drawCenteredString(Font font, String text, int x, int y, int color) {
-		GuiComponent.drawCenteredString(g, font, text, x, y, color);
+		drawString(font, text, x - font.width(text) / 2, y, color, false);
 	}
 
 	public void drawCenteredString(Font font, Component text, int x, int y, int color) {
-		GuiComponent.drawCenteredString(g, font, text, x, y, color);
+		drawString(font, text, x - font.width(text) / 2, y, color, false);
 	}
 
 	public void renderItem(ItemStack stack, int x, int y) {
 		Minecraft.getInstance().getItemRenderer().renderGuiItem(g, stack, x, y);
+	}
+
+	public void itemDecorations(ItemStack stack, int x, int y) {
+		Minecraft.getInstance().getItemRenderer().renderGuiItemDecorations(g, Minecraft.getInstance().font, stack, x, y);
 	}
 
 	public void blit(ResourceLocation texture, int x, int y, float u, float v, int w, int h, int regionW, int regionH, int texW, int texH, int color) {

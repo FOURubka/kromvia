@@ -19,6 +19,7 @@ pub struct Update {
     pub title: String,
     pub new_file: String,
     pub version: String,
+    pub changelog: Option<String>,
     #[serde(skip)]
     enabled: bool,
     #[serde(skip)]
@@ -43,7 +44,7 @@ pub async fn check(instance_id: &str) -> Result<Vec<Update>, String> {
     let inst = instances::get(instance_id)?;
     let game = instances::game_dir(instance_id)?;
     let index = read_index(instance_id);
-    let files = super::list(instance_id)?;
+    let files: Vec<_> = super::list(instance_id)?.into_iter().filter(|f| !f.locked).collect();
     let mut out = vec![];
 
     let (cf, rest): (Vec<_>, Vec<_>) =
@@ -59,6 +60,7 @@ pub async fn check(instance_id: &str) -> Result<Vec<Update>, String> {
         out.push(Update {
             new_file: new.file_name.clone(),
             version: new.display_name.clone(),
+            changelog: None,
             task: Some(curseforge::task(&new, dest, &f.title)?),
             entry: Some(curseforge::entry(&new, e.title.clone(), &f.folder)),
             folder: f.folder,
@@ -96,6 +98,7 @@ pub async fn check(instance_id: &str) -> Result<Vec<Update>, String> {
         out.push(Update {
             new_file: p.filename.clone(),
             version: v.version_number.clone(),
+            changelog: v.changelog.clone().filter(|c| !c.trim().is_empty()),
             task: Some(FileTask {
                 url: p.url.clone(),
                 dest: checked_file(instance_id, &f.folder, &on_disk(&p.filename, f.enabled))?,

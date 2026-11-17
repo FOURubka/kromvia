@@ -1,5 +1,6 @@
 package com.kromvia.client.compat;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -71,15 +72,19 @@ public final class Gfx {
 	}
 
 	public void drawCenteredString(Font font, String text, int x, int y, int color) {
-		g.centeredText(font, text, x, y, color);
+		drawString(font, text, x - font.width(text) / 2, y, color, false);
 	}
 
 	public void drawCenteredString(Font font, Component text, int x, int y, int color) {
-		g.centeredText(font, text, x, y, color);
+		drawString(font, text, x - font.width(text) / 2, y, color, false);
 	}
 
 	public void renderItem(ItemStack stack, int x, int y) {
 		g.item(stack, x, y);
+	}
+
+	public void itemDecorations(ItemStack stack, int x, int y) {
+		g.itemDecorations(Minecraft.getInstance().font, stack, x, y);
 	}
 
 	public void blit(Identifier texture, int x, int y, float u, float v, int w, int h, int regionW, int regionH, int texW, int texH, int color) {

@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::OnceLock;
-use std::time::Duration;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use futures_util::StreamExt;
 use reqwest::{header, Client, StatusCode};
@@ -11,6 +11,74 @@ use tokio::fs::{self, OpenOptions};
 use tokio::io::AsyncWriteExt;
 
 const ATTEMPTS: u32 = 3;
+const DEFAULT_PARALLEL: usize = 16;
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Limits {
+    /// Files downloaded at once, 1–32.
+    pub parallel: usize,
+    /// Total download speed in KB/s for all files together; 0 is no limit.
+    pub kbps: u64,
+}
+
+static PARALLEL: AtomicUsize = AtomicUsize::new(0);
+static KBPS: AtomicU64 = AtomicU64::new(0);
+
+fn limits_path() -> PathBuf {
+    crate::engine::core::paths::root().join("network.json")
+}
+
+fn load_limits() {
+    if PARALLEL.load(Ordering::Relaxed) != 0 {
+        return;
+    }
+    let saved: Option<Limits> = std::fs::read(limits_path()).ok().and_then(|b| serde_json::from_slice(&b).ok());
+    let l = saved.unwrap_or(Limits { parallel: DEFAULT_PARALLEL, kbps: 0 });
+    KBPS.store(l.kbps, Ordering::Relaxed);
+    PARALLEL.store(l.parallel.clamp(1, 32), Ordering::Relaxed);
+}
+
+pub fn limits() -> Limits {
+    load_limits();
+    Limits { parallel: PARALLEL.load(Ordering::Relaxed), kbps: KBPS.load(Ordering::Relaxed) }
+}
+
+pub fn set_limits(l: Limits) -> Result<(), String> {
+    let l = Limits { parallel: l.parallel.clamp(1, 32), kbps: l.kbps.min(10_000_000) };
+    std::fs::create_dir_all(crate::engine::core::paths::root()).map_err(|e| e.to_string())?;
+    std::fs::write(limits_path(), serde_json::to_vec(&l).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    PARALLEL.store(l.parallel, Ordering::Relaxed);
+    KBPS.store(l.kbps, Ordering::Relaxed);
+    Ok(())
+}
+
+/// How many files `download_all` fetches at once.
+pub fn parallel() -> usize {
+    limits().parallel
+}
+
+/// Leaky bucket shared by every download, so the limit holds for all of them together.
+async fn throttle(bytes: u64) {
+    let kbps = KBPS.load(Ordering::Relaxed);
+    if kbps == 0 {
+        return;
+    }
+    static BUCKET: Mutex<Option<(Instant, f64)>> = Mutex::new(None);
+    let rate = (kbps * 1024) as f64;
+    let wait = {
+        let mut bucket = BUCKET.lock().unwrap();
+        let now = Instant::now();
+        let (then, debt) = bucket.unwrap_or((now, 0.0));
+        let debt = (debt - now.duration_since(then).as_secs_f64() * rate).max(0.0) + bytes as f64;
+        *bucket = Some((now, debt));
+        // Let a quarter second of data through without waiting, so small files are not slowed down.
+        (debt - rate / 4.0).max(0.0) / rate
+    };
+    if wait > 0.0 {
+        tokio::time::sleep(Duration::from_secs_f64(wait)).await;
+    }
+}
 
 pub fn client() -> &'static Client {
     static CLIENT: OnceLock<Client> = OnceLock::new();
@@ -137,6 +205,7 @@ async fn fetch(
         }
         let chunk = chunk.map_err(|e| Fail::Retry(e.to_string()))?;
         file.write_all(&chunk).await.map_err(|e| Fail::Fatal(e.to_string()))?;
+        throttle(chunk.len() as u64).await;
         done += chunk.len() as u64;
         on_progress(done, total);
     }

@@ -76,7 +76,7 @@ pub fn scrub(text: &str, player: &str, uuid: Option<&str>) -> String {
     s
 }
 
-pub fn build(instance_id: &str, crash: &Crash, log: &str, report: &str, player: &str, uuid: Option<&str>) -> Value {
+fn about(instance_id: &str) -> Value {
     let inst = instances::get(instance_id).ok();
     let mods: Vec<String> = crate::engine::content::list(instance_id)
         .unwrap_or_default()
@@ -91,12 +91,54 @@ pub fn build(instance_id: &str, crash: &Crash, log: &str, report: &str, player: 
         "arch": std::env::consts::ARCH,
         "mc": inst.as_ref().map(|i| i.mc_version.clone()),
         "loader": inst.as_ref().and_then(|i| i.loader.as_ref()).map(|l| json!({ "kind": l.kind, "version": l.version })),
-        "cause": crash.cause,
-        "detail": crash.detail.as_deref().map(|d| scrub(d, player, uuid)),
         "mods": mods,
-        "log": scrub(tail(log, MAX_LOG), player, uuid),
-        "report": scrub(tail(report, MAX_REPORT), player, uuid),
+        "projects": crate::engine::perf::projects(instance_id),
     })
+}
+
+pub fn build(instance_id: &str, crash: &Crash, log: &str, report: &str, player: &str, uuid: Option<&str>) -> Value {
+    let mut v = about(instance_id);
+    v["cause"] = json!(crash.cause);
+    v["detail"] = json!(crash.detail.as_deref().map(|d| scrub(d, player, uuid)));
+    v["log"] = json!(scrub(tail(log, MAX_LOG), player, uuid));
+    v["report"] = json!(scrub(tail(report, MAX_REPORT), player, uuid));
+    v
+}
+
+pub fn support(instance_id: &str, log: &str, note: &str) -> Value {
+    let mut v = user_report(log, note);
+    for (k, val) in about(instance_id).as_object().cloned().unwrap_or_default() {
+        v[k] = val;
+    }
+    v["cause"] = json!("support");
+    v
+}
+
+/// A bug report about the launcher itself, with the tail of `launcher.log`.
+pub fn bug(note: &str) -> Value {
+    let log = std::fs::read_to_string(crate::engine::core::crashlog::dir().join("launcher.log")).unwrap_or_default();
+    let mut v = user_report(&log, note);
+    v["launcher"] = json!(env!("CARGO_PKG_VERSION"));
+    v["os"] = json!(std::env::consts::OS);
+    v["arch"] = json!(std::env::consts::ARCH);
+    v["cause"] = json!("bug");
+    v
+}
+
+fn user_report(log: &str, note: &str) -> Value {
+    // The server keeps 300 characters of the note.
+    let mut log = scrub(tail(log, MAX_LOG), "", None);
+    let mut note = scrub(&note.chars().take(300).collect::<String>(), "", None);
+    for a in crate::engine::accounts::list() {
+        log = scrub(&log, &a.name, Some(&a.id));
+        note = scrub(&note, &a.name, Some(&a.id));
+    }
+    let mut v = json!({});
+    v["detail"] = json!(note);
+    v["log"] = json!(log);
+    v["report"] = json!("");
+    v["mods"] = json!([]);
+    v
 }
 
 pub async fn send(report: &Value) -> Result<(), String> {

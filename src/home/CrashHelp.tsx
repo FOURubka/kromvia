@@ -84,6 +84,9 @@ export function CrashHelp({ inst, crash }: { inst: Instance; crash: Crash }) {
             <Glyph name="folder" /> {t("crash.openMods")}
           </button>
         )}
+        <button className="btn btn-ghost" title={t("game.safeHint")} onClick={() => l.play(inst, { safe: true })}>
+          <Glyph name="player-play" /> {t("game.safe")}
+        </button>
         {fixed && <Glyph name="check" />}
         {!sent && (
           <button className="btn btn-ghost" title={t("crash.sendHint")} onClick={send}>

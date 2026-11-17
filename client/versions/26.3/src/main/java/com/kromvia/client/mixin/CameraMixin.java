@@ -44,5 +44,6 @@ public abstract class CameraMixin {
 	private void kromvia$zoom(float delta, CallbackInfoReturnable<Float> cir) {
 		float f = Toggles.Zoom.factor();
 		if (f != 1) cir.setReturnValue(cir.getReturnValue() * f);
+		com.kromvia.client.module.Info.fov = cir.getReturnValue();
 	}
 }

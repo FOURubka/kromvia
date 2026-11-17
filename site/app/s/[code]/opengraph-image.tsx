@@ -17,7 +17,7 @@ export default async function Image({ params }: { params: Promise<{ code: string
     const loader = Object.entries(sh.data.dependencies).find(([k]) => k !== "minecraft");
     return ogCard({
       title: sh.data.name,
-      badge: "Build",
+      badge: "Instance",
       lines: [`Minecraft ${sh.data.dependencies.minecraft}${loader ? ` · ${loader[0].replace("-loader", "")}` : ""} · ${mods} mods`, `by ${sh.from.name} · code ${code.toUpperCase()}`],
     });
   }

@@ -1,0 +1,5 @@
+CREATE TABLE room_mods (
+  account TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+  mods TEXT NOT NULL,
+  updated INTEGER NOT NULL
+);

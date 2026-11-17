@@ -34,6 +34,9 @@ pub fn run() {
         .setup(|app| {
             paths::init(app.path().app_data_dir()?);
             crashlog::install();
+            for inst in engine::instances::list() {
+                engine::content::end_safe_mode(&inst.id);
+            }
             if paths::root() != paths::default_root() {
                 let _ = app.asset_protocol_scope().allow_directory(paths::instances(), true);
             }
@@ -115,6 +118,10 @@ pub fn run() {
             commands::game::instance_duplicate,
             commands::game::preset_apply,
             commands::game::game_launch,
+            commands::game::game_room_join,
+            commands::game::instance_history,
+            commands::game::instance_regression,
+            commands::game::instance_history_restore,
             commands::game::game_running,
             commands::game::game_stop,
             commands::game::game_toast,
@@ -140,7 +147,13 @@ pub fn run() {
             commands::worlds::crash_report_open,
             commands::game::crash_reports_get,
             commands::game::crash_reports_set,
+            commands::game::perf_reports_get,
+            commands::game::perf_reports_set,
+            commands::game::mod_insight,
+            commands::game::content_titles,
             commands::game::crash_report_send,
+            commands::game::support_report_send,
+            commands::game::bug_report_send,
             commands::worlds::instance_info,
             commands::worlds::instance_summary,
             commands::worlds::instance_open_log,
@@ -158,6 +171,7 @@ pub fn run() {
             commands::content::pack_order_set,
             commands::content::modpack_install,
             commands::content::modpack_import,
+            commands::content::modpack_update_check,
             commands::content::modpack_export,
             commands::content::content_list,
             commands::content::content_add_files,
@@ -170,6 +184,7 @@ pub fn run() {
             commands::content::instance_set_memory,
             commands::content::content_set_enabled,
             commands::content::content_remove,
+            commands::content::content_set_locked,
             commands::content::content_updates,
             commands::content::content_update,
             commands::content::content_audit,
@@ -202,9 +217,23 @@ pub fn run() {
             commands::desktop::theme_delete,
             commands::desktop::background_get,
             commands::desktop::background_set,
+            commands::desktop::menu_media_list,
+            commands::desktop::menu_media_add,
+            commands::desktop::menu_media_remove,
             commands::desktop::settings_export,
             commands::desktop::settings_import,
+            commands::desktop::network_get,
+            commands::desktop::network_set,
             commands::social::social_me,
+            commands::relay::relay_list,
+            commands::relay::relay_held,
+            commands::relay::relay_create,
+            commands::relay::relay_delete,
+            commands::relay::relay_add,
+            commands::relay::relay_kick,
+            commands::relay::relay_take,
+            commands::relay::relay_put_back,
+            commands::relay::relay_release,
             commands::social::wardrobe_push,
             commands::social::wardrobe_get,
             commands::social::social_cosmetics,

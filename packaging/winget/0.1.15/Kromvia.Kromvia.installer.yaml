@@ -1,0 +1,13 @@
+PackageIdentifier: Kromvia.Kromvia
+PackageVersion: 0.1.15
+InstallerType: nullsoft
+Scope: user
+UpgradeBehavior: install
+Protocols:
+  - kromvia
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/4rubka/kromvia/releases/download/v0.1.15/Kromvia_0.1.15_x64-setup.exe
+    InstallerSha256: E7D8AF1EB5AA4605D555B87E48B9176345D2BE128C99F567E54BE424C99B99F6
+ManifestType: installer
+ManifestVersion: 1.9.0

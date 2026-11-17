@@ -64,6 +64,47 @@ final class CapeArt {
 		return new NativeImage[] {img};
 	}
 
+	static int[] decode(String art) {
+		if (art == null) return null;
+		byte[] b;
+		try {
+			b = java.util.Base64.getDecoder().decode(art);
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
+		if (b.length != 10 * 16 * 4) return null;
+		int[] out = new int[10 * 16];
+		for (int i = 0; i < out.length; i++) out[i] = (b[i * 4] & 0xFF) << 16 | (b[i * 4 + 1] & 0xFF) << 8 | b[i * 4 + 2] & 0xFF;
+		return out;
+	}
+
+	static NativeImage[] custom(String art) {
+		int[] px = decode(art);
+		if (px == null) return frames("kromvia");
+		NativeImage img = new NativeImage(W, H, true);
+		for (int y = 0; y < 16; y++) {
+			for (int x = 0; x < 10; x++) {
+				int c = px[y * 10 + x];
+				put(img, 1 + x, 1 + y, c);
+				put(img, 12 + x, 1 + y, darker(c));
+			}
+		}
+		for (int x = 0; x < 10; x++) {
+			put(img, 1 + x, 0, px[x]);
+			put(img, 11 + x, 0, px[150 + x]);
+		}
+		for (int y = 0; y < 16; y++) {
+			put(img, 0, 1 + y, px[y * 10]);
+			put(img, 11, 1 + y, px[y * 10 + 9]);
+		}
+		return new NativeImage[] {img};
+	}
+
+	private static int darker(int rgb) {
+		int r = (rgb >> 16 & 0xFF) * 72 / 100, g = (rgb >> 8 & 0xFF) * 72 / 100, b = (rgb & 0xFF) * 72 / 100;
+		return r << 16 | g << 8 | b;
+	}
+
 	/** The launcher's Park-Miller generator, so the shading dither matches it pixel for pixel. */
 	private static double next(long[] seed) {
 		seed[0] = seed[0] * 16807 % 2147483647;

@@ -13,7 +13,7 @@ public class KeystrokesModule extends Module {
 	private static final int GAP = 2;
 
 	public KeystrokesModule() {
-		super("keystrokes", "Keystrokes", Category.PVP, Corner.BOTTOM_RIGHT, true);
+		super("keystrokes", "Keystrokes", Category.PVP, Corner.BOTTOM_RIGHT, false);
 		icon(Items.NOTE_BLOCK);
 	}
 

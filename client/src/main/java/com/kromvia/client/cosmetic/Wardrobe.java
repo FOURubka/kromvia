@@ -118,7 +118,7 @@ public final class Wardrobe {
 				if (e.getValue().isJsonPrimitive()) COLORS.put(e.getKey(), (int) e.getValue().getAsLong());
 			}
 		}
-		Cosmetics.useCape(str(o, "style"));
+		Cosmetics.useCape(Cosmetics.customStyle(str(o, "style"), str(o, "art")));
 		dev = o.has("dev") && o.get("dev").isJsonPrimitive() && o.get("dev").getAsBoolean();
 		if ("cape".equals(str(o, "back")) && !EQUIPPED.containsKey(Slot.BACK) && !MODELS.containsKey("back")) {
 			EQUIPPED.put(Slot.BACK, Cosmetics.KROMVIA_CAPE);

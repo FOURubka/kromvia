@@ -17,6 +17,8 @@ public class KButton extends DrawnButton {
 	private float press;
 	private boolean flat;
 	private boolean toggle;
+	private boolean primary;
+	private boolean plain;
 	private int clipTop = Integer.MIN_VALUE, clipBottom = Integer.MAX_VALUE;
 
 	public KButton(int x, int y, int w, int h, Component label, OnPress onPress, BooleanSupplier selected) {
@@ -35,6 +37,16 @@ public class KButton extends DrawnButton {
 
 	public KButton flat() {
 		flat = true;
+		return this;
+	}
+
+	public KButton primary() {
+		primary = true;
+		return this;
+	}
+
+	public KButton plain() {
+		plain = true;
 		return this;
 	}
 
@@ -71,28 +83,33 @@ public class KButton extends DrawnButton {
 		press = Mth.lerp(0.15F, press, 0);
 		g.pose().pushMatrix();
 		g.pose().translate((1 - in) * -24, 0);
-		if (flat) {
-			if (hover > 0.02F) g.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), UiStyle.fade(0x22FFFFFF, hover));
+		if (plain) {
+			if (hover > 0.02F) UiStyle.plain(g, getX(), getY(), getWidth(), getHeight(), getHeight() / 2F, 0x20FFFFFF, 0x20FFFFFF, hover);
+		} else if (flat) {
+			if (hover > 0.02F) UiStyle.round(g, getX(), getY(), getX() + getWidth(), getY() + getHeight(), getHeight() / 2F, UiStyle.fade(0x22FFFFFF, hover));
 		} else if (toggle) {
 			boolean on = selected.getAsBoolean();
-			UiStyle.button(g, getX(), getY(), getWidth(), getHeight(), active, on);
-			if (hover > 0.02F) g.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight() - 2, UiStyle.fade(0x14FFFFFF, hover));
-			int s = 7, bx = getX() + getWidth() - s - 6, by = getY() + (getHeight() - 2 - s) / 2;
-			int edge = on ? UiStyle.TEXT : 0xFF3A414E;
-			g.fill(bx, by, bx + s, by + 1, edge);
-			g.fill(bx, by + s - 1, bx + s, by + s, edge);
-			g.fill(bx, by, bx + 1, by + s, edge);
-			g.fill(bx + s - 1, by, bx + s, by + s, edge);
-			if (on) g.fill(bx + 2, by + 2, bx + s - 2, by + s - 2, UiStyle.TEXT);
+			UiStyle.button(g, getX(), getY(), getWidth(), getHeight(), active, false);
+			if (hover > 0.02F) UiStyle.round(g, getX(), getY(), getX() + getWidth(), getY() + getHeight(), getHeight() / 2F, UiStyle.fade(0x14FFFFFF, hover));
+			int sw = 14, sh = 8, bx = getX() + getWidth() - sw - 8, by = getY() + (getHeight() - sh) / 2;
+			UiStyle.round(g, bx, by, bx + sw, by + sh, sh / 2F, on ? UiStyle.FRONT : 0x40FFFFFF);
+			UiStyle.round(g, on ? bx + sw - sh + 1 : bx + 1, by + 1, on ? bx + sw - 1 : bx + sh - 1, by + sh - 1, (sh - 2) / 2F, on ? UiStyle.TEXT : UiStyle.MUTED);
 		} else {
-			boolean lit = selected.getAsBoolean() || isHoveredOrFocused();
-			UiStyle.button(g, getX(), getY(), getWidth(), getHeight(), active, lit);
-			int bar = Math.round(hover * (getHeight() - 2));
-			if (bar > 0) g.fill(getX(), getY() + (getHeight() - 2 - bar) / 2, getX() + 2, getY() + (getHeight() - 2 + bar) / 2, UiStyle.TOP);
+			UiStyle.button(g, getX(), getY(), getWidth(), getHeight(), active, primary || selected.getAsBoolean());
+			if (hover > 0.02F && !primary) UiStyle.glass(g, getX(), getY(), getWidth(), getHeight(), getHeight() / 2F, UiStyle.GLASS_HOT, UiStyle.GLASS_RIM, hover);
 		}
-		if (press > 0.02F) g.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), UiStyle.fade(0x66B49CFF, press));
-		g.pose().translate(hover * 2, 0);
-		drawDefaultLabel(g);
+		if (press > 0.02F) UiStyle.glass(g, getX(), getY(), getWidth(), getHeight(), getHeight() / 2F, 0x55B49CFF, UiStyle.GLASS_RIM, press);
+		label(g);
 		g.pose().popMatrix();
+	}
+
+	private void label(Gfx g) {
+		at(g, getX(), getY());
+	}
+
+	private void at(Gfx g, int bx, int by) {
+		net.minecraft.client.gui.Font font = net.minecraft.client.Minecraft.getInstance().font;
+		int color = !active ? UiStyle.MUTED : primary || selected.getAsBoolean() && !toggle && !flat ? UiStyle.INK : UiStyle.TEXT;
+		g.drawString(font, getMessage(), bx + (getWidth() - font.width(getMessage())) / 2, by + (getHeight() - 8) / 2, color, false);
 	}
 }

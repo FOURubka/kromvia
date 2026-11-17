@@ -2,7 +2,7 @@
   --bg: #06050b;
   --surface: #100e19;
   --surface-2: #1a1726;
-  --border: #322c48;
+  --border: #4a4168;
   --text: #f3f1fa;
   --text-muted: #c3bdd6;
   --text-dim: #8d86a6;
@@ -330,4 +330,98 @@ button.block:hover {
 
 .prose b {
   color: var(--text);
+}
+
+.block,
+.btn,
+.field,
+.chip,
+.block::before,
+.btn::before {
+  clip-path: none;
+}
+
+.block {
+  --side-h: 0px;
+  border-radius: 20px;
+}
+
+.block::before {
+  border-radius: 19px;
+}
+
+.field {
+  border-radius: 12px;
+}
+
+.chip {
+  border-radius: 999px;
+}
+
+.btn {
+  --b-face: color-mix(in srgb, var(--accent) 74%, transparent);
+  --b-rim: color-mix(in srgb, #fff 34%, var(--accent));
+  --b-top: rgb(255 255 255 / 0.3);
+  --b-fill: none;
+  border-radius: 999px;
+  padding: 11px 20px;
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  transition: filter 140ms var(--ease-out), transform 140ms var(--ease-out);
+}
+
+.btn::before {
+  border-radius: 999px;
+  background: linear-gradient(rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 55%), var(--b-face);
+  box-shadow: inset 0 1px 0 var(--b-top), inset 0 -1px 0 rgb(0 0 0 / 0.18);
+}
+
+.btn:active,
+.btn.big:active {
+  transform: scale(0.97);
+  padding: 11px 20px;
+}
+
+.btn.big,
+.btn.big:active {
+  padding: 16px 32px;
+}
+
+.btn.ghost {
+  --b-face: rgb(255 255 255 / 0.04);
+  --b-rim: rgb(255 255 255 / 0.22);
+  --b-top: rgb(255 255 255 / 0.28);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+.btn.ghost::before {
+  background:
+    radial-gradient(120% 90% at 50% -20%, rgb(255 255 255 / 0.16), transparent 60%),
+    var(--b-face);
+}
+
+.btn {
+  background: transparent;
+  border: 1px solid var(--b-rim);
+}
+
+.btn::before {
+  inset: 0;
+}
+
+.block {
+  --b-face: rgb(20 18 28 / 0.58);
+  --b-rim: rgb(255 255 255 / 0.09);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+.block::before {
+  background: var(--b-face);
+}
+
+a.block:hover,
+button.block:hover {
+  --b-face: rgb(32 29 44 / 0.66);
+  --b-rim: rgb(255 255 255 / 0.16);
 }

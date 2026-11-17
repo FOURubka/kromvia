@@ -1,0 +1,38 @@
+id: com.kromvia.launcher
+runtime: org.gnome.Platform
+runtime-version: '48'
+sdk: org.gnome.Sdk
+command: kromvia
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.Notifications
+  - --filesystem=xdg-run/discord-ipc-0
+  - --filesystem=home:ro
+modules:
+  - name: kromvia
+    buildsystem: simple
+    sources:
+      - type: file
+        url: https://github.com/4rubka/kromvia/releases/download/v0.1.15/Kromvia_0.1.15_amd64.deb
+        sha256: 87e9dae2f21bc586712d5fa51da842e02c6c9ae3f8f9c4d092e6e2beb1831c9e
+        only-arches: [x86_64]
+      - type: file
+        path: com.kromvia.launcher.metainfo.xml
+    build-commands:
+      - ar -x *.deb
+      - tar -xf data.tar.gz
+      - install -Dm755 usr/bin/kromvia /app/bin/kromvia
+      - cp -r usr/lib/Kromvia /app/lib/Kromvia
+      - touch /app/lib/Kromvia/package-managed
+      - install -Dm644 usr/share/applications/Kromvia.desktop /app/share/applications/com.kromvia.launcher.desktop
+      - desktop-file-edit --set-icon=com.kromvia.launcher /app/share/applications/com.kromvia.launcher.desktop
+      - install -Dm644 usr/share/icons/hicolor/128x128/apps/kromvia.png /app/share/icons/hicolor/128x128/apps/com.kromvia.launcher.png
+      - install -Dm644 usr/share/icons/hicolor/32x32/apps/kromvia.png /app/share/icons/hicolor/32x32/apps/com.kromvia.launcher.png
+      - install -Dm644 usr/share/icons/hicolor/256x256@2/apps/kromvia.png /app/share/icons/hicolor/512x512/apps/com.kromvia.launcher.png
+      - install -Dm644 com.kromvia.launcher.metainfo.xml /app/share/metainfo/com.kromvia.launcher.metainfo.xml

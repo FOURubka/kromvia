@@ -107,6 +107,8 @@ pub fn create(template_id: &str, name: &str) -> Result<Instance, String> {
                 gpu: src.gpu,
                 group: src.group,
                 no_client: Some(src.no_client),
+                hooks: None,
+                shared_options: Some(src.shared_options),
             },
         )?;
         match src.icon {

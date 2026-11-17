@@ -2,7 +2,7 @@
 	"required": true,
 	"package": "com.kromvia.client.fx.mixin",
 	"compatibilityLevel": "JAVA_25",
-	"client": ["QolButtonAccessor", "QolChatBackgroundMixin", "QolCameraMixin", "QolChatComponentMixin", "QolChatRowsMixin", "QolChatScreenMixin", "QolContainerScreenMixin", "QolGameRendererMixin", "QolHudMixin", "QolLightmapMixin", "QolLivingEntityMixin", "QolLivingEntityRenderStateMixin", "QolLivingEntityRendererMixin", "QolMouseHandlerMixin", "QolPauseScreenMixin", "QolScreenMixin", "QolTitleScreenMixin"],
+	"client": ["QolToastsMixin", "QolTooltipMixin", "QolSlotAccessor", "QolButtonAccessor", "QolChatBackgroundMixin", "QolCameraMixin", "QolChatComponentMixin", "QolChatRowsMixin", "QolChatScreenMixin", "QolContainerScreenMixin", "QolGameRendererMixin", "QolHudMixin", "QolLightmapMixin", "QolLivingEntityMixin", "QolLivingEntityRenderStateMixin", "QolLivingEntityRendererMixin", "QolMouseHandlerMixin", "QolPauseScreenMixin", "QolScreenMixin", "QolTitleScreenMixin"],
 	"injectors": {
 		"defaultRequire": 1
 	}

@@ -202,11 +202,11 @@ public class ModuleSettingsScreen extends KScreen {
 		slide(g);
 		UiStyle.panel(g, px, py, pw, ph);
 		if (preview) {
-			g.fill(px + pw / 2 - 4, py + HEADER, px + pw / 2 - 3, py + ph - 8, UiStyle.LINE);
+			g.fill(px + pw / 2 - 4, py + HEADER, px + pw / 2 - 3, py + ph - 8, 0x22FFFFFF);
 			int l = px + 10, r = px + pw / 2 - 12, t = py + 48, b = paneBottom();
-			g.fill(l, t, r, b, 0xFF0C0F13);
-			for (int gx = l + 4; gx < r; gx += 8) {
-				for (int gy = t + 4; gy < b; gy += 8) g.fill(gx, gy, gx + 1, gy + 1, 0xFF1A1F27);
+			UiStyle.plain(g, l, t, r - l, b - t, 10, 0x50100C1E, 0x30C9B5FF, 1);
+			for (int gx = l + 8; gx < r - 4; gx += 8) {
+				for (int gy = t + 8; gy < b - 4; gy += 8) g.fill(gx, gy, gx + 1, gy + 1, 0x18FFFFFF);
 			}
 		}
 		g.pose().popMatrix();
@@ -242,7 +242,7 @@ public class ModuleSettingsScreen extends KScreen {
 			int track = bottom() - top();
 			int bar = Math.max(12, track * track / (track + max));
 			int by = top() + Math.round((track - bar) * (scroll / (float) max));
-			g.fill(px + pw - 5, by, px + pw - 3, by + bar, 0x668B5CF6);
+			UiStyle.round(g, px + pw - 6, by, px + pw - 3, by + bar, 1.5F, 0x998B5CF6);
 		}
 
 		if (preview) {

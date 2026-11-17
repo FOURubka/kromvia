@@ -172,3 +172,28 @@ mod tests {
         assert_eq!(pack_code("https://kromvia.com/s/AB23CD45"), None);
     }
 }
+
+#[tauri::command]
+pub fn network_get() -> crate::engine::core::http::Limits {
+    crate::engine::core::http::limits()
+}
+
+#[tauri::command]
+pub fn network_set(limits: crate::engine::core::http::Limits) -> Result<(), String> {
+    crate::engine::core::http::set_limits(limits)
+}
+
+#[tauri::command]
+pub fn menu_media_list() -> crate::engine::menu_media::Media {
+    crate::engine::menu_media::list()
+}
+
+#[tauri::command]
+pub fn menu_media_add(paths: Vec<String>) -> Result<crate::engine::menu_media::Media, String> {
+    crate::engine::menu_media::add(&paths)
+}
+
+#[tauri::command]
+pub fn menu_media_remove(kind: String, name: String) -> Result<crate::engine::menu_media::Media, String> {
+    crate::engine::menu_media::remove(&kind, &name)
+}

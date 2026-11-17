@@ -37,6 +37,10 @@ pub fn init_resources(dir: PathBuf) {
     let _ = RESOURCES.set(dir);
 }
 
+pub fn backgrounds_dir() -> Option<PathBuf> {
+    RESOURCES.get().map(|d| d.join("backgrounds")).filter(|p| p.is_dir())
+}
+
 pub fn client_jar(mc: &str) -> Option<PathBuf> {
     if mc.is_empty() || !mc.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b)) {
         return None;

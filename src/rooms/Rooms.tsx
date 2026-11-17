@@ -4,6 +4,7 @@ import { describe, useLauncher } from "../lib/launcher";
 import { Progress } from "../ui/Progress";
 import { Glyph } from "../ui/Glyph";
 import { Select } from "../ui/Select";
+import { SharedWorlds } from "./SharedWorlds";
 
 export function Rooms() {
   const { t } = useI18n();
@@ -92,6 +93,8 @@ export function Rooms() {
           </div>
         </section>
       </div>
+
+      <SharedWorlds />
     </div>
   );
 }

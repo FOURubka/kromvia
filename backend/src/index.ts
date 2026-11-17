@@ -1,8 +1,11 @@
 
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { b64url, verify } from "./auth";
 import { DEV, NAME, isDev } from "./playing";
 import { asset, downloads, manifest } from "./update";
+import { PERF_DAYS, PERF_PER_DAY, insight, normGpu, projectsOf, runMods } from "./perf";
+import { PART_SIZE, RELAY_PART_PATH, dropOwned, relays } from "./relay";
 export { Hub } from "./hub";
 
 export type Env = {
@@ -10,6 +13,7 @@ export type Env = {
   LIMIT: RateLimit;
   HUB: DurableObjectNamespace;
   SHOTS?: R2Bucket;
+  WORLDS?: R2Bucket;
   DISCORD_CLIENT_ID?: string;
   DISCORD_CLIENT_SECRET?: string;
   TELEGRAM_BOT_NAME?: string;
@@ -29,7 +33,7 @@ const BIG_PATHS = /^\/v1\/(sync|shares)(\/|$)/;
 const MAX_PARTY = 8;
 const MAX_SYNC_KEYS = 64;
 const SYNC_KEY = /^[A-Za-z0-9._-]{1,64}$/;
-const SHARE_KINDS = ["build", "log"] as const;
+const SHARE_KINDS = ["build", "log", "ghost"] as const;
 const SHOT_PATH = "/v1/shares/screenshot";
 const MAX_SHOT = 8 * 1024 * 1024;
 const IMAGE_TYPES: [string, number[]][] = [
@@ -40,6 +44,7 @@ const SHARE_DAYS = 30;
 const MAX_SHARES = 50;
 const SHARE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const MAX_COSMETICS = 4 * 1024;
+export const CAPE_ART = /^[A-Za-z0-9+/]{854}==$/;
 const MAX_FRIENDS = 200;
 const SEEN_EVERY_MS = 60_000;
 const SIGNUPS_PER_DAY = 5;
@@ -240,6 +245,39 @@ app.get("/bot/links", async (c) => {
   );
 });
 
+export const ROADMAP = [
+  "crash-bisect", "try-mod", "auto-tune", "world-relay", "proximity-voice", "afk-telegram", "screenshot-place",
+  "session-recap", "second-screen", "join-by-ip", "mods-rollback", "world-backups", "portable", "slot-lock",
+];
+
+async function netHash(req: Request) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(clientNet(req)));
+  return Array.from(new Uint8Array(digest).slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function roadmap(c: { env: Env; req: { raw: Request } }) {
+  const net = await netHash(c.req.raw);
+  const { results } = await c.env.DB.prepare("SELECT item, COUNT(*) AS votes, MAX(net = ?) AS mine FROM roadmap_votes GROUP BY item").bind(net).all<{ item: string; votes: number; mine: number }>();
+  return ROADMAP.map((id) => {
+    const r = results.find((x) => x.item === id);
+    return { id, votes: r?.votes ?? 0, voted: r?.mine === 1 };
+  });
+}
+
+app.use("/v1/roadmap/*", cors({ origin: ["https://kromvia.com", "https://www.kromvia.com"], allowMethods: ["GET", "POST"] }));
+app.use("/v1/roadmap", cors({ origin: ["https://kromvia.com", "https://www.kromvia.com"], allowMethods: ["GET"] }));
+
+app.get("/v1/roadmap", async (c) => c.json(await roadmap(c)));
+
+app.post("/v1/roadmap/:id/vote", async (c) => {
+  const id = c.req.param("id");
+  if (!ROADMAP.includes(id)) return fail(404, "no such item");
+  const net = await netHash(c.req.raw);
+  const del = await c.env.DB.prepare("DELETE FROM roadmap_votes WHERE item = ? AND net = ?").bind(id, net).run();
+  if (!del.meta.changes) await c.env.DB.prepare("INSERT INTO roadmap_votes (item, net, created) VALUES (?, ?, ?)").bind(id, net, Date.now()).run();
+  return c.json(await roadmap(c));
+});
+
 app.get("/v1/top", async (c) => {
   const { results } = await c.env.DB.prepare(
     "SELECT a.id, a.name, a.mc_uuid, COUNT(*) AS likes FROM likes l JOIN accounts a ON a.id = l.to_id WHERE a.name_lower != ? GROUP BY l.to_id ORDER BY likes DESC, a.name_lower LIMIT 50",
@@ -313,30 +351,72 @@ app.post("/crashes", async (c) => {
   const log = str(body.log, MAX_CRASH) ?? "";
   const report = str(body.report, MAX_CRASH) ?? "";
   if (!cause || !launcher || !os) return fail(400, "bad report");
-  const net = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(clientNet(c.req.raw)))).slice(0, 8), (b) =>
-    b.toString(16).padStart(2, "0"),
-  ).join("");
+  const net = await netHash(c.req.raw);
   const now = Date.now();
   await c.env.DB.prepare("DELETE FROM crashes WHERE created < ?").bind(now - CRASH_DAYS * DAY_MS).run();
   const n = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM crashes WHERE net = ? AND created > ?").bind(net, now - DAY_MS).first<number>("n");
   if ((n ?? 0) >= CRASHES_PER_DAY) return fail(429, "too many crash reports today");
   const loader = body.loader && typeof body.loader === "object" ? body.loader as Record<string, unknown> : null;
   const mods = Array.isArray(body.mods) ? body.mods.filter((m) => typeof m === "string").slice(0, 400).map((m) => (m as string).slice(0, 200)) : [];
-  await c.env.DB.prepare(
-    "INSERT INTO crashes (created, net, launcher, os, mc, loader, cause, sig, detail, mods, log, report) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  const projects = projectsOf(body.projects);
+  const id = await c.env.DB.prepare(
+    "INSERT INTO crashes (created, net, launcher, os, mc, loader, cause, sig, detail, mods, log, report, projects) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
   )
     .bind(
       now, net, launcher, `${os}/${str(body.arch, 16) ?? "?"}`, str(body.mc, 32),
       loader ? `${str(loader.kind, 16) ?? "?"} ${str(loader.version, 64) ?? ""}`.trim() : null,
-      cause, crashSig(cause, log, report), str(body.detail, 300), JSON.stringify(mods), log, report,
+      cause, crashSig(cause, log, report), str(body.detail, 300), JSON.stringify(mods), log, report, JSON.stringify(projects),
     )
-    .run();
+    .first<number>("id");
+  if (id !== null && projects.length && !["support", "bug"].includes(cause)) await c.env.DB.batch(runMods(c.env.DB, "c", id, projects, net, now));
   return c.json({ ok: true }, 201);
 });
 
+app.post("/perf", async (c) => {
+  const bytes = await readCapped(c.req.raw, 64 * 1024);
+  if (!bytes) return fail(413, "body too large");
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return fail(400, "body is not JSON");
+  }
+  const num = (v: unknown, max: number) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= max ? v : null);
+  const launcher = str(body.launcher, 32);
+  const os = str(body.os, 16);
+  const mc = str(body.mc, 32);
+  const seconds = num(body.seconds, 7 * 24 * 3600);
+  if (!launcher || !os || !mc || seconds === null) return fail(400, "bad report");
+  const net = await netHash(c.req.raw);
+  const now = Date.now();
+  const n = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM perf_runs WHERE net = ? AND created > ?").bind(net, now - DAY_MS).first<number>("n");
+  if ((n ?? 0) >= PERF_PER_DAY) return fail(429, "too many reports today");
+  await c.env.DB.batch([
+    c.env.DB.prepare("DELETE FROM perf_runs WHERE created < ?").bind(now - PERF_DAYS * DAY_MS),
+    c.env.DB.prepare("DELETE FROM run_mods WHERE created < ?").bind(now - PERF_DAYS * DAY_MS),
+  ]);
+  const projects = projectsOf(body.projects);
+  const low = num(body.fpsLow, 10000), avg = num(body.fpsAvg, 10000);
+  const id = await c.env.DB.prepare(
+    "INSERT INTO perf_runs (created, net, launcher, os, gpu, cpu, ram_gb, mc, loader, fps_avg, fps_low, seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+  )
+    .bind(now, net, launcher, os, normGpu(body.gpu), str(body.cpu, 80) ?? "", num(body.ramGb, 4096), mc, str(body.loader, 16), avg, low !== null && avg !== null && low <= avg + 1 ? low : null, Math.round(seconds))
+    .first<number>("id");
+  if (id !== null && projects.length) await c.env.DB.batch(runMods(c.env.DB, "p", id, projects, net, now));
+  return c.json({ ok: true }, 201);
+});
+
+app.get("/perf/insight", async (c) => {
+  const mod = c.req.query("mod") ?? "";
+  if (!/^[A-Za-z0-9]{8}$/.test(mod)) return fail(400, "bad mod");
+  const mine = projectsOf((c.req.query("with") ?? "").split(","));
+  return c.json(await insight(c.env.DB, mod, normGpu(c.req.query("gpu")), (c.req.query("mc") ?? "").slice(0, 32), mine, Date.now()));
+});
+
 app.use("/v1/*", async (c, next) => {
-  const shot = c.req.path === SHOT_PATH;
-  const bytes = await readCapped(c.req.raw, shot ? MAX_SHOT : BIG_PATHS.test(c.req.path) ? MAX_BIG_BODY : MAX_BODY);
+  const part = c.req.method === "PUT" && RELAY_PART_PATH.test(c.req.path);
+  const shot = c.req.path === SHOT_PATH || part;
+  const bytes = await readCapped(c.req.raw, part ? PART_SIZE : c.req.path === SHOT_PATH ? MAX_SHOT : BIG_PATHS.test(c.req.path) ? MAX_BIG_BODY : MAX_BODY);
   if (!bytes) return fail(413, "body too large");
   const auth = await verify(c.req.raw, bytes);
   if ("error" in auth) return fail(401, auth.error);
@@ -461,6 +541,7 @@ app.delete("/v1/me", async (c) => {
   await leaveParty(c.env, me);
   const { results } = await c.env.DB.prepare("SELECT code FROM shares WHERE account = ? AND kind = 'screenshot'").bind(me).all<{ code: string }>();
   if (results.length && c.env.SHOTS) await c.env.SHOTS.delete(results.map((r) => `screenshots/${r.code}`));
+  await dropOwned(c.env, me);
   await c.env.DB.prepare("DELETE FROM accounts WHERE id = ?").bind(me).run();
   await (c.env.HUB.get(c.env.HUB.idFromName("hub")) as unknown as { drop(id: string): Promise<void> }).drop(me);
   return c.json({ ok: true });
@@ -469,6 +550,8 @@ app.delete("/v1/me", async (c) => {
 app.put("/v1/me/cosmetics", async (c) => {
   const cosmetics = field(c.var.body, "cosmetics");
   if (!cosmetics || typeof cosmetics !== "object" || Array.isArray(cosmetics)) return fail(400, "cosmetics must be an object");
+  const art = (cosmetics as { art?: unknown }).art;
+  if (art !== undefined && (typeof art !== "string" || !CAPE_ART.test(art))) return fail(400, "bad cape art");
   const json = JSON.stringify(cosmetics);
   if (json.length > MAX_COSMETICS) return fail(413, "cosmetics too large");
   await c.env.DB.prepare("UPDATE accounts SET cosmetics = ? WHERE id = ?").bind(json, c.var.account.id).run();
@@ -551,6 +634,35 @@ app.get("/v1/ws", (c) => {
   return c.env.HUB.get(c.env.HUB.idFromName("hub")).fetch(c.req.url, { headers });
 });
 
+const MAX_ROOM_MODS = 500;
+const MODRINTH_ID = /^[A-Za-z0-9]{8}$/;
+
+app.put("/v1/me/room-mods", async (c) => {
+  const mods = field(c.var.body, "mods");
+  if (!Array.isArray(mods) || mods.length > MAX_ROOM_MODS) return fail(400, "bad mod list");
+  const clean: { p: string; v: string }[] = [];
+  for (const m of mods) {
+    const p = (m as { p?: unknown })?.p, v = (m as { v?: unknown })?.v;
+    if (typeof p !== "string" || typeof v !== "string" || !MODRINTH_ID.test(p) || !MODRINTH_ID.test(v)) return fail(400, "bad mod list");
+    clean.push({ p, v });
+  }
+  await c.env.DB.prepare("INSERT OR REPLACE INTO room_mods (account, mods, updated) VALUES (?, ?, ?)").bind(c.var.account.id, JSON.stringify(clean), Date.now()).run();
+  return c.json({ ok: true });
+});
+
+app.delete("/v1/me/room-mods", async (c) => {
+  await c.env.DB.prepare("DELETE FROM room_mods WHERE account = ?").bind(c.var.account.id).run();
+  return c.json({ ok: true });
+});
+
+app.get("/v1/friends/:id/room-mods", async (c) => {
+  const [a, b] = pair(c.var.account.id, c.req.param("id"));
+  if (!(await c.env.DB.prepare("SELECT 1 FROM friendships WHERE a = ? AND b = ?").bind(a, b).first())) return fail(403, "only friends can see that");
+  const row = await c.env.DB.prepare("SELECT mods FROM room_mods WHERE account = ?").bind(c.req.param("id")).first<{ mods: string }>();
+  if (!row) return fail(404, "your friend is not hosting");
+  return c.json({ mods: JSON.parse(row.mods) });
+});
+
 app.get("/v1/messages/:id", async (c) => {
   const me = c.var.account.id;
   const [a, b] = pair(me, c.req.param("id"));
@@ -567,6 +679,8 @@ const areFriends = async (db: D1Database, x: string, y: string) => {
   const [a, b] = pair(x, y);
   return !!(await db.prepare("SELECT 1 FROM friendships WHERE a = ? AND b = ?").bind(a, b).first());
 };
+
+relays(app as never, { notify: notify as never, areFriends });
 
 const partyMembers = async (db: D1Database, party: string) =>
   (await db.prepare("SELECT account FROM party_members WHERE party = ? ORDER BY joined").bind(party).all<{ account: string }>()).results.map((r) => r.account);

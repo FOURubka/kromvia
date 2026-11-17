@@ -1,0 +1,15 @@
+PackageIdentifier: Kromvia.Kromvia
+PackageVersion: 0.1.15
+PackageLocale: en-US
+Publisher: Kromvia
+PublisherUrl: https://kromvia.com
+PackageName: Kromvia
+PackageUrl: https://kromvia.com
+License: Proprietary
+ShortDescription: Minecraft launcher with a built-in client
+Tags:
+  - minecraft
+  - launcher
+  - modrinth
+ManifestType: defaultLocale
+ManifestVersion: 1.9.0

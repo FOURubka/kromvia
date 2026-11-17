@@ -19,8 +19,8 @@ const T = {
       "the likes you give and get;",
       "your Discord or Telegram name and ID, if you link them. On our Discord server a linked account gets the Player role and roles for your badges;",
       "while you play on a server, its address and the nickname you use there, so your cosmetics show up for other players;",
-      "builds you save to the cloud;",
-      "builds, logs and screenshots you share. Shares are deleted after 30 days.",
+      "instances you save to the cloud;",
+      "instances, logs and screenshots you share. Shares are deleted after 30 days.",
     ],
     profile:
       "Your profile at kromvia.com/u/yourname is public: it shows your nickname, cosmetics, likes, when you joined, and whether your Minecraft account is verified.",

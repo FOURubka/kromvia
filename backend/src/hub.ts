@@ -12,6 +12,32 @@ const MC_VERSION = /^[0-9a-z.+-]{1,32}$/i;
 
 export const MAX_TEXT = 500;
 
+export const NO_PINGS = [
+  "hypixel.net",
+  "minemen.club",
+  "pvp.land",
+  "cubecraft.net",
+  "mineplex.com",
+  "blocksmc.com",
+  "pika-network.net",
+  "jartexnetwork.com",
+  "bedwarspractice.club",
+  "mccentral.org",
+  "hoplite.gg",
+  "mcplayhd.net",
+  "zonix.us",
+  "stray.gg",
+  "ranked.gg",
+  "minehut.com",
+];
+
+export const pingsOff = (host: string) => {
+  const h = host.toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "");
+  return NO_PINGS.some((s) => h === s || h.endsWith("." + s));
+};
+
+const DIMENSION = /^[a-z0-9_.-]{1,32}:[a-z0-9_./-]{1,64}$/;
+
 export class Hub extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -38,7 +64,7 @@ export class Hub extends DurableObject<Env> {
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer) {
     const who = ws.deserializeAttachment() as Who;
-    let msg: { type?: unknown; to?: unknown; text?: unknown; host?: unknown; nick?: unknown; names?: unknown; room?: unknown; mc?: unknown };
+    let msg: { type?: unknown; to?: unknown; text?: unknown; host?: unknown; nick?: unknown; names?: unknown; room?: unknown; mc?: unknown; dim?: unknown; x?: unknown; y?: unknown; z?: unknown };
     try {
       msg = JSON.parse(typeof raw === "string" ? raw : new TextDecoder().decode(raw));
     } catch {
@@ -50,6 +76,7 @@ export class Hub extends DurableObject<Env> {
     }
     if (msg.type === "room") return this.setRoom(ws, who, msg.room, msg.mc);
     if (msg.type === "chat") return this.chat(ws, who, msg.to, msg.text);
+    if (msg.type === "ping") return this.ping(ws, who, msg);
     if (msg.type === "server") {
       if (!(await this.env.LIMIT.limit({ key: `server:${who.id}` })).success) return ws.send(JSON.stringify({ type: "error", error: "too many messages, slow down" }));
       const error = await setPlaying(this.env.DB, who, msg.host, msg.nick);
@@ -90,6 +117,24 @@ export class Hub extends DurableObject<Env> {
       .bind(a, b, who.id, body, time)
       .first<number>("id");
     this.tell([who.id, to], { type: "chat", id: row, from: who.id, to, text: body, time });
+  }
+
+  private async ping(ws: WebSocket, who: Who, msg: { host?: unknown; dim?: unknown; x?: unknown; y?: unknown; z?: unknown }) {
+    const fail = (error: string) => ws.send(JSON.stringify({ type: "ping.error", error }));
+    const { host, dim, x, y, z } = msg;
+    const coord = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && Math.abs(n) < 3e7;
+    if (typeof host !== "string" || !ROOM_HOST.test(host.toLowerCase()) && !/^[0-9.]{7,15}(:[0-9]{1,5})?$/.test(host)) return fail("bad server");
+    if (typeof dim !== "string" || !DIMENSION.test(dim) || !coord(x) || !coord(y) || !coord(z)) return fail("bad ping");
+    if (pingsOff(host)) return fail("Pings are off on this server: it is a PvP server.");
+    if (!(await this.env.LIMIT.limit({ key: `ping:${who.id}` })).success) return fail("too many pings, slow down");
+    const { results } = await this.env.DB.prepare("SELECT m.account FROM party_members m JOIN party_members me ON me.party = m.party WHERE me.account = ? AND m.account != me.account")
+      .bind(who.id)
+      .all<{ account: string }>();
+    if (results.length === 0) return fail("You are not in a party.");
+    this.tell(
+      results.map((r) => r.account),
+      { type: "ping", from: who.id, name: who.name, host: host.toLowerCase(), dim, x, y, z },
+    );
   }
 
   private async setRoom(ws: WebSocket, who: Who, room: unknown, mc: unknown) {

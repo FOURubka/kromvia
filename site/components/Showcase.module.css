@@ -54,11 +54,7 @@
   background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--border), inset 0 -3px 0 rgb(0 0 0 / 0.35);
   cursor: pointer;
-  clip-path: polygon(
-    var(--n) 0, calc(100% - var(--n)) 0, calc(100% - var(--n)) var(--n), 100% var(--n),
-    100% calc(100% - var(--n)), calc(100% - var(--n)) calc(100% - var(--n)), calc(100% - var(--n)) 100%,
-    var(--n) 100%, var(--n) calc(100% - var(--n)), 0 calc(100% - var(--n)), 0 var(--n), var(--n) var(--n)
-  );
+  border-radius: 999px;
   transition: background 140ms var(--ease-out), transform 140ms var(--ease-out);
 }
 

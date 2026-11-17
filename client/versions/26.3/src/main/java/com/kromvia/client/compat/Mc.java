@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
@@ -77,5 +78,33 @@ public final class Mc {
 
 	public static void fullBright(EntityRenderState state) {
 		state.lightCoords = 0xF000F0;
+	}
+
+	public static void initScreen(Screen s, int w, int h) {
+		s.init(w, h);
+	}
+
+	public static String label(AbstractWidget w) {
+		return w.getMessage().getString();
+	}
+
+	public static void place(AbstractWidget w, int x, int y, int width) {
+		w.setX(x);
+		w.setY(y);
+		w.setWidth(width);
+	}
+
+	public static float[] view() {
+		net.minecraft.client.Camera cam = mc().gameRenderer.mainCamera();
+		net.minecraft.world.phys.Vec3 p = cam.position();
+		return new float[] {(float) p.x, (float) p.y, (float) p.z, cam.yRot(), cam.xRot(), com.kromvia.client.module.Info.fov};
+	}
+
+	public static String gpu() {
+		try {
+			return com.mojang.blaze3d.systems.RenderSystem.getDevice().getDeviceInfo().name();
+		} catch (RuntimeException e) {
+			return "";
+		}
 	}
 }
