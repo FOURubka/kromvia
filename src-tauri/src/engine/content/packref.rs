@@ -46,7 +46,7 @@ pub struct PackUpdate {
 pub async fn check_update(instance_id: &str) -> Result<Option<PackUpdate>, String> {
     let Some(saved) = load(instance_id).filter(|s| s.pack.source == "modrinth") else { return Ok(None) };
     let latest = super::modrinth::latest_version(&saved.pack.project, super::ContentKind::Modpack, None).await?;
-    Ok((latest.id != saved.pack.file).then(|| PackUpdate { project: saved.pack.project, version: latest.version_number }))
+    Ok((latest.id != saved.pack.file).then_some(PackUpdate { project: saved.pack.project, version: latest.version_number }))
 }
 
 pub fn load(instance_id: &str) -> Option<Saved> {
