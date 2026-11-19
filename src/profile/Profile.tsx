@@ -5,7 +5,7 @@ import { describe, formatDuration, useLauncher, type Instance } from "../lib/lau
 import { InstanceIcon } from "../art/ModelIcon";
 import { emblemUrl } from "../art/emblems";
 import { BADGES, earned as isEarned, type Facts } from "./badges";
-import { BadgeMedal, BadgesDialog, badgeTip } from "./Badges";
+import { BadgeMedal, BadgesDialog, badgeTip } from "./BadgesView";
 import { Clans } from "./Clans";
 import type { ClanTag } from "./card";
 import type { MyStatus } from "../friends/social";
