@@ -1,3 +1,7 @@
+import { ProfileCard } from "../profile/ProfileCard";
+import type { Card, CardOwner, ClanTag } from "../profile/card";
+import { ClanChip } from "../profile/ProfileCard";
+import { Rich } from "../profile/Rich";
 import { useEffect, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -13,8 +17,8 @@ import "./friends.css";
 
 type Player = { id: string; name: string; verified: boolean };
 type Me = Player & { cosmetics: Record<string, unknown> };
-type FriendList = { friends: (Player & { seen: number })[]; incoming: Player[]; outgoing: Player[] };
-type PublicProfile = Player & { created: number; likes: number; cosmetics: Record<string, unknown> };
+type FriendList = { friends: (Player & { seen: number; clan?: ClanTag | null; note?: string | null })[]; incoming: Player[]; outgoing: Player[] };
+type PublicProfile = Player & { created: number; likes: number; cosmetics: Record<string, unknown>; profile?: Card; links?: CardOwner["links"]; clan?: ClanTag | null };
 type View = { chat: string } | { profile: string } | null;
 
 const SHOT = /^https:\/\/api\.kromvia\.com\/share\/[A-Za-z0-9]{4,16}$/;
@@ -207,15 +211,39 @@ export function Friends() {
                   <button className="friend-row" aria-pressed={chat === p.id} onClick={() => setView({ chat: p.id })}>
                     <span className="head-wrap">
                       <Head name={p.name} />
-                      <span className="presence-dot" data-online={social.online.has(p.id)} />
+                      <span className="presence-dot" data-online={social.online.has(p.id)} data-presence={social.online.has(p.id) ? (social.statuses[p.id] ?? "online") : undefined} />
                     </span>
-                    <span className="friend-name">{p.name}</span>
+                    <span className="friend-text">
+                      <span className="friend-name">
+                        {p.name} {p.clan && <ClanChip clan={p.clan} />}
+                      </span>
+                      {social.online.has(p.id) && (social.games[p.id] || social.servers[p.id] || p.note) && (
+                        <small className="friend-activity">
+                          {social.games[p.id] ? (
+                            <>
+                              <Glyph name="device-gamepad" size={12} /> Minecraft {social.games[p.id].mc}
+                              {social.servers[p.id] ? ` · ${social.servers[p.id]}` : ""}
+                            </>
+                          ) : social.servers[p.id] ? (
+                            social.servers[p.id]
+                          ) : (
+                            <Rich text={p.note!} />
+                          )}
+                        </small>
+                      )}
+                    </span>
                     {!!social.unread[p.id] && <span className="unread">{social.unread[p.id]}</span>}
                   </button>
-                  {social.rooms[p.id] && (
+                  {social.rooms[p.id] ? (
                     <button className="btn friend-join" title={t("friends.hosting", { mc: social.rooms[p.id].mc })} onClick={() => social.join(p.id)}>
                       <Glyph name="login-2" /> {t("friends.join")}
                     </button>
+                  ) : (
+                    social.servers[p.id] && (
+                      <button className="btn friend-join" title={t("friends.playingOn", { host: social.servers[p.id] })} onClick={() => social.joinServer(p.id)}>
+                        <Glyph name="login-2" /> {t("friends.join")}
+                      </button>
+                    )
                   )}
                 </li>
               ))}
@@ -278,6 +306,8 @@ function PlayerView({
   onChat: (p: Player) => void;
 }) {
   const { t } = useI18n();
+  const social = useSocial();
+  const launcher = useLauncher();
   const [p, setP] = useState<PublicProfile | null | undefined>(undefined);
   const [skin, setSkin] = useState<{ dataUrl: string; slim: boolean } | null>(null);
   const [liked, setLiked] = useState(false);
@@ -308,35 +338,46 @@ function PlayerView({
         <SkinArt skin={skin?.dataUrl ?? null} slim={skin?.slim ?? false} back="cape" worn={c as Worn} zoom={0.85} />
       </div>
       <div className="player-info">
-        <h2 className="player-name">
-          {p.name} {p.verified && <span title={t("profile.verified")}><Glyph name="user-check" /></span>}
-        </h2>
-        <p className="muted">
-          {t("profile.likes", { n: p.likes })} · {t("friends.joined", { date: new Date(p.created).toLocaleDateString() })}
-        </p>
-        <div className="actions">
-          {rel === "friend" && (
-            <button className="btn" onClick={() => onChat(p)}>
-              <Glyph name="pencil" /> {t("friends.chat")}
-            </button>
-          )}
-          {rel === "none" && (
-            <button className="btn" onClick={() => onRequest(p)}>
-              <Glyph name="user-plus" /> {t("friends.send")}
-            </button>
-          )}
-          {rel === "incoming" && (
-            <button className="btn" onClick={() => onAccept(p)}>
-              <Glyph name="check" /> {t("friends.accept")}
-            </button>
-          )}
-          {rel === "sent" && <span className="muted">{t("friends.pending")}</span>}
-          {rel !== "me" && (
-            <button className="btn btn-ghost profile-like" data-on={liked} onClick={like}>
-              <Glyph name="heart" /> {t("profile.like")}
-            </button>
-          )}
-        </div>
+        <ProfileCard
+          card={p.profile ?? {}}
+          owner={{
+            name: p.name,
+            verified: p.verified,
+            created: p.created,
+            likes: p.likes,
+            links: p.links,
+            clan: p.clan ?? null,
+            presence: social.online.has(p.id) ? (social.statuses[p.id] ?? "online") : "offline",
+            playing: social.servers[p.id] ?? null,
+            game: social.games[p.id] ?? null,
+          }}
+          onJoinServer={launcher.current ? (host) => launcher.play(launcher.current!, { join: host }) : undefined}
+          actions={
+            <>
+              {rel === "friend" && (
+                <button className="btn" onClick={() => onChat(p)}>
+                  <Glyph name="pencil" /> {t("friends.chat")}
+                </button>
+              )}
+              {rel === "none" && (
+                <button className="btn" onClick={() => onRequest(p)}>
+                  <Glyph name="user-plus" /> {t("friends.send")}
+                </button>
+              )}
+              {rel === "incoming" && (
+                <button className="btn" onClick={() => onAccept(p)}>
+                  <Glyph name="check" /> {t("friends.accept")}
+                </button>
+              )}
+              {rel === "sent" && <span className="muted">{t("friends.pending")}</span>}
+              {rel !== "me" && (
+                <button className="btn btn-ghost profile-like" data-on={liked} onClick={like}>
+                  <Glyph name="heart" /> {t("profile.like")}
+                </button>
+              )}
+            </>
+          }
+        />
         {error && <p className="error">{error}</p>}
       </div>
     </div>
@@ -454,15 +495,27 @@ function Chat({ friend, myId, onProfile, onRemove }: { friend: Player; myId: str
           <span className="list-main">
             <span className="instance-name">{friend.name}</span>
             <span className="muted small">
-              {social.rooms[friend.id] ? t("friends.hosting", { mc: social.rooms[friend.id].mc }) : online ? t("friends.online") : t("friends.offline")}
+              {social.rooms[friend.id]
+                ? t("friends.hosting", { mc: social.rooms[friend.id].mc })
+                : social.servers[friend.id]
+                  ? t("friends.playingOn", { host: social.servers[friend.id] })
+                  : online
+                    ? t("friends.online")
+                    : t("friends.offline")}
             </span>
           </span>
         </button>
         <div className="actions">
-          {social.rooms[friend.id] && (
+          {social.rooms[friend.id] ? (
             <button className="btn" onClick={() => social.join(friend.id)}>
               <Glyph name="login-2" /> {t("friends.join")}
             </button>
+          ) : (
+            social.servers[friend.id] && (
+              <button className="btn" onClick={() => social.joinServer(friend.id)}>
+                <Glyph name="login-2" /> {t("friends.join")}
+              </button>
+            )
           )}
           {online && !social.party?.members.some((m) => m.id === friend.id) && (
             <button className="btn btn-ghost" onClick={() => social.partyActions.invite(friend.id)}>
@@ -493,7 +546,7 @@ function Chat({ friend, myId, onProfile, onRemove }: { friend: Player; myId: str
         <div className="chat-shots">
           {shots.length === 0 && <span className="muted small">{t("friends.noShots")}</span>}
           {shots.map((s) => (
-            <button key={s.name} className="shot" title={s.name} onClick={() => upload(invoke<string>("share_screenshot", { instanceId: l.current!.id, name: s.name }))}>
+            <button key={s.name} className="shot" title={s.name} onClick={() => upload(invoke<string>("share_screenshot", { instanceId: l.current!.id, name: s.name }).then((url) => url.replace("https://kromvia.com/s/", "https://api.kromvia.com/share/")))}>
               <img src={convertFileSrc(s.path)} alt="" loading="lazy" />
             </button>
           ))}

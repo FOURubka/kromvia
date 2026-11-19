@@ -18,14 +18,16 @@ public final class Social {
 		public final int unread;
 		public final String head;
 		public final String room;
+		public final String server;
 
-		Friend(String id, String name, boolean online, int unread, String head, String room) {
+		Friend(String id, String name, boolean online, int unread, String head, String room, String server) {
 			this.id = id;
 			this.name = name;
 			this.online = online;
 			this.unread = unread;
 			this.head = head;
 			this.room = room;
+			this.server = server;
 		}
 	}
 
@@ -36,6 +38,32 @@ public final class Social {
 		Invite(String party, String from) {
 			this.party = party;
 			this.from = from;
+		}
+	}
+
+	public static final class ClanMember {
+		public final String id;
+		public final String name;
+		public final boolean online;
+		public final String server;
+		public final boolean me;
+
+		ClanMember(String id, String name, boolean online, String server, boolean me) {
+			this.id = id;
+			this.name = name;
+			this.online = online;
+			this.server = server;
+			this.me = me;
+		}
+	}
+
+	public static final class ClanLine {
+		public final String from;
+		public final String text;
+
+		ClanLine(String from, String text) {
+			this.from = from;
+			this.text = text;
 		}
 	}
 
@@ -52,6 +80,11 @@ public final class Social {
 	public static volatile int version;
 	private static volatile boolean received;
 	private static volatile String me;
+	private static volatile String clanId;
+	private static volatile String clanTag;
+	private static volatile int clanUnread;
+	private static volatile List<ClanMember> clanMembers = Collections.emptyList();
+	private static volatile List<ClanLine> clanChat = Collections.emptyList();
 	private static volatile boolean connected;
 	private static volatile String error;
 	private static volatile List<Friend> friends = Collections.emptyList();
@@ -65,12 +98,30 @@ public final class Social {
 
 	public static void set(JsonObject s) {
 		me = str(s, "me");
+		JsonObject clan = s.has("clan") && s.get("clan").isJsonObject() ? s.getAsJsonObject("clan") : null;
+		clanId = clan == null ? null : str(clan, "id");
+		clanTag = clan == null ? null : str(clan, "tag");
+		clanUnread = clan != null && clan.has("unread") ? clan.get("unread").getAsInt() : 0;
+		List<ClanMember> cm = new ArrayList<>();
+		List<ClanLine> cl = new ArrayList<>();
+		if (clan != null) {
+			for (JsonElement e : arr(clan, "members")) {
+				JsonObject o = e.getAsJsonObject();
+				cm.add(new ClanMember(str(o, "id"), str(o, "name"), o.has("online") && o.get("online").getAsBoolean(), str(o, "server"), o.has("me") && o.get("me").getAsBoolean()));
+			}
+			for (JsonElement e : arr(clan, "chat")) {
+				JsonObject o = e.getAsJsonObject();
+				cl.add(new ClanLine(str(o, "from"), str(o, "text")));
+			}
+		}
+		clanMembers = Collections.unmodifiableList(cm);
+		clanChat = Collections.unmodifiableList(cl);
 		connected = s.has("connected") && s.get("connected").getAsBoolean();
 		error = str(s, "error");
 		List<Friend> fs = new ArrayList<>();
 		for (JsonElement e : arr(s, "friends")) {
 			JsonObject o = e.getAsJsonObject();
-			fs.add(new Friend(str(o, "id"), str(o, "name"), o.has("online") && o.get("online").getAsBoolean(), o.has("unread") ? o.get("unread").getAsInt() : 0, str(o, "head"), str(o, "room")));
+			fs.add(new Friend(str(o, "id"), str(o, "name"), o.has("online") && o.get("online").getAsBoolean(), o.has("unread") ? o.get("unread").getAsInt() : 0, str(o, "head"), str(o, "room"), str(o, "server")));
 		}
 		friends = Collections.unmodifiableList(fs);
 		JsonObject party = s.has("party") && s.get("party").isJsonObject() ? s.getAsJsonObject("party") : null;
@@ -107,6 +158,38 @@ public final class Social {
 
 	private static JsonArray arr(JsonObject o, String key) {
 		return o.has(key) && o.get(key).isJsonArray() ? o.getAsJsonArray(key) : new JsonArray();
+	}
+
+	public static String clanId() {
+		return clanId;
+	}
+
+	public static String clanTag() {
+		return clanTag;
+	}
+
+	public static boolean inClan() {
+		return clanId != null;
+	}
+
+	public static int clanUnread() {
+		return clanUnread;
+	}
+
+	public static List<ClanMember> clanMembers() {
+		return clanMembers;
+	}
+
+	public static List<ClanLine> clanChat() {
+		return clanChat;
+	}
+
+	public static void clanSend(String text) {
+		ask("clanSend", "text", text);
+	}
+
+	public static void clanOpen() {
+		ask("clanOpen", null, null);
 	}
 
 	public static boolean available() {

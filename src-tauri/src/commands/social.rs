@@ -135,6 +135,36 @@ pub fn social_room(live: State<'_, Live>, room: Option<String>, mc: Option<Strin
 }
 
 #[tauri::command]
+pub fn social_status(live: State<'_, Live>, status: String) -> Result<(), String> {
+    live.set_status(&status)
+}
+
+#[tauri::command]
+pub fn social_game(live: State<'_, Live>, mc: Option<String>, since: Option<i64>) {
+    live.set_game(mc.as_deref().zip(since));
+}
+
+#[tauri::command]
+pub async fn social_clan(method: String, path: String, body: Option<Value>) -> Result<Value, String> {
+    social::clan_call(&method, &path, body).await
+}
+
+#[tauri::command]
+pub fn social_clan_chat(live: State<'_, Live>, text: String) -> Result<(), String> {
+    live.send(serde_json::json!({ "type": "clan.chat", "text": text }))
+}
+
+#[tauri::command]
+pub fn social_clan_presence(live: State<'_, Live>) -> Result<(), String> {
+    live.send(serde_json::json!({ "type": "clan.presence" }))
+}
+
+#[tauri::command]
+pub fn social_hide_server(live: State<'_, Live>, hide: bool) {
+    live.set_hidden(hide);
+}
+
+#[tauri::command]
 pub fn social_presence(live: State<'_, Live>) -> Result<(), String> {
     live.send(serde_json::json!({ "type": "presence" }))
 }
@@ -206,13 +236,13 @@ pub async fn share_build(instance_id: String) -> Result<Value, String> {
 
 #[tauri::command]
 pub async fn share_log(text: String) -> Result<String, String> {
-    Ok(format!("{}/share/{}", social::base(), social::share("log", Value::String(text)).await?))
+    Ok(social::page(&social::share("log", Value::String(text)).await?))
 }
 
 #[tauri::command]
 pub async fn share_screenshot(instance_id: String, name: String) -> Result<String, String> {
     let path = crate::engine::worlds::screenshot_path(&instance_id, &name)?;
-    Ok(format!("{}/share/{}", social::base(), social::share_screenshot(&path).await?))
+    Ok(social::page(&social::share_screenshot(&path).await?))
 }
 
 #[tauri::command]
@@ -266,4 +296,9 @@ pub async fn wardrobe_push(
         let _ = social::set_cosmetics(worn).await;
     });
     Ok(())
+}
+
+#[tauri::command]
+pub async fn social_profile(profile: Value) -> Result<Value, String> {
+    social::set_profile(profile).await
 }

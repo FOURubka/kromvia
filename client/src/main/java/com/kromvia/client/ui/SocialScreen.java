@@ -21,6 +21,7 @@ public class SocialScreen extends KScreen {
 	private static final int PARTY_MAX = 8;
 	private static final int HEAD = 12;
 	private static final String SHOT_PREFIX = "https://api.kromvia.com/share/";
+	private static boolean clanMode;
 	private final Screen parent;
 	private EditBox input;
 	private String draft = "";
@@ -62,9 +63,11 @@ public class SocialScreen extends KScreen {
 	private static String layoutKey() {
 		StringBuilder k = new StringBuilder();
 		k.append(Social.received()).append(Social.signedOut()).append(Social.inParty()).append(Social.leads()).append(Social.room()).append(Social.chatWith());
-		for (Social.Friend f : Social.friends()) k.append('|').append(f.id).append(f.online).append(f.unread).append(f.room);
+		for (Social.Friend f : Social.friends()) k.append('|').append(f.id).append(f.online).append(f.unread).append(f.room).append(f.server);
 		for (String m : Social.members()) k.append('#').append(m);
 		for (Social.Invite i : Social.invites()) k.append('!').append(i.party);
+		k.append(clanMode).append(Social.inClan()).append(Social.clanUnread());
+		for (Social.ClanMember m : Social.clanMembers()) k.append('~').append(m.id).append(m.online).append(m.server);
 		return k.toString();
 	}
 
@@ -73,18 +76,36 @@ public class SocialScreen extends KScreen {
 		built = layoutKey();
 		int x = left();
 		int rows = Math.max(1, (bottom() - TOP - 14) / ROW);
+		if (clanMode && !Social.inClan()) clanMode = false;
+		if (Social.inClan()) {
+			int tx = left() + panelW() - 150;
+			addRenderableWidget(new KButton(tx, 8, 70, 18, Component.literal("Friends"), b -> {
+				clanMode = false;
+				rebuild();
+			}, () -> !clanMode));
+			addRenderableWidget(new KButton(tx + 74, 8, 76, 18, Component.literal("Clan" + (Social.clanUnread() > 0 ? "  " + Social.clanUnread() : "")), b -> {
+				clanMode = true;
+				Social.clanOpen();
+				rebuild();
+			}, () -> clanMode));
+		}
+		if (clanMode) {
+			initClan(x, rows);
+			return;
+		}
 		List<Social.Friend> friends = sorted();
 		boolean canInvite = !Social.inParty() || Social.leads() && Social.members().size() < PARTY_MAX;
 		for (int i = 0; i < Math.min(rows, friends.size()); i++) {
 			Social.Friend f = friends.get(i);
 			String dot = f.online ? "§a● §r" : "§8● §7";
-			String label = "    " + dot + f.name + (f.unread > 0 ? "  §d" + f.unread : "");
+			String label = "    " + dot + f.name + (f.unread > 0 ? "  §d" + f.unread : "") + (f.room == null && f.server != null ? "  §8" + f.server : "");
 			int y = TOP + 14 + i * ROW;
 			boolean invite = canInvite && f.online && !Social.members().contains(f.name);
-			int side = (invite ? 24 : 0) + (f.room != null ? 36 : 0);
+			int side = (invite ? 24 : 0) + (f.room != null || f.server != null ? 36 : 0);
 			addRenderableWidget(new KButton(x, y, LEFT_W - side, ROW - 2, Component.literal(label), b -> Social.open(f.id),
 					() -> f.id.equals(Social.chatWith())));
 			if (f.room != null) addRenderableWidget(new KButton(x + LEFT_W - side + 2, y, 34, ROW - 2, Component.literal("Join"), b -> joinFriend(f.id, f.room)));
+			else if (f.server != null) addRenderableWidget(new KButton(x + LEFT_W - side + 2, y, 34, ROW - 2, Component.literal("Join"), b -> joinServer(f.server)));
 			if (invite) addRenderableWidget(new KButton(x + LEFT_W - 22, y, 22, ROW - 2, Component.literal("+"), b -> Social.invite(f.id)).flat());
 		}
 
@@ -119,6 +140,63 @@ public class SocialScreen extends KScreen {
 		addRenderableWidget(new KButton(x, height - 24, 80, 20, Component.literal("Back"), b -> onClose()));
 	}
 
+	private void rebuild() {
+		clearWidgets();
+		init();
+	}
+
+	private void initClan(int x, int rows) {
+		List<Social.ClanMember> ms = clanSorted();
+		for (int i = 0; i < Math.min(rows, ms.size()); i++) {
+			Social.ClanMember m = ms.get(i);
+			String dot = m.online ? "§a● §r" : "§8● §7";
+			int y = TOP + 14 + i * ROW;
+			boolean join = m.online && !m.me && m.server != null;
+			addRenderableWidget(new KButton(x, y, LEFT_W - (join ? 38 : 0), ROW - 2, Component.literal(fit(" " + dot + m.name + (m.me ? " §8(you)" : m.online && m.server != null ? " §8" + m.server : ""), LEFT_W - (join ? 46 : 8))), b -> {}).flat());
+			if (join) addRenderableWidget(new KButton(x + LEFT_W - 36, y, 34, ROW - 2, Component.literal("Join"), b -> joinServer(m.server)));
+		}
+		int rx = right(), rw = rightW();
+		if (input == null || builtW != width || builtH != height) {
+			input = new EditBox(font, rx, bottom() - 20, rw - 54, 20, Component.literal("Message"));
+			input.setMaxLength(500);
+			input.setValue(draft);
+			input.setResponder(v -> draft = v);
+			builtW = width;
+			builtH = height;
+		}
+		addRenderableWidget(input);
+		addRenderableWidget(new KButton(rx + rw - 50, bottom() - 20, 50, 20, Component.literal("Send"), b -> send()));
+		addRenderableWidget(new KButton(x, height - 24, 80, 20, Component.literal("Back"), b -> onClose()));
+	}
+
+	private static List<Social.ClanMember> clanSorted() {
+		List<Social.ClanMember> list = new ArrayList<>(Social.clanMembers());
+		list.sort((a, b) -> a.online != b.online ? (a.online ? -1 : 1) : a.name.compareToIgnoreCase(b.name));
+		return list;
+	}
+
+	private void drawClan(Gfx g) {
+		int x = left(), rx = right(), rw = rightW();
+		int online = 0;
+		for (Social.ClanMember m : Social.clanMembers()) if (m.online) online++;
+		g.drawString(font, "CLAN  [" + Social.clanTag() + "]  " + online + "/" + Social.clanMembers().size(), x, TOP, UiStyle.FRONT, false);
+		g.drawString(font, "CLAN CHAT", rx, TOP, UiStyle.FRONT, false);
+		List<String> wrapped = new ArrayList<>();
+		List<Integer> colours = new ArrayList<>();
+		for (Social.ClanLine l : Social.clanChat()) {
+			for (String part : wrap(l.from + ": " + l.text, rw)) {
+				wrapped.add(part);
+				colours.add(UiStyle.TEXT);
+			}
+		}
+		int lineH = font.lineHeight + 2;
+		int top = TOP + 14;
+		int fits = Math.max(0, (bottom() - 26 - top) / lineH);
+		int from = Math.max(0, wrapped.size() - fits);
+		for (int i = from; i < wrapped.size(); i++) g.drawString(font, wrapped.get(i), rx, top + (i - from) * lineH, colours.get(i), false);
+		if (wrapped.isEmpty()) g.drawString(font, "No clan messages yet.", rx, top, UiStyle.MUTED, false);
+	}
+
 	private static List<Social.Friend> sorted() {
 		List<Social.Friend> list = new ArrayList<>(Social.friends());
 		list.sort((a, b) -> a.online != b.online ? (a.online ? -1 : 1) : a.name.compareToIgnoreCase(b.name));
@@ -126,6 +204,14 @@ public class SocialScreen extends KScreen {
 	}
 
 	private void send() {
+		if (clanMode) {
+			String text = draft.trim();
+			if (text.isEmpty()) return;
+			Social.clanSend(text);
+			draft = "";
+			input.setValue("");
+			return;
+		}
 		String to = Social.chatWith();
 		String text = draft.trim();
 		if (to == null || text.isEmpty()) return;
@@ -137,6 +223,13 @@ public class SocialScreen extends KScreen {
 	private void joinFriend(String friend, String room) {
 		if (friend != null && com.kromvia.client.Launcher.PRESENT && com.kromvia.client.Accounts.sender != null) Social.joinFriend(friend);
 		else connect(this, room);
+	}
+
+	private void joinServer(String host) {
+		net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+		if (mc.getCurrentServer() != null && host.equalsIgnoreCase(mc.getCurrentServer().ip.trim())) return;
+		if (mc.level != null) com.kromvia.client.compat.Mc.leaveWorld(null);
+		connect(com.kromvia.client.compat.Mc.screen(), host);
 	}
 
 	public static void connect(net.minecraft.client.gui.screens.Screen parent, String room) {
@@ -185,6 +278,11 @@ public class SocialScreen extends KScreen {
 	protected void draw(Gfx g, int mouseX, int mouseY, float delta) {
 		super.draw(g, mouseX, mouseY, delta);
 		int x = left();
+		if (clanMode) {
+			g.drawString(font, "SOCIAL", x, 14, UiStyle.TEXT, false);
+			drawClan(g);
+			return;
+		}
 		List<Social.Friend> shown = sorted();
 		int rows = Math.max(1, (bottom() - TOP - 14) / ROW);
 		for (int i = 0; i < Math.min(rows, shown.size()); i++) {

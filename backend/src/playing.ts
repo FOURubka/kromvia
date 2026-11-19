@@ -43,17 +43,21 @@ export async function wornOn(db: D1Database, host: string, nicks: string[]): Pro
   const { results } = await db
     .prepare(
       `SELECT p.nick_lower, a.cosmetics, a.name_lower, a.mc_uuid,
-         (SELECT l.ext_id FROM links l WHERE l.account = a.id AND l.provider = 'discord') AS discord
+         (SELECT l.ext_id FROM links l WHERE l.account = a.id AND l.provider = 'discord') AS discord,
+         c.id AS clan_id, c.tag AS clan_tag, c.icon AS clan_icon
        FROM playing p JOIN accounts a ON a.id = p.account
+       LEFT JOIN clan_members cm ON cm.account = a.id LEFT JOIN clans c ON c.id = cm.clan
        WHERE p.host = ? AND p.updated > ? AND p.owned = 1 AND p.nick_lower IN (${nicks.map(() => "?").join(",")})`,
     )
     .bind(host, Date.now() - STALE_MS, ...nicks)
-    .all<{ nick_lower: string; cosmetics: string; name_lower: string; mc_uuid: string | null; discord: string | null }>();
+    .all<{ nick_lower: string; cosmetics: string; name_lower: string; mc_uuid: string | null; discord: string | null; clan_id: string | null; clan_tag: string | null; clan_icon: string | null }>();
   return Object.fromEntries(
     results.map((r) => {
       const worn = JSON.parse(r.cosmetics);
       delete worn.dev;
       if (isDev(r, r.discord)) worn.dev = true;
+      delete worn.clan;
+      if (r.clan_tag) worn.clan = { id: r.clan_id, tag: r.clan_tag, icon: r.clan_icon };
       return [r.nick_lower, worn];
     }),
   );

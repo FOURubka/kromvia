@@ -1057,7 +1057,7 @@ fn share_screenshot<R: Runtime>(app: &AppHandle<R>, run_id: u64, name: String) {
     };
     tauri::async_runtime::spawn(async move {
         let link = match crate::engine::worlds::screenshot_path(&instance_id, &name) {
-            Ok(path) => crate::engine::social::share_screenshot(&path).await.map(|code| format!("{}/share/{code}", crate::engine::social::base())),
+            Ok(path) => crate::engine::social::share_screenshot(&path).await.map(|code| crate::engine::social::page(&code)),
             Err(e) => Err(e),
         };
         let answer = match link {

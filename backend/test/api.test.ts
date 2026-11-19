@@ -506,3 +506,76 @@ test("perf runs and crashes feed mod insight", async () => {
   expect(body.cost).toEqual({ fps: 30, with: 6, without: 6 });
   expect(body.pairs).toEqual([{ project: A, crashed: 4, rate: 0.4 }]);
 });
+
+test("profile cards are checked, saved and public", async () => {
+  const a = await signup("Carded");
+  const bad = [
+    { banner: "red" },
+    { frame: "rainbow" },
+    { bannerAngle: 400 },
+    { nameFont: "comic sans" },
+    { status: "x".repeat(81) },
+    { mains: ["a", "b", "c", "d", "e", "f"] },
+    { server: "not a host!" },
+    { bio: "hi‮evil" },
+    { showLinks: "yes" },
+    { music: { title: "Sweden", url: "https://evil.example/x" } },
+    { looking: ["pvp", "griefing"] },
+    { mods: ["Sodium!"] },
+    { shot: "../etc" },
+  ];
+  for (const profile of bad) expect((await call(a, "PUT", "/v1/me/profile", { profile })).status).toBe(400);
+  const r = await call(a, "PUT", "/v1/me/profile", {
+    profile: { banner: "#8B5CF6", status: "  building  a\tbase ", bio: "line one\r\n\n\n\nline two", frame: "gold", effect: "snow", mains: ["Bedwars", "bedwars", "SMP"], server: " Mc.Hypixel.net ", showLinks: false, junk: 1 },
+  });
+  expect(r.status).toBe(200);
+  expect(r.json).toEqual({ banner: "#8b5cf6", status: "building a base", bio: "line one\n\nline two", frame: "gold", effect: "snow", mains: ["Bedwars", "SMP"], server: "mc.hypixel.net" });
+  expect((await call(a, "GET", "/v1/me")).json.profile).toEqual(r.json);
+  const p = await call(null, "GET", "/v1/users/carded");
+  expect(p.json.profile).toEqual(r.json);
+  expect(p.json.links).toBeUndefined();
+  await call(a, "PUT", "/v1/me/profile", { profile: { showLinks: true } });
+  expect((await call(null, "GET", "/v1/users/carded")).json.links).toEqual({});
+});
+
+test("profile extras: clan, music, favourites, looking for, mods, showcase", async () => {
+  const a = await signup("Extras");
+  const r = await call(a, "PUT", "/v1/me/profile", {
+    profile: { music: { title: "Sweden", artist: "C418", url: "https://open.spotify.com/track/abc" }, mob: "Axolotl", block: "Amethyst", biome: "Cherry Grove", version: "1.21.11", looking: ["smp", "pvp"], mods: ["sodium", "sodium", "iris"], shot: "ab23cd45" },
+  });
+  expect(r.status).toBe(200);
+  expect(r.json).toEqual({ music: { title: "Sweden", artist: "C418", url: "https://open.spotify.com/track/abc" }, mob: "Axolotl", block: "Amethyst", biome: "Cherry Grove", version: "1.21.11", looking: ["pvp", "smp"], mods: ["sodium", "iris"], shot: "AB23CD45" });
+});
+
+test("clans: create, open join, closed requests, owner hand-over, Kromvia clan", async () => {
+  const a = await signup("ClanBoss");
+  const b = await signup("ClanMate");
+  const k = await call(null, "GET", "/v1/clans/kromvia");
+  expect(k.json).toMatchObject({ id: "kromvia", name: "Kromvia", tag: "Kromvia", icon: "kromvia", open: true });
+  expect((await call(a, "POST", "/v1/clans", { name: "x", tag: "TOOLONGTAG", icon: "sword" })).status).toBe(400);
+  expect((await call(a, "POST", "/v1/clans", { name: "Fake", tag: "KV", icon: "kromvia" })).status).toBe(400);
+  const made = await call(a, "POST", "/v1/clans", { name: "Night Owls", tag: "OWLS", icon: "moon", open: false });
+  expect(made.status).toBe(201);
+  expect((await call(b, "POST", "/v1/clans", { name: "night owls", tag: "x2", icon: "moon" })).status).toBe(409);
+  expect((await call(b, "POST", `/v1/clans/${made.json.id}/join`)).json.status).toBe("requested");
+  const mine = await call(a, "GET", "/v1/me/clan");
+  expect(mine.json.role).toBe("owner");
+  expect(mine.json.requests.map((r: any) => r.name)).toEqual(["ClanMate"]);
+  expect((await call(a, "POST", `/v1/clans/${made.json.id}/requests/${b.id}`)).status).toBe(200);
+  expect((await call(null, "GET", "/v1/users/clanmate")).json.clan).toMatchObject({ tag: "OWLS", icon: "moon" });
+  await call(a, "DELETE", "/v1/me/clan");
+  expect((await call(b, "GET", "/v1/me/clan")).json.role).toBe("owner");
+  expect((await call(b, "POST", "/v1/clans/kromvia/join")).json.status).toBe("member");
+  expect((await call(null, "GET", `/v1/clans/${made.json.id}`)).status).toBe(404);
+  expect((await call(null, "GET", "/v1/clans?q=krom")).json[0]).toMatchObject({ id: "kromvia", members: 1 });
+});
+
+test("clan cape is the owner's to set and shows in the clan", async () => {
+  const a = await signup("CapeBoss");
+  const made = await call(a, "POST", "/v1/clans", { name: "Capers", tag: "CAPE", icon: "sword" });
+  expect((await call(a, "PATCH", `/v1/clans/${made.json.id}`, { cape: "nope" })).status).toBe(400);
+  const art = "A".repeat(854) + "==";
+  expect((await call(a, "PATCH", `/v1/clans/${made.json.id}`, { cape: art })).status).toBe(200);
+  expect((await call(null, "GET", `/v1/clans/${made.json.id}`)).json.cape).toBe(art);
+  expect((await call(a, "GET", "/v1/me/clan/messages")).json).toEqual([]);
+});

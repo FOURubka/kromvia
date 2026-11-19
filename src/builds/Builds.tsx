@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { save } from "@tauri-apps/plugin-dialog";
 import { useI18n } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useJobs } from "../lib/jobs";
@@ -15,7 +15,7 @@ import { Glyph } from "../ui/Glyph";
 import { usePaged } from "../ui/Pager";
 import { Empty } from "../ui/Empty";
 import { InstanceIcon } from "../art/ModelIcon";
-import { PIXEL_ICONS, pixelIcon } from "../art/pixelIcons";
+import { PICKER_EMBLEMS, emblemPng, emblemUrl } from "../art/emblems";
 import { MOD_QUERY_KEY } from "../ui/Palette";
 import { aimContent, InstalledList, type Installed, type Kind } from "../content/Content";
 import { PackOrder, SafetyCheck } from "../content/Tools";
@@ -26,6 +26,7 @@ import { LagCheck } from "./LagCheck";
 import { Memory } from "./Memory";
 import { Metrics } from "./Metrics";
 import { History } from "./History";
+import { ImportInstances } from "../home/ImportInstances";
 
 type Preset = "auto" | "maxFps" | "balanced" | "quality";
 const PRESETS: Preset[] = ["auto", "maxFps", "balanced", "quality"];
@@ -88,8 +89,9 @@ export function Builds({ onAddContent, onAccounts, dropped }: { onAddContent: (k
     refresh();
   }, []);
 
+  const importOpenRef = useRef(false);
   const imports = useJobs("modpack-file-", (_, e) => {
-    setError(e);
+    if (!importOpenRef.current) setError(e);
     if (!e) refresh();
   });
   const exports = useJobs("export-", (_, e) => {
@@ -175,15 +177,8 @@ export function Builds({ onAddContent, onAccounts, dropped }: { onAddContent: (k
     };
   }, []);
 
-  const importPack = async () => {
-    setError(null);
-    const path = await open({ filters: [{ name: "Modpack", extensions: ["mrpack", "zip"] }] });
-    if (!path) return;
-    invoke<number>("modpack_import", { path }).then(
-      (id) => imports.started(`modpack-file-${path}`, id),
-      (e) => setError(String(e)),
-    );
-  };
+  const [importOpen, setImportOpen] = useState(false);
+  importOpenRef.current = importOpen;
 
   const exportPack = async (i: Instance) => {
     setError(null);
@@ -250,16 +245,17 @@ export function Builds({ onAddContent, onAccounts, dropped }: { onAddContent: (k
     <>
       <div className="page-head">
         <h1 className="page-title">{t("nav.builds")}</h1>
-        {importing ? (
+        {importing && !importOpen ? (
           <div className="job">
             <Progress job={importing} />
           </div>
         ) : (
-          <button className="btn btn-ghost" onClick={importPack}>
-            <Glyph name="file-import" /> {t("builds.import")}
+          <button className="btn btn-ghost" onClick={() => setImportOpen((v) => !v)}>
+            <Glyph name="file-import" /> {t("import.open")}
           </button>
         )}
       </div>
+      {importOpen && <ImportInstances onImported={refresh} onClose={() => setImportOpen(false)} />}
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
       {packUpdate && inst && (
@@ -734,13 +730,17 @@ function CoverPicker({ inst, hasCover, onChange, onError }: { inst: Instance; ha
 function IconPicker({ inst, onChange, onError }: { inst: Instance; onChange: () => void; onError: (e: string) => void }) {
   const { t } = useI18n();
   const set = (icon: string | null) => invoke("instance_set_icon", { id: inst.id, icon }).then(onChange, (e) => onError(String(e)));
+  const [pngs, setPngs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    Promise.all(PICKER_EMBLEMS.map((id) => emblemPng(id).then((png) => [id, png] as const))).then((all) => setPngs(Object.fromEntries(all)), () => {});
+  }, []);
   return (
     <section className="card icon-picker">
       <InstanceIcon inst={inst} size={56} />
       <div className="icon-choices">
-        {PIXEL_ICONS.map((id) => (
-          <button key={id} className="icon-choice" aria-pressed={inst.icon === pixelIcon(id)} aria-label={id} title={id} onClick={() => set(pixelIcon(id))}>
-            <img className="pixel-icon" src={pixelIcon(id)} width={32} height={32} alt="" />
+        {PICKER_EMBLEMS.map((id) => (
+          <button key={id} className="icon-choice" aria-pressed={pngs[id] !== undefined && inst.icon === pngs[id]} aria-label={id} title={id} onClick={() => emblemPng(id).then(set)}>
+            <img src={emblemUrl(id)} width={32} height={32} alt="" />
           </button>
         ))}
         <label className="btn btn-ghost">

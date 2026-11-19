@@ -1,6 +1,7 @@
 export const API = process.env.KROMVIA_API ?? "https://api.kromvia.com";
 
 import type { Worn } from "@launcher/art/worn";
+import type { Card, ClanTag } from "@launcher/profile/card";
 
 export type Cosmetics = Worn;
 
@@ -12,6 +13,9 @@ export type Player = {
   created: number;
   likes: number;
   cosmetics: Cosmetics;
+  profile?: Card;
+  clan?: ClanTag | null;
+  links?: Partial<Record<"discord" | "telegram", string>>;
 };
 
 export type Ranked = { id: string; name: string; verified: boolean; likes: number };

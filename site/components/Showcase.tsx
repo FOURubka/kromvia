@@ -11,7 +11,6 @@ const PICKS = ["royal_crown", "angel_halo", "demon_horns", "cyber_visor", "drago
 export function Showcase() {
   const [worn, setWorn] = useState<Record<string, string>>({ head: "royal_crown", back: "dragon_wings" });
   const [touched, setTouched] = useState(false);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (touched) return;
@@ -38,13 +37,7 @@ export function Showcase() {
   return (
     <div className={s.showcase}>
       <div className={s.stage}>
-        <img src="/showcase-poster.webp" alt="" className={s.poster} data-hidden={ready || undefined} />
-        <Player3D className={s.player} cosmetics={{ items: Object.values(worn) }} zoom={0.78} turn={0.7} onReady={() => setReady(true)} />
-        <svg className={s.pedestal} viewBox="0 0 280 110" aria-hidden="true">
-          <path d="M140 0L280 40L140 80L0 40Z" fill="#c9b5ff" />
-          <path d="M0 40L140 80V110L0 70Z" fill="#8b5cf6" />
-          <path d="M280 40L140 80V110L280 70Z" fill="#2f55c8" />
-        </svg>
+        <Player3D className={s.player} skin="/api/skin/MHF_Steve" cosmetics={{ items: Object.values(worn) }} zoom={0.78} turn={0.7} />
       </div>
       <div className={s.picks}>
         {PICKS.map((id) => (

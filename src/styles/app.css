@@ -2188,12 +2188,6 @@ h2,
   font-size: var(--text-md);
 }
 
-.onboarding-bee {
-  width: 112px;
-  align-self: center;
-  animation: bee-hover 3.2s ease-in-out infinite;
-}
-
 .launch-bee {
   width: 72px;
   animation: bee-hover 3.2s ease-in-out infinite;
@@ -2458,6 +2452,152 @@ h2,
   bottom: var(--space-4);
   color: #fff;
   background: rgb(0 0 0 / 0.45);
+}
+
+.onboard {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-5);
+  background: #0b0912 url("/onboarding/bg.webp") center / cover no-repeat;
+}
+
+.onboard-brand {
+  position: absolute;
+  left: var(--space-6);
+  bottom: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: 0.01em;
+}
+
+.onboard-brand img {
+  border-radius: 12px;
+}
+
+.onboard-panel {
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  border: 1px solid var(--frost-edge);
+  border-radius: 22px;
+  background: var(--frost);
+  -webkit-backdrop-filter: var(--frost-blur);
+  backdrop-filter: var(--frost-blur);
+}
+
+.onboard-steps {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboard-steps li {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--frost-edge);
+  transition: background var(--duration-med) var(--ease-out);
+}
+
+.onboard-steps li[data-on] {
+  background: var(--accent);
+}
+
+.onboard-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+  animation: onboard-in var(--duration-med) var(--ease-out);
+}
+
+.onboard-body h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  line-height: 1.15;
+}
+
+.onboard-body p {
+  margin: 0;
+}
+
+.onboard-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--frost-edge);
+  border-radius: 16px;
+  background: var(--rail);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
+}
+
+.onboard-choice:hover,
+.onboard-choice:focus-visible {
+  border-color: var(--accent);
+}
+
+.onboard-choice > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.onboard-body .field {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  padding: 0;
+}
+
+.onboard-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.onboard-nav > span {
+  flex: 1;
+}
+
+@keyframes onboard-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboard-body {
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .onboard {
+    justify-content: center;
+  }
+
+  .onboard-brand {
+    display: none;
+  }
 }
 
 .onboarding {
@@ -3707,11 +3847,6 @@ kbd {
 
 .tabs-menu .tab-alert {
   margin-left: auto;
-}
-
-.pixel-icon {
-  display: block;
-  image-rendering: pixelated;
 }
 
 .memory-row {

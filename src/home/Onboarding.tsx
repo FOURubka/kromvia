@@ -5,6 +5,7 @@ import { useLauncher } from "../lib/launcher";
 import type { ThemePref } from "../theme";
 import { Select } from "../ui/Select";
 import { Glyph } from "../ui/Glyph";
+import { requestNewInstance } from "./Home";
 
 const DONE_KEY = "kromvia.onboarded";
 const THEMES: ThemePref[] = ["system", "light", "dark"];
@@ -42,69 +43,90 @@ export function Onboarding({
     onDone(go);
   };
 
+  const STEPS = 3;
   return (
-    <div className="overlay" role="dialog" aria-modal="true" aria-label={t("onboarding.title")}>
-      <section className="card onboarding">
-        <span className="muted">{t("onboarding.step", { n: step + 1, total: 3 })}</span>
-        {step === 0 && (
-          <>
-            <img className="onboarding-bee" src="/bee/welcome.webp" alt="" draggable={false} />
-            <h2>{t("onboarding.title")}</h2>
-            <p className="muted">{t("onboarding.intro")}</p>
-            <div className="field">
-              <span>{t("settings.language")}</span>
-              <Select value={language} label={t("settings.language")} options={Object.entries(LANGUAGES).map(([value, label]) => ({ value, label }))} onChange={setLanguage} />
-            </div>
-            <div className="field">
-              <span>{t("settings.theme")}</span>
-              <div className="segmented">
-                {THEMES.map((th) => (
-                  <button key={th} aria-pressed={theme === th} onClick={() => setTheme(th)}>
-                    {t(`settings.theme.${th}` as MessageKey)}
-                  </button>
-                ))}
+    <div className="onboard" role="dialog" aria-modal="true" aria-label={t("onboarding.title")}>
+      <div className="onboard-brand">
+        <img src="/logo.svg" alt="" width={44} height={44} draggable={false} />
+        <span>Kromvia</span>
+      </div>
+      <section className="onboard-panel">
+        <ol className="onboard-steps" aria-label={t("onboarding.step", { n: step + 1, total: STEPS })}>
+          {Array.from({ length: STEPS }, (_, i) => (
+            <li key={i} data-on={i <= step || undefined} />
+          ))}
+        </ol>
+        <div className="onboard-body" key={step}>
+          {step === 0 && (
+            <>
+              <h2>{t("onboarding.title")}</h2>
+              <p className="muted">{t("onboarding.intro")}</p>
+              <div className="field">
+                <span>{t("settings.language")}</span>
+                <Select value={language} label={t("settings.language")} options={Object.entries(LANGUAGES).map(([value, label]) => ({ value, label }))} onChange={setLanguage} />
               </div>
-            </div>
-          </>
-        )}
-        {step === 1 && (
-          <>
-            <h2>{t("onboarding.accountTitle")}</h2>
-            <p className="muted">{t("onboarding.accountText")}</p>
-            <div className="field">
-              <span>{t("onboarding.nick")}</span>
-              <input className="input" value={l.nick} maxLength={16} placeholder="Steve" onChange={(e) => l.setNick(e.currentTarget.value)} onBlur={() => l.rememberNick()} />
-            </div>
-            <button className="btn btn-ghost" onClick={() => done("accounts")}>
-              <Glyph name="login-2" /> {t("onboarding.microsoft")}
-            </button>
-          </>
-        )}
-        {step === 2 && (
-          <>
-            <h2>{t("onboarding.buildTitle")}</h2>
-            <p className="muted">{t("onboarding.buildText")}</p>
-            <div className="actions">
-              <button className="btn" onClick={() => done("home")}>
-                <Glyph name="plus" /> {t("onboarding.newBuild")}
+              <div className="field">
+                <span>{t("settings.theme")}</span>
+                <div className="segmented">
+                  {THEMES.map((th) => (
+                    <button key={th} aria-pressed={theme === th} onClick={() => setTheme(th)}>
+                      {t(`settings.theme.${th}` as MessageKey)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+          {step === 1 && (
+            <>
+              <h2>{t("onboarding.accountTitle")}</h2>
+              <p className="muted">{t("onboarding.accountText")}</p>
+              <button className="onboard-choice" onClick={() => done("accounts")}>
+                <Glyph name="login-2" />
+                <span>
+                  <b>{t("onboarding.microsoft")}</b>
+                  <small className="muted">{t("onboarding.microsoftHint")}</small>
+                </span>
               </button>
-              <button className="btn btn-ghost" onClick={() => done("builds")}>
-                <Glyph name="file-import" /> {t("onboarding.import")}
+              <div className="field">
+                <span>{t("onboarding.nick")}</span>
+                <input className="input" value={l.nick} maxLength={16} placeholder="Steve" onChange={(e) => l.setNick(e.currentTarget.value)} onBlur={() => l.rememberNick()} />
+              </div>
+            </>
+          )}
+          {step === 2 && (
+            <>
+              <h2>{t("onboarding.buildTitle")}</h2>
+              <p className="muted">{t("onboarding.buildText")}</p>
+              <button className="onboard-choice" onClick={() => (done("home"), requestNewInstance())}>
+                <Glyph name="plus" />
+                <span>
+                  <b>{t("onboarding.newBuild")}</b>
+                  <small className="muted">{t("onboarding.newBuildHint")}</small>
+                </span>
               </button>
-            </div>
-            <p className="muted">{t("onboarding.keys")}</p>
-          </>
-        )}
-        <div className="actions">
+              <button className="onboard-choice" onClick={() => done("builds")}>
+                <Glyph name="file-import" />
+                <span>
+                  <b>{t("onboarding.import")}</b>
+                  <small className="muted">Prism, Modrinth App, CurseForge, ATLauncher, .mrpack</small>
+                </span>
+              </button>
+              <p className="muted small">{t("onboarding.keys")}</p>
+            </>
+          )}
+        </div>
+        <div className="onboard-nav">
           <button className="btn btn-ghost" onClick={() => done("home")}>
             {t("onboarding.skip")}
           </button>
+          <span />
           {step > 0 && (
-            <button className="btn btn-ghost" onClick={() => setStep(step - 1)}>
-              <Glyph name="chevron-left" /> {t("onboarding.back")}
+            <button className="btn btn-ghost" aria-label={t("onboarding.back")} onClick={() => setStep(step - 1)}>
+              <Glyph name="chevron-left" />
             </button>
           )}
-          {step < 2 && (
+          {step < STEPS - 1 && (
             <button className="btn" onClick={() => setStep(step + 1)}>
               {t("onboarding.next")} <Glyph name="chevron-right" />
             </button>

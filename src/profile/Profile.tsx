@@ -2,38 +2,27 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useI18n } from "../i18n";
 import { describe, formatDuration, useLauncher, type Instance } from "../lib/launcher";
-import { BlockIcon, InstanceIcon } from "../art/ModelIcon";
-import type { BlockKind } from "../art/blocks";
+import { InstanceIcon } from "../art/ModelIcon";
+import { emblemUrl } from "../art/emblems";
+import { BADGES, earned as isEarned, type Facts } from "./badges";
+import { BadgeMedal, BadgesDialog, badgeTip } from "./Badges";
+import { Clans } from "./Clans";
+import type { ClanTag } from "./card";
+import type { MyStatus } from "../friends/social";
 import type { MessageKey } from "../i18n/en";
 import { SkinArt } from "../art/SkinArt";
 import { outfitWorn, savedOutfit } from "../lib/outfit";
 import { useSocial } from "../friends/social";
 import { Glyph } from "../ui/Glyph";
 import { Empty } from "../ui/Empty";
+import { ProfileCard } from "./ProfileCard";
+import { ProfileEditor } from "./ProfileEditor";
+import type { Card } from "./card";
 import "./profile.css";
 
-type Me = { id: string; name: string; verified: boolean; created?: number; likes?: number; links?: Partial<Record<Provider, string>> };
+type Me = { id: string; name: string; verified: boolean; created?: number; likes?: number; links?: Partial<Record<Provider, string>>; profile?: Card; clan?: ClanTag | null; dev?: boolean };
 type Provider = "discord" | "telegram";
 type Ranked = Friend & { likes: number };
-type Facts = { hours: number; launches: number; builds: number; worlds: number; friends: number; likes: number; verified: boolean; linked: boolean; days: number; created: number };
-
-const BADGES: { id: string; block: BlockKind; earned: (f: Facts) => boolean }[] = [
-  { id: "early", block: "portal", earned: (f) => f.created > 0 && f.created < Date.UTC(2027, 0, 1) },
-  { id: "firstLaunch", block: "crafting", earned: (f) => f.launches >= 1 },
-  { id: "launches100", block: "crafting", earned: (f) => f.launches >= 100 },
-  { id: "hours10", block: "grass", earned: (f) => f.hours >= 10 },
-  { id: "hours100", block: "grass", earned: (f) => f.hours >= 100 },
-  { id: "hours500", block: "grass", earned: (f) => f.hours >= 500 },
-  { id: "builds5", block: "stone", earned: (f) => f.builds >= 5 },
-  { id: "worlds10", block: "earth", earned: (f) => f.worlds >= 10 },
-  { id: "friends1", block: "wool", earned: (f) => f.friends >= 1 },
-  { id: "friends10", block: "wool", earned: (f) => f.friends >= 10 },
-  { id: "likes10", block: "wool", earned: (f) => f.likes >= 10 },
-  { id: "likes100", block: "portal", earned: (f) => f.likes >= 100 },
-  { id: "verified", block: "stone", earned: (f) => f.verified },
-  { id: "linked", block: "portal", earned: (f) => f.linked },
-  { id: "veteran", block: "earth", earned: (f) => f.days >= 365 },
-];
 type Friend = { id: string; name: string; verified: boolean };
 type Stats = { playSeconds: number; launches: number; lastPlayed: number };
 type World = { folder: string; name: string; lastPlayed: number; mode: string; icon: string | null };
@@ -48,11 +37,13 @@ export function Profile({ onFriends }: { onFriends: () => void }) {
   const [stats, setStats] = useState<Record<string, Stats>>({});
   const [worlds, setWorlds] = useState<(World & { inst: Instance })[]>([]);
   const [skin, setSkin] = useState<LibrarySkin | null>(null);
-  const [tab, setTab] = useState<"overview" | "friends" | "top">("overview");
+  const [tab, setTab] = useState<"overview" | "clan" | "friends" | "top">("overview");
+  const [badgesOpen, setBadgesOpen] = useState(false);
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [top, setTop] = useState<Ranked[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const loadMe = () =>
     invoke<Me | null>("social_me").then((m) => {
@@ -141,8 +132,32 @@ export function Profile({ onFriends }: { onFriends: () => void }) {
     linked: !!me?.links && Object.keys(me.links).length > 0,
     days: me?.created ? (Date.now() - me.created) / 86_400_000 : 0,
     created: me?.created ?? 0,
+    clan: !!me?.clan,
+    dev: !!me?.dev,
+    profile: [me?.profile?.bio, me?.profile?.status, me?.profile?.music, me?.profile?.banner ?? me?.profile?.shot, me?.profile?.mob ?? me?.profile?.block ?? me?.profile?.biome].filter(Boolean).length,
   };
-  const badges = BADGES.map((b) => ({ ...b, has: b.earned(facts) })).sort((a, b) => Number(b.has) - Number(a.has));
+  const badges = BADGES.map((b) => ({ ...b, has: isEarned(b, facts) })).sort((a, b) => Number(b.has) - Number(a.has));
+  const earned = [
+    ...badges
+      .filter((b) => b.has)
+      .map((b) => (
+        <button key={b.id} className="pcard-badge" data-tier={b.tier} data-tip={badgeTip(t, b)} aria-label={t(`badge.${b.id}` as MessageKey)} onClick={() => setBadgesOpen(true)}>
+          <img src={emblemUrl(b.emblem)} width={20} height={20} alt="" />
+        </button>
+      )),
+    <button key="all" className="pcard-badge pcard-badge-all" data-tip={t("card.allBadges")} aria-label={t("card.allBadges")} onClick={() => setBadgesOpen(true)}>
+      <Glyph name="trophy" size={15} />
+    </button>,
+  ];
+  const ownerBase = {
+    name,
+    verified: !!me?.verified,
+    created: me?.created,
+    likes: me?.likes,
+    links: me?.links,
+    clan: me?.clan ?? null,
+    presence: me ? (social.connected ? social.myStatus : "offline") : undefined,
+  } as const;
   const likeButton = (id: string) =>
     me && id !== me.id ? (
       <button className="btn btn-ghost profile-like" data-on={liked.has(id)} title={t("profile.like")} onClick={() => like(id)}>
@@ -154,33 +169,41 @@ export function Profile({ onFriends }: { onFriends: () => void }) {
 
   return (
     <>
-      <section className="card profile-hero">
-        <div className="profile-art">
-          <SkinArt skin={skin?.dataUrl ?? null} slim={skin?.slim ?? false} back="cape" worn={outfitWorn(savedOutfit())} zoom={0.9} />
-        </div>
-        <div className="profile-info">
-          <h1 className="page-title">
-            {name}
-            {me?.verified && (
-              <span className="profile-verified" title={t("profile.verified")}>
-                <Glyph name="check" size={12} />
-              </span>
-            )}
-          </h1>
-          {me ? (
-            <p className="muted">
-              {me.created ? t("profile.since", { date: new Date(me.created).toLocaleDateString() }) : t("profile.kromvia")}
-              {" · "}
-              <span className="presence-dot" data-online={social.connected} /> {social.connected ? t("friends.online") : t("friends.offline")}
-            </p>
-          ) : (
-            <p className="muted">
-              {t("profile.noAccount")}{" "}
-              <button className="btn btn-ghost" onClick={onFriends}>
+      {editing && me ? (
+        <ProfileEditor
+          initial={me.profile ?? {}}
+          owner={ownerBase}
+          badges={earned}
+          onSaved={(profile) => setMe({ ...me, profile })}
+          onClose={() => setEditing(false)}
+        />
+      ) : (
+      <div className="profile-hero">
+        <ProfileCard
+          card={me?.profile ?? {}}
+          owner={ownerBase}
+          badges={earned}
+          onClan={() => setTab("clan")}
+          actions={
+            me ? (
+              <>
+                <button className="btn" onClick={() => setEditing(true)}>
+                  <Glyph name="pencil" /> {t("card.edit")}
+                </button>
+                <StatusPicker value={social.myStatus} onChange={social.setMyStatus} />
+              </>
+            ) : (
+              <button className="btn" onClick={onFriends}>
                 <Glyph name="user-plus" /> {t("friends.create")}
               </button>
-            </p>
-          )}
+            )
+          }
+        />
+        <div className="profile-side">
+          <div className="profile-art">
+            <SkinArt skin={skin?.dataUrl ?? null} slim={skin?.slim ?? false} back="cape" worn={outfitWorn(savedOutfit())} zoom={0.9} />
+          </div>
+          {!me && <p className="muted">{t("profile.noAccount")}</p>}
           <dl className="stats profile-stats">
             {(
               [
@@ -188,7 +211,6 @@ export function Profile({ onFriends }: { onFriends: () => void }) {
                 [t("files.launches"), launches],
                 [t("builds.worlds"), worlds.length],
                 [t("nav.friends"), friends.length],
-                [t("profile.reputation"), me?.likes ?? 0],
               ] as [string, string | number][]
             ).map(([label, value]) => (
               <div key={label} className="stat">
@@ -198,12 +220,15 @@ export function Profile({ onFriends }: { onFriends: () => void }) {
             ))}
           </dl>
         </div>
-      </section>
+      </div>
+      )}
 
+      {!editing && (
+      <>
       <div className="segmented tabs" role="tablist">
-        {(["overview", "friends", "top"] as const).map((k) => (
+        {(["overview", "clan", "friends", "top"] as const).map((k) => (
           <button key={k} role="tab" aria-pressed={tab === k} aria-selected={tab === k} onClick={() => setTab(k)}>
-            {k === "friends" ? `${t("nav.friends")} ${online.length}/${friends.length}` : t(k === "top" ? "profile.top" : "profile.overview")}
+            {k === "friends" ? `${t("nav.friends")} ${online.length}/${friends.length}` : t(k === "top" ? "profile.top" : k === "clan" ? "clan.title" : "profile.overview")}
           </button>
         ))}
       </div>
@@ -212,15 +237,21 @@ export function Profile({ onFriends }: { onFriends: () => void }) {
       {tab === "overview" && (
         <>
           <section className="card">
-            <h2>
-              {t("profile.badges")} <span className="muted">{badges.filter((b) => b.has).length}/{badges.length}</span>
-            </h2>
+            <div className="library-head">
+              <h2>
+                {t("profile.badges")} <span className="muted">{badges.filter((b) => b.has).length}/{badges.length}</span>
+              </h2>
+              <button className="btn btn-ghost" onClick={() => setBadgesOpen(true)}>
+                <Glyph name="trophy" /> {t("card.allBadges")}
+              </button>
+            </div>
             <div className="profile-badges">
               {badges.map((b) => (
-                <div key={b.id} className="profile-badge" data-has={b.has} title={t(`badge.${b.id}.hint` as MessageKey)}>
-                  <BlockIcon kind={b.block} size={40} />
-                  <span className="small">{t(`badge.${b.id}` as MessageKey)}</span>
-                </div>
+                <button key={b.id} className="profile-badge" data-has={b.has} onClick={() => setBadgesOpen(true)}>
+                  <BadgeMedal b={b} size={52} locked={!b.has} />
+                  <b className="small">{t(`badge.${b.id}` as MessageKey)}</b>
+                  <span className="muted small">{t(`badge.${b.id}.hint` as MessageKey)}</span>
+                </button>
               ))}
             </div>
           </section>
@@ -287,6 +318,7 @@ export function Profile({ onFriends }: { onFriends: () => void }) {
         </div>
         </>
       )}
+      {tab === "clan" && <Clans signedIn={!!me} onChange={loadMe} />}
       {tab === "top" && (
         <section className="card">
           {top.length === 0 && <p className="muted">{t("profile.topEmpty")}</p>}
@@ -327,6 +359,50 @@ export function Profile({ onFriends }: { onFriends: () => void }) {
           </div>
         </section>
       )}
+      </>
+      )}
+      {badgesOpen && <BadgesDialog facts={facts} onClose={() => setBadgesOpen(false)} />}
     </>
+  );
+}
+
+const STATUSES: MyStatus[] = ["online", "idle", "dnd", "invisible"];
+
+function StatusPicker({ value, onChange }: { value: MyStatus; onChange: (v: MyStatus) => void }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="status-picker">
+      <button className="btn btn-ghost" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="pcard-online" data-presence={value}>
+          {t(`presence.${value}` as MessageKey)}
+        </span>
+        <Glyph name="chevron-down" size={14} />
+      </button>
+      {open && (
+        <>
+          <span className="emoji-backdrop" onClick={() => setOpen(false)} />
+          <div className="status-menu" role="menu">
+            {STATUSES.map((s) => (
+              <button
+                key={s}
+                role="menuitemradio"
+                aria-checked={s === value}
+                onClick={() => {
+                  onChange(s);
+                  setOpen(false);
+                }}
+              >
+                <span className="status-dot" data-presence={s} />
+                <span>
+                  <b>{t(`presence.${s}` as MessageKey)}</b>
+                  {s !== "online" && <small className="muted">{t(`presence.${s}.hint` as MessageKey)}</small>}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </span>
   );
 }

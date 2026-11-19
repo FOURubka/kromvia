@@ -6,6 +6,7 @@ import { useJobs } from "../lib/jobs";
 import { LOADER_NAMES, type Instance } from "../lib/launcher";
 import { ModelIcon } from "../art/ModelIcon";
 import { Glyph } from "../ui/Glyph";
+import { Progress } from "../ui/Progress";
 
 type Found = { source: keyof typeof SOURCES; path: string; name: string; mcVersion: string; loader: Instance["loader"] };
 
@@ -28,6 +29,11 @@ export function ImportInstances({ onImported, onClose }: { onImported: () => voi
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [pickEmpty, setPickEmpty] = useState(false);
+  const [packError, setPackError] = useState<string | null>(null);
+  const packs = useJobs("modpack-file-", (_, error) => {
+    setPackError(error);
+    if (!error) onImported();
+  });
   const { jobs, started } = useJobs("import-", (key, error) => {
     const path = key.slice("import-".length);
     if (error) setErrors((e) => ({ ...e, [path]: error }));
@@ -49,6 +55,16 @@ export function ImportInstances({ onImported, onClose }: { onImported: () => voi
     setFound((cur) => [...more, ...(cur ?? []).filter((f) => !more.some((m) => m.path === f.path))]);
   };
 
+  const pickPack = async () => {
+    setPackError(null);
+    const path = await open({ filters: [{ name: "Modpack", extensions: ["mrpack", "zip"] }] });
+    if (typeof path !== "string") return;
+    invoke<number>("modpack_import", { path }).then(
+      (id) => packs.started(`modpack-file-${path}`, id),
+      (e) => setPackError(String(e)),
+    );
+  };
+
   const start = (f: Found) => {
     setErrors(({ [f.path]: _, ...rest }) => rest);
     invoke<number>("import_instance", { path: f.path }).then(
@@ -57,10 +73,21 @@ export function ImportInstances({ onImported, onClose }: { onImported: () => voi
     );
   };
 
+  const waiting = (found ?? []).filter((f) => !jobs[`import-${f.path}`] && !done[f.path]);
+  const packJob = Object.values(packs.jobs)[0];
+
   return (
     <section className="card import">
       <div className="library-head">
         <h2 className="section-title">{t("import.title")}</h2>
+        {waiting.length > 1 && (
+          <button className="btn" onClick={() => waiting.forEach(start)}>
+            <Glyph name="file-import" /> {t("import.all", { n: String(waiting.length) })}
+          </button>
+        )}
+        <button className="btn btn-ghost" onClick={pickPack} disabled={!!packJob}>
+          <Glyph name="package" /> {t("import.file")}
+        </button>
         <button className="btn btn-ghost" onClick={pick}>
           <Glyph name="folder" /> {t("import.pick")}
         </button>
@@ -68,6 +95,8 @@ export function ImportInstances({ onImported, onClose }: { onImported: () => voi
           <Glyph name="x" /> {t("common.close")}
         </button>
       </div>
+      {packJob && <Progress job={packJob} />}
+      {packError && <p className="error">{packError}</p>}
       {pickEmpty && <p className="error">{t("import.pickEmpty")}</p>}
       {found === null ? (
         <p className="muted">{t("import.searching")}</p>

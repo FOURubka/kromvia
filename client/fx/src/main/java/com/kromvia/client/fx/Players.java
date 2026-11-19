@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.kromvia.client.cosmetic.Cosmetics;
 import com.kromvia.client.cosmetic.CosmeticsLayer;
 import com.kromvia.client.module.Module;
+import com.kromvia.client.module.setting.BoolSetting;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -29,7 +30,13 @@ public final class Players extends Module {
 	private static final int BATCH = 100;
 	private static final long ANSWER_MS = 10_000;
 
-	private record Seen(List<String> models, String cape, boolean dev, long at) {}
+	private record Seen(List<String> models, String cape, boolean dev, String clanId, String clanTag, long at) {}
+
+	final BoolSetting mark = add(new BoolSetting("mark", "Kromvia mark", true));
+	final BoolSetting clan = add(new BoolSetting("clan", "Clan tag", true));
+	final BoolSetting mates = add(new BoolSetting("mates", "Clanmates in green", true));
+	final BoolSetting devBadge = add(new BoolSetting("dev", "Developer badge", true));
+	final BoolSetting tab = add(new BoolSetting("tab", "Also in the tab list", true));
 
 	private final Map<String, Seen> seen = new ConcurrentHashMap<>();
 	private String reported;
@@ -125,7 +132,10 @@ public final class Players extends Module {
 			String style = st != null && st.isJsonPrimitive() ? Cosmetics.customStyle(st.getAsString(), art != null && art.isJsonPrimitive() ? art.getAsString() : null) : "kromvia";
 			String cape = c != null && c.isJsonPrimitive() && c.getAsBoolean() ? dev ? Cosmetics.DEV_STYLE : style : null;
 			if (dev) Cosmetics.styled(Cosmetics.DEV_STYLE);
-			self.seen.put(name, new Seen(worn == null ? null : models(worn), cape, dev, at));
+			JsonObject cl = worn != null && worn.isJsonObject() && worn.getAsJsonObject().get("clan") instanceof JsonObject o ? o : null;
+			String clanId = cl != null && cl.get("id") != null && cl.get("id").isJsonPrimitive() ? cl.get("id").getAsString() : null;
+			String clanTag = cl != null && cl.get("tag") != null && cl.get("tag").isJsonPrimitive() ? cl.get("tag").getAsString() : null;
+			self.seen.put(name, new Seen(worn == null ? null : models(worn), cape, dev, clanId, clanTag, at));
 		}
 	}
 
@@ -152,11 +162,31 @@ public final class Players extends Module {
 	}
 
 	public static Component badged(String nick, Component name) {
-		boolean self = Fx.PLAYERS.enabled && nick.equalsIgnoreCase(Minecraft.getInstance().getUser().getName());
-		if (name == null || !self && worn(nick) == null) return name;
-		MutableComponent out = Component.literal("").append(Badge.glyph(Badge.KROMVIA)).append(" ").append(name);
-		Seen s = Fx.PLAYERS.seen.get(nick.toLowerCase(Locale.ROOT));
-		if (self ? Cosmetics.devSelf() : s != null && s.dev) out.append(" ").append(Badge.glyph(Badge.CHECK)).append(" ").append(Badge.glyph(Badge.DEV));
+		return decorate(nick, name, false);
+	}
+
+	public static Component badgedTab(String nick, Component name) {
+		return decorate(nick, name, true);
+	}
+
+	private static Component decorate(String nick, Component name, boolean inTab) {
+		Players p = Fx.PLAYERS;
+		if (name == null || !p.enabled || inTab && !p.tab.on()) return name;
+		boolean self = nick.equalsIgnoreCase(Minecraft.getInstance().getUser().getName());
+		Seen s = p.seen.get(nick.toLowerCase(Locale.ROOT));
+		if (!self && (s == null || s.models == null)) return name;
+		String clanId = self ? com.kromvia.client.Social.clanId() : s.clanId;
+		String clanTag = self ? com.kromvia.client.Social.clanTag() : s.clanTag;
+		MutableComponent out = Component.literal("");
+		if (p.mark.on()) out.append(Badge.glyph(Badge.KROMVIA)).append(" ");
+		if (p.clan.on() && clanTag != null) {
+			boolean mate = !self && clanId != null && clanId.equals(com.kromvia.client.Social.clanId());
+			int colour = p.mates.on() && mate ? 0x7EE0B0 : 0xC9B5FF;
+			out.append(Component.literal("[" + clanTag + "]").withStyle(st -> st.withColor(net.minecraft.network.chat.TextColor.fromRgb(colour)))).append(" ");
+		}
+		out.append(name);
+		boolean dev = self ? Cosmetics.devSelf() : s.dev;
+		if (p.devBadge.on() && dev) out.append(" ").append(Badge.glyph(Badge.CHECK)).append(" ").append(Badge.glyph(Badge.DEV));
 		return out;
 	}
 }

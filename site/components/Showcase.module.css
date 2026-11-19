@@ -14,28 +14,16 @@
   z-index: 1;
 }
 
-.poster {
+.stage::after {
+  content: "";
   position: absolute;
-  inset: 0 0 50px;
-  z-index: 1;
-  width: 100%;
-  height: calc(100% - 50px);
-  object-fit: contain;
-  transition: opacity 400ms;
-  pointer-events: none;
-}
-
-.poster[data-hidden] {
-  opacity: 0;
-}
-
-.pedestal {
-  position: absolute;
-  bottom: 0;
+  bottom: 34px;
   left: 50%;
-  width: min(62%, 280px);
+  width: min(44%, 200px);
+  height: 22px;
   transform: translateX(-50%);
-  filter: drop-shadow(0 24px 40px rgb(91 63 214 / 0.55));
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(0 0 0 / 0.55), transparent);
 }
 
 .picks {

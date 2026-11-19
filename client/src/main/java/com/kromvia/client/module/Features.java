@@ -8,6 +8,7 @@ import com.kromvia.client.module.setting.BoolSetting;
 import com.kromvia.client.module.setting.ChoiceSetting;
 import com.kromvia.client.module.setting.ColorSetting;
 import com.kromvia.client.module.setting.SliderSetting;
+import com.kromvia.client.module.setting.TextSetting;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
@@ -62,7 +63,8 @@ public final class Features {
 	}
 
 	public static final class Crosshair extends Flag {
-		final ChoiceSetting style = add(new ChoiceSetting("style", "Style", 0, "Cross", "Dot", "Plus gap", "Box", "Circle"));
+		final ChoiceSetting style = add(new ChoiceSetting("style", "Style", 0, "Cross", "Dot", "Plus gap", "Box", "Circle", "Pixel"));
+		public final TextSetting pixels = add(new TextSetting("pixels", "Pixels", CrosshairGrid.DEFAULT, CrosshairGrid.N * CrosshairGrid.N));
 		final ColorSetting color = add(new ColorSetting("color", "Colour", 0xFF8B5CF6));
 		final SliderSetting size = add(new SliderSetting("size", "Size", 5, 2, 12, 1, "px"));
 		final SliderSetting gap = add(new SliderSetting("gap", "Gap", 2, 0, 6, 1, "px"));
@@ -75,6 +77,7 @@ public final class Features {
 			super("crosshair", "Crosshair", Module.Category.PVP, false);
 			icon(Items.TARGET);
 			invert.shown = false;
+			pixels.shown = false;
 		}
 
 		public interface Fill {
@@ -96,7 +99,19 @@ public final class Features {
 			inverted = null;
 		}
 
+		public boolean pixel() {
+			return style.index() == 5;
+		}
+
+		public int argb() {
+			return color.argb();
+		}
+
 		public void draw(Gfx g, int cx, int cy) {
+			if (pixel()) {
+				CrosshairGrid.draw(g, pixels.get(), cx, cy, color.argb(), outline.on(), inverted == null ? null : inverted::fill);
+				return;
+			}
 			int s = Math.round(size.value()), gp = Math.round(gap.value()), t = Math.round(thickness.value());
 			int h = t / 2, h2 = t - h;
 			switch (style.index()) {

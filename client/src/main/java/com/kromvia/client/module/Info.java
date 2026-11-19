@@ -415,8 +415,8 @@ public final class Info {
 
 		private void send(Minecraft mc) {
 			if (mc.level == null || mc.player == null) return;
-			if (!com.kromvia.client.Social.inParty()) {
-				Mc.actionbar(Component.literal("§7Pings go to your party. Invite friends from the Friends screen."));
+			if (!com.kromvia.client.Social.inParty() && !com.kromvia.client.Social.inClan()) {
+				Mc.actionbar(Component.literal("§7Pings go to your party and clanmates on this server. Invite friends from the Friends screen."));
 				return;
 			}
 			long now = System.currentTimeMillis();

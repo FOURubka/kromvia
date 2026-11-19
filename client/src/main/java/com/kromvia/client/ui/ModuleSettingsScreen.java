@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.kromvia.client.Config;
+import com.kromvia.client.module.CrosshairGrid;
 import com.kromvia.client.module.Features;
 import com.kromvia.client.module.Hud;
 import com.kromvia.client.module.Module;
@@ -35,6 +36,7 @@ public class ModuleSettingsScreen extends KScreen {
 	private int px, py, pw, ph, scroll, contentH;
 	private KButton keyButton;
 	private boolean listening;
+	private Boolean painting;
 
 	private static final class Placed {
 		final AbstractWidget widget;
@@ -218,6 +220,7 @@ public class ModuleSettingsScreen extends KScreen {
 
 	@Override
 	protected void draw(Gfx g, int mouseX, int mouseY, float delta) {
+		if (painting != null) paint(cellAt(mouseX, mouseY));
 		g.pose().pushMatrix();
 		slide(g);
 		super.draw(g, mouseX, mouseY, delta);
@@ -260,7 +263,8 @@ public class ModuleSettingsScreen extends KScreen {
 		int cx = (l + r) / 2, cy = (t + b) / 2;
 		g.drawCenteredString(font, "Preview", cx, py + 36, UiStyle.MUTED);
 		if (module == Features.CROSSHAIR) {
-			Features.CROSSHAIR.draw(g, cx, cy);
+			if (Features.CROSSHAIR.pixel()) drawGrid(g, l, t, r, b);
+			else Features.CROSSHAIR.draw(g, cx, cy);
 			return;
 		}
 		int w = module.width(minecraft), h = module.height(minecraft);
@@ -271,6 +275,62 @@ public class ModuleSettingsScreen extends KScreen {
 		g.pose().scale(fit, fit);
 		Hud.drawScaled(g, minecraft, module, -Math.round(w * module.scale() / 2), -Math.round(h * module.scale() / 2));
 		g.pose().popMatrix();
+	}
+
+	private int cell() {
+		int l = px + 10, r = px + pw / 2 - 12, t = py + 48, b = paneBottom();
+		return Math.max(2, Math.min(r - l - 48, b - t - 16) / CrosshairGrid.N);
+	}
+
+	private int[] cellAt(double mx, double my) {
+		int l = px + 10, r = px + pw / 2 - 12, t = py + 48, b = paneBottom(), c = cell();
+		int gx = (l + r) / 2 - c * CrosshairGrid.N / 2, gy = (t + b) / 2 - c * CrosshairGrid.N / 2;
+		int x = (int) Math.floor((mx - gx) / c), y = (int) Math.floor((my - gy) / c);
+		return x < 0 || y < 0 || x >= CrosshairGrid.N || y >= CrosshairGrid.N ? null : new int[] {x, y};
+	}
+
+	private void drawGrid(Gfx g, int l, int t, int r, int b) {
+		int c = cell(), n = CrosshairGrid.N, size = c * n;
+		int gx = (l + r) / 2 - size / 2, gy = (t + b) / 2 - size / 2;
+		String px = Features.CROSSHAIR.pixels.get();
+		g.fill(gx, gy, gx + size, gy + size, 0x40000000);
+		for (int y = 0; y < n; y++) {
+			for (int x = 0; x < n; x++) {
+				int x1 = gx + x * c, y1 = gy + y * c;
+				if (CrosshairGrid.on(px, x, y)) g.fill(x1, y1, x1 + c, y1 + c, Features.CROSSHAIR.argb());
+				else if (x == n / 2 || y == n / 2) g.fill(x1, y1, x1 + c, y1 + c, 0x14FFFFFF);
+			}
+		}
+		for (int i = 0; i <= n; i++) {
+			g.fill(gx + i * c, gy, gx + i * c + 1, gy + size, 0x22FFFFFF);
+			g.fill(gx, gy + i * c, gx + size, gy + i * c + 1, 0x22FFFFFF);
+		}
+		Features.CROSSHAIR.draw(g, r - 12, t + 12);
+	}
+
+	@Override
+	protected void mouseDown(double x, double y) {
+		if (module != Features.CROSSHAIR || !Features.CROSSHAIR.pixel()) return;
+		int[] at = cellAt(x, y);
+		if (at == null) return;
+		painting = !CrosshairGrid.on(Features.CROSSHAIR.pixels.get(), at[0], at[1]);
+		paint(at);
+	}
+
+	private void paint(int[] at) {
+		if (at != null && painting != null) Features.CROSSHAIR.pixels.set(CrosshairGrid.set(Features.CROSSHAIR.pixels.get(), at[0], at[1], painting));
+	}
+
+	@Override
+	protected boolean mouseDrag(double dx, double dy) {
+		return painting != null;
+	}
+
+	@Override
+	protected void mouseUp() {
+		if (painting == null) return;
+		painting = null;
+		Config.save();
 	}
 
 	private String keyLabel() {

@@ -13,6 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class FxPlayerTabOverlayMixin {
 	@Inject(method = "getNameForDisplay", at = @At("RETURN"), cancellable = true)
 	private void kromvia$badge(PlayerInfo info, CallbackInfoReturnable<Component> cir) {
-		cir.setReturnValue(Players.badged(info.getProfile().name(), cir.getReturnValue()));
+		cir.setReturnValue(Players.badgedTab(info.getProfile().name(), cir.getReturnValue()));
 	}
 }

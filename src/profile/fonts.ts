@@ -1,0 +1,11 @@
+import "@fontsource/pixelify-sans/600.css";
+import "@fontsource/press-start-2p/400.css";
+import "@fontsource/bangers/400.css";
+import "@fontsource/pacifico/400.css";
+import "@fontsource/orbitron/700.css";
+import "@fontsource/righteous/400.css";
+import "@fontsource/creepster/400.css";
+import "@fontsource/zilla-slab/700.css";
+import "@fontsource/rubik-mono-one/400.css";
+import "@fontsource/comfortaa/700.css";
+import "@fontsource/caveat/700.css";

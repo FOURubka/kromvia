@@ -110,7 +110,7 @@ public final class ModuleInfo {
 		put("vanilla_hud", "vanilla_hud", "Resizes or hides titles, the action bar and boss bars.");
 		put("lyrics", "lyrics", "Shows synced lyrics for the song you are playing.");
 		put("music", "music", "Shows the song you are playing. Press M for the music menu.");
-		put("kromvia_players", "kromvia_players", "Shows the capes and cosmetics of other Kromvia players.");
+		put("kromvia_players", "kromvia_players", "Shows the capes, cosmetics and clan tags of other Kromvia players. Pick what goes next to their names.");
 		put("colour_filter", "colour_filter", "Shifts colours so reds, greens or blues you can't tell apart stand out from each other.");
 		put("screen_colours", "screen_colours", "Saturation, brightness, contrast and hue for the whole screen.");
 		put("health", "health", "Shows your exact health, with absorption if you want it.");
@@ -125,7 +125,7 @@ public final class ModuleInfo {
 		put("move_status", "move_status", "Shows if you are sprinting, sneaking, swimming, gliding or flying.");
 		put("auto_respawn", "auto_respawn", "Respawns you after you die. Never in hardcore.");
 		put("auto_gg", "auto_gg", "Says gg for you when a game ends. Knows the big servers, and you can add your own trigger words.");
-		put("party_pings", "party_pings", "Press Z to mark the block you look at. Your party sees the mark on any server, except PvP servers where it is off.");
+		put("party_pings", "party_pings", "Press Z to mark the block you look at. Your party and clanmates on the same server see the mark, except on PvP servers where it is off.");
 		put("frame_report", "frame_report", "Tells the launcher your FPS and 1% lows, so it can warn you when a mod update makes the game slower.");
 		put("ghosts", "ghosts", "Press K to start a run after a 3 second count, K again to stop. Start at the same spot to race your best run as a ghost, or load a friend's ghost by code from Ghosts in the pause menu.");
 		put("kromvia_font", "kromvia_font", "Draws all text with the Kromvia font. Switch it off for the normal Minecraft font.");

@@ -1,4 +1,6 @@
 
+import { readProfile } from "./profile";
+import { clanOf, privateClans, publicClans } from "./clans";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { b64url, verify } from "./auth";
@@ -24,7 +26,7 @@ export type Env = {
   BOT_API_KEY?: string;
 };
 
-type Account = { id: string; pubkey: string; name: string; mc_uuid: string | null; cosmetics: string; created: number; seen: number };
+type Account = { id: string; pubkey: string; name: string; mc_uuid: string | null; cosmetics: string; profile: string; created: number; seen: number };
 type Vars = { key: string; body: unknown; raw: Uint8Array; account: Account };
 
 const MAX_BODY = 16 * 1024;
@@ -44,7 +46,7 @@ const SHARE_DAYS = 30;
 const MAX_SHARES = 50;
 const SHARE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const MAX_COSMETICS = 4 * 1024;
-export const CAPE_ART = /^[A-Za-z0-9+/]{854}==$/;
+const CAPE_ART = /^[A-Za-z0-9+/]{854}==$/;
 const MAX_FRIENDS = 200;
 const SEEN_EVERY_MS = 60_000;
 const SIGNUPS_PER_DAY = 5;
@@ -223,7 +225,7 @@ app.post("/link/telegram/webhook", async (c) => {
   return c.json({ ok: true });
 });
 
-export const EARLY_BEFORE = Date.UTC(2027, 0, 1);
+const EARLY_BEFORE = Date.UTC(2027, 0, 1);
 
 app.get("/bot/links", async (c) => {
   const key = c.env.BOT_API_KEY;
@@ -245,7 +247,7 @@ app.get("/bot/links", async (c) => {
   );
 });
 
-export const ROADMAP = [
+const ROADMAP = [
   "crash-bisect", "try-mod", "auto-tune", "world-relay", "proximity-voice", "afk-telegram", "screenshot-place",
   "session-recap", "second-screen", "join-by-ip", "mods-rollback", "world-backups", "portable", "slot-lock",
 ];
@@ -287,6 +289,8 @@ app.get("/v1/top", async (c) => {
   return c.json(results.map((a) => ({ ...publicAccount(a), likes: a.likes })));
 });
 
+publicClans(app as never);
+
 app.get("/v1/users", async (c) => {
   const q = (c.req.query("q") ?? "").trim().toLowerCase();
   if (!/^[a-z0-9_]{1,16}$/.test(q)) return c.json([]);
@@ -300,15 +304,21 @@ app.get("/v1/users", async (c) => {
 
 app.get("/v1/users/:name", async (c) => {
   const a = await c.env.DB.prepare(
-    "SELECT a.id, a.name, a.name_lower, a.mc_uuid, a.cosmetics, a.created, (SELECT COUNT(*) FROM likes WHERE to_id = a.id) AS likes, (SELECT l.ext_id FROM links l WHERE l.account = a.id AND l.provider = 'discord') AS discord FROM accounts a WHERE a.name_lower = ?",
+    "SELECT a.id, a.name, a.name_lower, a.mc_uuid, a.cosmetics, a.profile, a.created, (SELECT COUNT(*) FROM likes WHERE to_id = a.id) AS likes, (SELECT l.ext_id FROM links l WHERE l.account = a.id AND l.provider = 'discord') AS discord FROM accounts a WHERE a.name_lower = ?",
   )
     .bind(c.req.param("name").toLowerCase())
-    .first<Pick<Account, "id" | "name" | "mc_uuid" | "cosmetics" | "created"> & { name_lower: string; likes: number; discord: string | null }>();
+    .first<Pick<Account, "id" | "name" | "mc_uuid" | "cosmetics" | "profile" | "created"> & { name_lower: string; likes: number; discord: string | null }>();
   if (!a) return fail(404, "no such player");
   const cosmetics = JSON.parse(a.cosmetics);
   delete cosmetics.dev;
   if (isDev(a, a.discord)) cosmetics.dev = true;
-  return c.json({ ...publicAccount(a), mc_uuid: a.mc_uuid, created: a.created, likes: a.likes, cosmetics });
+  const profile = JSON.parse(a.profile);
+  let links: Record<string, string> | undefined;
+  if (profile.showLinks) {
+    const { results } = await c.env.DB.prepare("SELECT provider, name FROM links WHERE account = ?").bind(a.id).all<{ provider: string; name: string }>();
+    links = Object.fromEntries(results.map((l) => [l.provider, l.name]));
+  }
+  return c.json({ ...publicAccount(a), mc_uuid: a.mc_uuid, created: a.created, likes: a.likes, cosmetics, profile, links, clan: await clanOf(c.env.DB, a.id) });
 });
 
 app.get("/share/:code", async (c) => {
@@ -330,7 +340,7 @@ const CRASHES_PER_DAY = 30;
 const CRASH_DAYS = 60;
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : null);
 
-export function crashSig(cause: string, log: string, report: string): string {
+function crashSig(cause: string, log: string, report: string): string {
   const exc = /^\s*(?:Caused by: )?([\w$]+\.)+[\w$]*(?:Exception|Error)\b.*$/m;
   const line = report.match(exc)?.[0] ?? log.split("\n").reverse().find((l) => exc.test(l)) ?? "";
   return `${cause}|${line.trim().replace(/\d+/g, "#").slice(0, 200)}`;
@@ -476,6 +486,8 @@ app.get("/v1/me", async (c) => {
     ...publicAccount(me),
     created: me.created,
     cosmetics: JSON.parse(me.cosmetics),
+    profile: JSON.parse(me.profile),
+    clan: await clanOf(c.env.DB, me.id),
     likes: likes.results[0]?.n ?? 0,
     links: Object.fromEntries(links.results.map((l) => [l.provider, l.name])),
     dev: isDev({ name_lower: me.name.toLowerCase(), mc_uuid: me.mc_uuid }, links.results.find((l) => l.provider === "discord")?.ext_id),
@@ -547,6 +559,13 @@ app.delete("/v1/me", async (c) => {
   return c.json({ ok: true });
 });
 
+app.put("/v1/me/profile", async (c) => {
+  const profile = readProfile(field(c.var.body, "profile"));
+  if (typeof profile === "string") return fail(400, profile);
+  await c.env.DB.prepare("UPDATE accounts SET profile = ? WHERE id = ?").bind(JSON.stringify(profile), c.var.account.id).run();
+  return c.json(profile);
+});
+
 app.put("/v1/me/cosmetics", async (c) => {
   const cosmetics = field(c.var.body, "cosmetics");
   if (!cosmetics || typeof cosmetics !== "object" || Array.isArray(cosmetics)) return fail(400, "cosmetics must be an object");
@@ -562,15 +581,18 @@ const pair = (x: string, y: string) => (x < y ? [x, y] : [y, x]);
 
 app.get("/v1/friends", async (c) => {
   const me = c.var.account.id;
-  const [friends, incoming, outgoing] = await c.env.DB.batch<{ id: string; name: string; mc_uuid: string | null; seen: number }>([
+  const [friends, incoming, outgoing] = await c.env.DB.batch<{ id: string; name: string; mc_uuid: string | null; seen: number; profile?: string; clan_tag?: string | null; clan_icon?: string; clan_id?: string; clan_name?: string }>([
     c.env.DB.prepare(
-      "SELECT a.id, a.name, a.mc_uuid, a.seen FROM friendships f JOIN accounts a ON a.id = CASE WHEN f.a = ?1 THEN f.b ELSE f.a END WHERE f.a = ?1 OR f.b = ?1 ORDER BY a.name_lower",
+      "SELECT a.id, a.name, a.mc_uuid, a.seen, a.profile, c.tag AS clan_tag, c.icon AS clan_icon, c.id AS clan_id, c.name AS clan_name FROM friendships f JOIN accounts a ON a.id = CASE WHEN f.a = ?1 THEN f.b ELSE f.a END LEFT JOIN clan_members cm ON cm.account = a.id LEFT JOIN clans c ON c.id = cm.clan WHERE f.a = ?1 OR f.b = ?1 ORDER BY a.name_lower",
     ).bind(me),
     c.env.DB.prepare("SELECT a.id, a.name, a.mc_uuid, a.seen FROM friend_requests r JOIN accounts a ON a.id = r.from_id WHERE r.to_id = ? ORDER BY r.created DESC").bind(me),
     c.env.DB.prepare("SELECT a.id, a.name, a.mc_uuid, a.seen FROM friend_requests r JOIN accounts a ON a.id = r.to_id WHERE r.from_id = ? ORDER BY r.created DESC").bind(me),
   ]);
   return c.json({
-    friends: friends.results.map((a) => ({ ...publicAccount(a), seen: a.seen })),
+    friends: friends.results.map((a) => {
+      const p = JSON.parse(a.profile ?? "{}");
+      return { ...publicAccount(a), seen: a.seen, clan: a.clan_tag ? { id: a.clan_id, name: a.clan_name, tag: a.clan_tag, icon: a.clan_icon } : null, note: p.status ?? null };
+    }),
     incoming: incoming.results.map(publicAccount),
     outgoing: outgoing.results.map(publicAccount),
   });
@@ -681,6 +703,7 @@ const areFriends = async (db: D1Database, x: string, y: string) => {
 };
 
 relays(app as never, { notify: notify as never, areFriends });
+privateClans(app as never);
 
 const partyMembers = async (db: D1Database, party: string) =>
   (await db.prepare("SELECT account FROM party_members WHERE party = ? ORDER BY joined").bind(party).all<{ account: string }>()).results.map((r) => r.account);

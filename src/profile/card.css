@@ -1,0 +1,1316 @@
+.pcard {
+  --pcard-pad: 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--frost-edge);
+  border-radius: 22px;
+  background: var(--surface);
+  min-width: 0;
+}
+
+.pcard-banner {
+  position: relative;
+  height: 132px;
+  overflow: hidden;
+  background-color: #2a1f4d;
+  background-position: center;
+  background-size: cover;
+}
+
+.pcard[data-effect] .pcard-banner::before,
+.pcard[data-effect] .pcard-banner::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.pcard-top {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin: -48px var(--pcard-pad) 0;
+}
+
+.pcard-avatar {
+  position: relative;
+  flex: none;
+  padding: 6px;
+  border-radius: 22px;
+  background: var(--surface);
+}
+
+.pcard-avatar .head {
+  display: block;
+  border-radius: 14px;
+  image-rendering: pixelated;
+  background: var(--surface-2);
+}
+
+.pcard-avatar[data-frame="violet"] {
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+
+.pcard-avatar[data-frame="gold"] {
+  box-shadow: inset 0 0 0 3px #e0b04a, inset 0 0 0 5px #7a5410;
+}
+
+.pcard-avatar[data-frame="pixel"] {
+  border-radius: 0;
+  clip-path: polygon(0 8px, 4px 8px, 4px 4px, 8px 4px, 8px 0, calc(100% - 8px) 0, calc(100% - 8px) 4px, calc(100% - 4px) 4px, calc(100% - 4px) 8px, 100% 8px, 100% calc(100% - 8px), calc(100% - 4px) calc(100% - 8px), calc(100% - 4px) calc(100% - 4px), calc(100% - 8px) calc(100% - 4px), calc(100% - 8px) 100%, 8px 100%, 8px calc(100% - 4px), 4px calc(100% - 4px), 4px calc(100% - 8px), 0 calc(100% - 8px));
+  background: var(--accent);
+}
+
+.pcard-avatar[data-frame="pixel"] .head {
+  border-radius: 0;
+}
+
+.pcard-avatar[data-frame="glow"] {
+  box-shadow: inset 0 0 0 2px rgb(201 181 255 / 0.9), 0 0 18px 2px rgb(139 92 246 / 0.55);
+}
+
+.pcard-status {
+  position: relative;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  max-width: 100%;
+  border: 1px solid var(--frost-edge);
+  border-radius: 14px;
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.pcard-id {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--space-3) var(--pcard-pad) 0;
+}
+
+.pcard-plate {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.pcard-plate[data-plate] {
+  padding: 6px 14px 7px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 14px;
+  background: var(--plate);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+}
+
+[data-plate="aurora"] {
+  --plate: linear-gradient(110deg, rgb(46 204 160 / 0.5), rgb(139 92 246 / 0.5) 55%, rgb(59 130 246 / 0.45));
+}
+
+[data-plate="nether"] {
+  --plate: repeating-linear-gradient(135deg, rgb(0 0 0 / 0.12) 0 6px, transparent 6px 12px), linear-gradient(110deg, rgb(120 18 18 / 0.85), rgb(230 80 30 / 0.55));
+}
+
+[data-plate="end"] {
+  --plate: radial-gradient(circle at 18% 30%, rgb(255 255 255 / 0.5) 0 1px, transparent 2px), radial-gradient(circle at 62% 70%, rgb(255 255 255 / 0.4) 0 1px, transparent 2px), radial-gradient(circle at 86% 25%, rgb(255 255 255 / 0.45) 0 1px, transparent 2px), linear-gradient(110deg, rgb(18 10 36 / 0.9), rgb(176 132 255 / 0.5));
+}
+
+[data-plate="ocean"] {
+  --plate: linear-gradient(110deg, rgb(14 80 140 / 0.8), rgb(56 189 248 / 0.45));
+}
+
+[data-plate="forest"] {
+  --plate: linear-gradient(110deg, rgb(25 90 40 / 0.85), rgb(132 204 22 / 0.4));
+}
+
+[data-plate="gold"] {
+  --plate: linear-gradient(110deg, rgb(120 80 10 / 0.8), rgb(250 204 21 / 0.55) 50%, rgb(120 80 10 / 0.8));
+}
+
+[data-plate="sunset"] {
+  --plate: linear-gradient(110deg, rgb(244 114 82 / 0.65), rgb(236 72 153 / 0.5) 55%, rgb(99 102 241 / 0.5));
+}
+
+[data-plate="frost"] {
+  --plate: linear-gradient(110deg, rgb(186 230 253 / 0.4), rgb(255 255 255 / 0.12));
+}
+
+.pcard-name {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.pcard-verified {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.pcard-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.pcard-sub:empty {
+  display: none;
+}
+
+.pcard-online {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pcard-online::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--presence, #6b6880);
+}
+
+[data-presence="online"] {
+  --presence: #3fb950;
+}
+
+[data-presence="idle"] {
+  --presence: #f2b33d;
+}
+
+[data-presence="dnd"] {
+  --presence: #e5484d;
+}
+
+[data-presence="invisible"],
+[data-presence="offline"] {
+  --presence: #6b6880;
+}
+
+.pcard-clan {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px 2px 6px;
+  border: 1px solid var(--frost-edge);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+button.pcard-clan {
+  cursor: pointer;
+}
+
+button.pcard-clan:hover {
+  border-color: var(--accent);
+}
+
+.pcard-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.pcard-badge {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--well);
+  box-shadow: inset 0 0 0 2px var(--tier, var(--frost-edge));
+  cursor: pointer;
+}
+
+.pcard-badge[data-tip]:hover::after,
+.pcard-badge[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 5;
+  width: max-content;
+  max-width: 220px;
+  padding: 8px 10px;
+  transform: translateX(-50%);
+  border: 1px solid var(--frost-edge);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  white-space: pre-line;
+  pointer-events: none;
+}
+
+.pcard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.pcard-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--pcard-pad) var(--pcard-pad);
+}
+
+.pcard-body section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pcard-body h3 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pcard-body p {
+  margin: 0;
+}
+
+.pcard-bio {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.emoji {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  margin: 0 0.05em;
+  vertical-align: -0.28em;
+  object-fit: contain;
+}
+
+.pcard-jukebox,
+.pcard-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.pcard-game img {
+  flex: none;
+  border-radius: 10px;
+}
+
+.pcard-timer {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.pcard-row-main {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.pcard-disc {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--accent) 0 4px, #111 5px 7px, transparent 8px),
+    repeating-radial-gradient(circle, #1b1b22 0 2px, #26242e 2px 3px);
+}
+
+.pcard-jukebox:hover .pcard-disc {
+  animation: pcard-spin 2.4s linear infinite;
+}
+
+.pcard-track {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pcard-track b,
+.pcard-track small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pcard-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+
+.pcard-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--well);
+  box-shadow: inset 0 2px 0 var(--well-shade);
+}
+
+.pcard-slot small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.pcard-slot b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pcard-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pcard-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border: 1px solid var(--frost-edge);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+button.pcard-chip {
+  cursor: pointer;
+}
+
+button.pcard-chip:hover,
+.pcard-chip[data-on] {
+  border-color: var(--accent);
+}
+
+.pcard-shot {
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.pcard-shot img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.pcard-meta {
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  gap: var(--space-5) !important;
+}
+
+.pcard-meta p {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.emoji-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.emoji-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.emoji-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 31;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 320px;
+  padding: 10px;
+  border: 1px solid var(--frost-edge);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.45);
+}
+
+.emoji-tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.emoji-tabs button {
+  flex: 1;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.emoji-tabs button img {
+  width: 18px;
+  height: 18px;
+}
+
+.emoji-tabs button[aria-selected="true"] {
+  background: var(--surface-2);
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.emoji-grid button {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.emoji-grid button:hover {
+  background: var(--surface-2);
+}
+
+.emoji-grid img {
+  width: 26px;
+  height: 26px;
+}
+
+@keyframes pcard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pcard-snow-far {
+  0% {
+    transform: translate(0, -270px);
+  }
+  25% {
+    transform: translate(8px, -202px);
+  }
+  50% {
+    transform: translate(-4px, -135px);
+  }
+  75% {
+    transform: translate(9px, -67px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes pcard-snow-near {
+  0% {
+    transform: translate(0, -270px);
+  }
+  33% {
+    transform: translate(-14px, -180px);
+  }
+  66% {
+    transform: translate(10px, -90px);
+  }
+  100% {
+    transform: translate(-6px, 0);
+  }
+}
+
+@keyframes pcard-twinkle {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes pcard-rise {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(-30px, -270px);
+  }
+}
+
+@keyframes pcard-rain {
+  from {
+    transform: translate(0, -270px) rotate(14deg);
+  }
+  to {
+    transform: translate(-60px, 0) rotate(14deg);
+  }
+}
+
+.pcard[data-effect="snow"] .pcard-banner::before {
+  filter: blur(0.6px);
+  animation: pcard-snow-far 14s linear infinite;
+  box-shadow:
+    84px 428px 0 0.6px rgb(230 240 255 / 0.45),
+    325px 288px 0 0.3px rgb(255 255 255 / 0.55),
+    405px 486px 0 0.6px rgb(255 255 255 / 0.55),
+    258px 540px 0 0px rgb(255 255 255 / 0.55),
+    7px 379px 0 0.6px rgb(230 240 255 / 0.45),
+    35px 148px 0 0px rgb(255 255 255 / 0.55),
+    355px 43px 0 0.3px rgb(230 240 255 / 0.45),
+    315px 452px 0 0px rgb(230 240 255 / 0.45),
+    276px 509px 0 0.6px rgb(255 255 255 / 0.55),
+    332px 377px 0 0px rgb(255 255 255 / 0.55),
+    379px 90px 0 0px rgb(255 255 255 / 0.55),
+    232px 164px 0 0.6px rgb(230 240 255 / 0.45),
+    205px 496px 0 0px rgb(255 255 255 / 0.55),
+    340px 38px 0 0.3px rgb(255 255 255 / 0.55),
+    38px 202px 0 0px rgb(255 255 255 / 0.55),
+    62px 487px 0 0.6px rgb(230 240 255 / 0.45),
+    102px 349px 0 0px rgb(230 240 255 / 0.45),
+    149px 373px 0 0.3px rgb(230 240 255 / 0.45),
+    162px 496px 0 0.3px rgb(230 240 255 / 0.45),
+    13px 95px 0 0px rgb(230 240 255 / 0.45),
+    1px 503px 0 0px rgb(255 255 255 / 0.55),
+    292px 326px 0 0.6px rgb(255 255 255 / 0.55),
+    92px 174px 0 0.6px rgb(230 240 255 / 0.45),
+    426px 340px 0 0.3px rgb(230 240 255 / 0.45),
+    125px 105px 0 0px rgb(255 255 255 / 0.55),
+    416px 178px 0 0.3px rgb(230 240 255 / 0.45),
+    81px 37px 0 0.6px rgb(255 255 255 / 0.55),
+    208px 167px 0 0.6px rgb(255 255 255 / 0.55),
+    452px 354px 0 0.3px rgb(230 240 255 / 0.45),
+    341px 253px 0 0px rgb(255 255 255 / 0.55),
+    287px 70px 0 0.3px rgb(230 240 255 / 0.45),
+    396px 494px 0 0px rgb(230 240 255 / 0.45),
+    26px 264px 0 0.6px rgb(230 240 255 / 0.45),
+    17px 429px 0 0px rgb(255 255 255 / 0.55),
+    201px 71px 0 0.3px rgb(255 255 255 / 0.55),
+    77px 490px 0 0px rgb(230 240 255 / 0.45),
+    71px 538px 0 0.6px rgb(230 240 255 / 0.45),
+    14px 217px 0 0.3px rgb(255 255 255 / 0.55),
+    451px 377px 0 0.6px rgb(230 240 255 / 0.45),
+    248px 488px 0 0.3px rgb(255 255 255 / 0.55),
+    273px 282px 0 0px rgb(255 255 255 / 0.55),
+    195px 128px 0 0.6px rgb(255 255 255 / 0.55),
+    135px 333px 0 0.6px rgb(255 255 255 / 0.55),
+    436px 431px 0 0.3px rgb(230 240 255 / 0.45),
+    384px 141px 0 0px rgb(255 255 255 / 0.55),
+    48px 406px 0 0px rgb(255 255 255 / 0.55),
+    12px 457px 0 0px rgb(255 255 255 / 0.55),
+    444px 121px 0 0.6px rgb(230 240 255 / 0.45),
+    64px 311px 0 0.6px rgb(230 240 255 / 0.45),
+    202px 505px 0 0px rgb(255 255 255 / 0.55),
+    92px 188px 0 0.3px rgb(255 255 255 / 0.55),
+    363px 47px 0 0.6px rgb(255 255 255 / 0.55),
+    404px 8px 0 0.3px rgb(230 240 255 / 0.45),
+    442px 65px 0 0.3px rgb(255 255 255 / 0.55),
+    437px 238px 0 0.3px rgb(230 240 255 / 0.45),
+    381px 42px 0 0px rgb(230 240 255 / 0.45),
+    79px 316px 0 0.6px rgb(230 240 255 / 0.45),
+    418px 515px 0 0.6px rgb(230 240 255 / 0.45),
+    293px 100px 0 0.6px rgb(255 255 255 / 0.55),
+    260px 331px 0 0.6px rgb(230 240 255 / 0.45),
+    149px 538px 0 0.6px rgb(255 255 255 / 0.55),
+    32px 333px 0 0px rgb(230 240 255 / 0.45),
+    33px 325px 0 0.6px rgb(230 240 255 / 0.45),
+    55px 77px 0 0.6px rgb(255 255 255 / 0.55),
+    320px 458px 0 0.6px rgb(255 255 255 / 0.55),
+    348px 453px 0 0.3px rgb(230 240 255 / 0.45),
+    448px 411px 0 0px rgb(255 255 255 / 0.55),
+    12px 49px 0 0.6px rgb(230 240 255 / 0.45),
+    21px 252px 0 0.3px rgb(230 240 255 / 0.45),
+    370px 437px 0 0.3px rgb(255 255 255 / 0.55),
+    204px 394px 0 0.3px rgb(230 240 255 / 0.45),
+    116px 87px 0 0px rgb(230 240 255 / 0.45),
+    88px 503px 0 0.3px rgb(255 255 255 / 0.55),
+    399px 460px 0 0.6px rgb(230 240 255 / 0.45),
+    125px 492px 0 0.3px rgb(230 240 255 / 0.45),
+    156px 391px 0 0.6px rgb(255 255 255 / 0.55),
+    82px 320px 0 0px rgb(230 240 255 / 0.45),
+    448px 400px 0 0.6px rgb(255 255 255 / 0.55),
+    46px 179px 0 0px rgb(230 240 255 / 0.45),
+    317px 384px 0 0.6px rgb(230 240 255 / 0.45),
+    55px 170px 0 0.6px rgb(230 240 255 / 0.45),
+    105px 343px 0 0.3px rgb(255 255 255 / 0.55),
+    133px 83px 0 0px rgb(230 240 255 / 0.45),
+    263px 260px 0 0px rgb(255 255 255 / 0.55),
+    122px 284px 0 0.6px rgb(230 240 255 / 0.45),
+    80px 402px 0 0.3px rgb(230 240 255 / 0.45),
+    223px 471px 0 0.6px rgb(230 240 255 / 0.45),
+    342px 178px 0 0.6px rgb(230 240 255 / 0.45),
+    318px 278px 0 0px rgb(255 255 255 / 0.55),
+    110px 35px 0 0.3px rgb(230 240 255 / 0.45),
+    9px 76px 0 0.6px rgb(255 255 255 / 0.55),
+    203px 451px 0 0.6px rgb(230 240 255 / 0.45),
+    122px 7px 0 0.6px rgb(255 255 255 / 0.55),
+    48px 316px 0 0px rgb(230 240 255 / 0.45),
+    189px 3px 0 0.3px rgb(255 255 255 / 0.55),
+    69px 442px 0 0.6px rgb(255 255 255 / 0.55),
+    158px 192px 0 0.3px rgb(230 240 255 / 0.45),
+    451px 250px 0 0px rgb(230 240 255 / 0.45),
+    452px 18px 0 0.6px rgb(255 255 255 / 0.55),
+    41px 446px 0 0.6px rgb(255 255 255 / 0.55),
+    77px 61px 0 0.3px rgb(230 240 255 / 0.45),
+    241px 346px 0 0px rgb(230 240 255 / 0.45),
+    78px 361px 0 0.3px rgb(230 240 255 / 0.45),
+    327px 9px 0 0px rgb(255 255 255 / 0.55),
+    95px 524px 0 0px rgb(255 255 255 / 0.55),
+    184px 276px 0 0.3px rgb(255 255 255 / 0.55),
+    82px 38px 0 0.6px rgb(230 240 255 / 0.45),
+    140px 409px 0 0px rgb(255 255 255 / 0.55),
+    53px 238px 0 0.3px rgb(230 240 255 / 0.45),
+    209px 203px 0 0.6px rgb(255 255 255 / 0.55);
+}
+
+.pcard[data-effect="snow"] .pcard-banner::after {
+  width: 3px;
+  height: 3px;
+  filter: blur(0.3px);
+  animation: pcard-snow-near 8s linear infinite;
+  box-shadow:
+    372px 537px 0 1.5px rgb(255 255 255 / 0.9),
+    166px 224px 0 1px rgb(255 255 255 / 0.9),
+    372px 360px 0 2px rgb(255 255 255 / 0.9),
+    10px 377px 0 1.5px rgb(240 246 255 / 0.8),
+    82px 452px 0 1px rgb(240 246 255 / 0.8),
+    347px 56px 0 1px rgb(255 255 255 / 0.9),
+    158px 399px 0 1px rgb(240 246 255 / 0.8),
+    356px 375px 0 1px rgb(240 246 255 / 0.8),
+    88px 271px 0 2px rgb(255 255 255 / 0.9),
+    386px 385px 0 2px rgb(255 255 255 / 0.9),
+    93px 512px 0 1.5px rgb(255 255 255 / 0.9),
+    115px 527px 0 2px rgb(240 246 255 / 0.8),
+    397px 460px 0 2px rgb(240 246 255 / 0.8),
+    42px 245px 0 1.5px rgb(255 255 255 / 0.9),
+    180px 370px 0 2px rgb(255 255 255 / 0.9),
+    13px 433px 0 2px rgb(255 255 255 / 0.9),
+    340px 215px 0 2px rgb(255 255 255 / 0.9),
+    108px 535px 0 1.5px rgb(240 246 255 / 0.8),
+    62px 164px 0 1px rgb(240 246 255 / 0.8),
+    314px 475px 0 1.5px rgb(255 255 255 / 0.9),
+    333px 217px 0 1.5px rgb(255 255 255 / 0.9),
+    220px 387px 0 1px rgb(240 246 255 / 0.8),
+    244px 271px 0 1px rgb(240 246 255 / 0.8),
+    105px 36px 0 1.5px rgb(240 246 255 / 0.8),
+    411px 309px 0 2px rgb(255 255 255 / 0.9),
+    374px 224px 0 1px rgb(240 246 255 / 0.8),
+    72px 403px 0 1px rgb(255 255 255 / 0.9),
+    398px 303px 0 2px rgb(240 246 255 / 0.8),
+    100px 497px 0 1px rgb(240 246 255 / 0.8),
+    344px 56px 0 1px rgb(240 246 255 / 0.8),
+    423px 135px 0 1.5px rgb(240 246 255 / 0.8),
+    236px 362px 0 1.5px rgb(240 246 255 / 0.8),
+    306px 72px 0 1.5px rgb(255 255 255 / 0.9),
+    191px 256px 0 2px rgb(240 246 255 / 0.8),
+    405px 127px 0 1px rgb(240 246 255 / 0.8),
+    455px 79px 0 2px rgb(240 246 255 / 0.8),
+    127px 133px 0 1px rgb(240 246 255 / 0.8),
+    53px 302px 0 2px rgb(255 255 255 / 0.9),
+    263px 211px 0 1px rgb(240 246 255 / 0.8),
+    394px 507px 0 1px rgb(255 255 255 / 0.9),
+    351px 343px 0 2px rgb(240 246 255 / 0.8),
+    4px 197px 0 1px rgb(240 246 255 / 0.8),
+    29px 268px 0 2px rgb(240 246 255 / 0.8),
+    30px 126px 0 2px rgb(255 255 255 / 0.9),
+    371px 238px 0 2px rgb(240 246 255 / 0.8);
+}
+
+.pcard[data-effect="stars"] .pcard-banner::before {
+  animation: pcard-twinkle 4s ease-in-out infinite;
+  box-shadow:
+    249px 128px 0 0.4px rgb(201 181 255 / 0.8),
+    325px 5px 0 0.4px rgb(255 255 255 / 0.85),
+    177px 102px 0 0.4px rgb(201 181 255 / 0.8),
+    368px 131px 0 0px rgb(201 181 255 / 0.8),
+    404px 59px 0 0px rgb(201 181 255 / 0.8),
+    431px 56px 0 0px rgb(201 181 255 / 0.8),
+    250px 39px 0 0px rgb(255 255 255 / 0.85),
+    409px 69px 0 0.4px rgb(201 181 255 / 0.8),
+    153px 55px 0 0px rgb(201 181 255 / 0.8),
+    95px 51px 0 0px rgb(255 255 255 / 0.85),
+    319px 40px 0 0px rgb(255 255 255 / 0.85),
+    282px 28px 0 0px rgb(255 255 255 / 0.85),
+    321px 103px 0 0px rgb(255 255 255 / 0.85),
+    104px 53px 0 0px rgb(255 255 255 / 0.85),
+    399px 62px 0 0px rgb(255 255 255 / 0.85),
+    125px 52px 0 0.4px rgb(255 255 255 / 0.85),
+    204px 77px 0 0.4px rgb(201 181 255 / 0.8),
+    452px 106px 0 0px rgb(201 181 255 / 0.8),
+    23px 103px 0 0.4px rgb(255 255 255 / 0.85),
+    19px 20px 0 0.4px rgb(201 181 255 / 0.8),
+    368px 67px 0 0px rgb(201 181 255 / 0.8),
+    174px 94px 0 0.4px rgb(201 181 255 / 0.8),
+    199px 75px 0 0px rgb(255 255 255 / 0.85),
+    147px 23px 0 0.4px rgb(201 181 255 / 0.8),
+    420px 35px 0 0px rgb(201 181 255 / 0.8),
+    157px 99px 0 0px rgb(201 181 255 / 0.8),
+    338px 113px 0 0px rgb(255 255 255 / 0.85),
+    191px 108px 0 0px rgb(201 181 255 / 0.8),
+    111px 93px 0 0px rgb(255 255 255 / 0.85),
+    253px 77px 0 0.4px rgb(201 181 255 / 0.8),
+    95px 4px 0 0.4px rgb(255 255 255 / 0.85),
+    83px 8px 0 0px rgb(255 255 255 / 0.85),
+    84px 86px 0 0px rgb(255 255 255 / 0.85),
+    435px 115px 0 0px rgb(201 181 255 / 0.8),
+    270px 96px 0 0px rgb(201 181 255 / 0.8),
+    358px 46px 0 0.4px rgb(201 181 255 / 0.8),
+    73px 84px 0 0.4px rgb(255 255 255 / 0.85),
+    147px 20px 0 0px rgb(255 255 255 / 0.85),
+    368px 77px 0 0.4px rgb(201 181 255 / 0.8),
+    420px 42px 0 0.4px rgb(255 255 255 / 0.85);
+}
+
+.pcard[data-effect="stars"] .pcard-banner::after {
+  filter: drop-shadow(0 0 3px rgb(255 255 255 / 0.9));
+  animation: pcard-twinkle 2.6s ease-in-out infinite 1.3s;
+  box-shadow:
+    320px 69px 0 1.2px rgb(255 255 255 / 0.9),
+    406px 59px 0 0.8px rgb(255 255 255 / 0.9),
+    457px 53px 0 1.2px rgb(255 255 255 / 0.9),
+    255px 131px 0 0.8px rgb(255 255 255 / 0.9),
+    335px 110px 0 1.2px rgb(255 255 255 / 0.9),
+    394px 33px 0 1.2px rgb(255 255 255 / 0.9),
+    70px 1px 0 0.8px rgb(255 255 255 / 0.9),
+    232px 28px 0 1.2px rgb(255 255 255 / 0.9),
+    38px 83px 0 0.8px rgb(255 255 255 / 0.9),
+    261px 75px 0 1.2px rgb(255 255 255 / 0.9),
+    211px 100px 0 0.8px rgb(255 255 255 / 0.9),
+    178px 1px 0 1.2px rgb(255 255 255 / 0.9),
+    237px 80px 0 1.2px rgb(255 255 255 / 0.9),
+    69px 88px 0 1.2px rgb(255 255 255 / 0.9);
+}
+
+.pcard[data-effect="embers"] .pcard-banner::before {
+  filter: drop-shadow(0 0 3px rgb(255 140 60 / 0.9));
+  animation: pcard-rise 9s linear infinite;
+  box-shadow:
+    323px 164px 0 0.4px rgb(255 214 120 / 0.85),
+    406px 165px 0 0.4px rgb(255 214 120 / 0.85),
+    22px 170px 0 0.8px rgb(255 100 60 / 0.8),
+    109px 516px 0 0.4px rgb(255 170 80 / 0.9),
+    411px 29px 0 0.4px rgb(255 214 120 / 0.85),
+    293px 237px 0 0.4px rgb(255 214 120 / 0.85),
+    318px 172px 0 1.2px rgb(255 170 80 / 0.9),
+    49px 177px 0 1.2px rgb(255 214 120 / 0.85),
+    211px 258px 0 0.8px rgb(255 170 80 / 0.9),
+    372px 405px 0 0.8px rgb(255 214 120 / 0.85),
+    381px 42px 0 0.4px rgb(255 214 120 / 0.85),
+    164px 233px 0 0.8px rgb(255 214 120 / 0.85),
+    394px 193px 0 0.4px rgb(255 100 60 / 0.8),
+    460px 475px 0 0.8px rgb(255 100 60 / 0.8),
+    354px 187px 0 0.4px rgb(255 100 60 / 0.8),
+    315px 448px 0 0.4px rgb(255 214 120 / 0.85),
+    249px 86px 0 1.2px rgb(255 100 60 / 0.8),
+    249px 170px 0 1.2px rgb(255 170 80 / 0.9),
+    315px 9px 0 1.2px rgb(255 170 80 / 0.9),
+    158px 533px 0 0.4px rgb(255 100 60 / 0.8),
+    325px 1px 0 1.2px rgb(255 170 80 / 0.9),
+    446px 451px 0 0.4px rgb(255 100 60 / 0.8),
+    208px 372px 0 1.2px rgb(255 214 120 / 0.85),
+    403px 451px 0 0.8px rgb(255 100 60 / 0.8),
+    135px 190px 0 1.2px rgb(255 214 120 / 0.85),
+    327px 230px 0 0.8px rgb(255 170 80 / 0.9),
+    72px 163px 0 0.8px rgb(255 100 60 / 0.8),
+    160px 267px 0 0.8px rgb(255 214 120 / 0.85),
+    275px 118px 0 0.8px rgb(255 100 60 / 0.8),
+    261px 52px 0 0.4px rgb(255 100 60 / 0.8),
+    103px 246px 0 0.8px rgb(255 214 120 / 0.85),
+    241px 298px 0 1.2px rgb(255 170 80 / 0.9),
+    336px 484px 0 0.8px rgb(255 170 80 / 0.9),
+    351px 322px 0 0.8px rgb(255 100 60 / 0.8),
+    301px 494px 0 1.2px rgb(255 214 120 / 0.85),
+    385px 235px 0 1.2px rgb(255 214 120 / 0.85);
+}
+
+.pcard[data-effect="embers"] .pcard-banner::after {
+  animation: pcard-rise 13s linear infinite;
+  box-shadow:
+    104px 183px 0 0px rgb(255 200 120 / 0.7),
+    370px 189px 0 0.4px rgb(255 200 120 / 0.7),
+    216px 276px 0 0px rgb(255 200 120 / 0.7),
+    44px 118px 0 0.4px rgb(255 200 120 / 0.7),
+    104px 174px 0 0px rgb(255 200 120 / 0.7),
+    327px 440px 0 0.4px rgb(255 200 120 / 0.7),
+    133px 184px 0 0.4px rgb(255 200 120 / 0.7),
+    7px 298px 0 0.4px rgb(255 200 120 / 0.7),
+    100px 266px 0 0.4px rgb(255 200 120 / 0.7),
+    144px 236px 0 0px rgb(255 200 120 / 0.7),
+    128px 383px 0 0.4px rgb(255 200 120 / 0.7),
+    262px 58px 0 0.4px rgb(255 200 120 / 0.7),
+    458px 239px 0 0px rgb(255 200 120 / 0.7),
+    171px 231px 0 0px rgb(255 200 120 / 0.7),
+    161px 539px 0 0px rgb(255 200 120 / 0.7),
+    26px 492px 0 0px rgb(255 200 120 / 0.7),
+    203px 385px 0 0.4px rgb(255 200 120 / 0.7),
+    402px 42px 0 0px rgb(255 200 120 / 0.7),
+    95px 389px 0 0.4px rgb(255 200 120 / 0.7),
+    206px 392px 0 0.4px rgb(255 200 120 / 0.7),
+    344px 209px 0 0px rgb(255 200 120 / 0.7),
+    58px 344px 0 0px rgb(255 200 120 / 0.7),
+    195px 345px 0 0.4px rgb(255 200 120 / 0.7),
+    139px 86px 0 0.4px rgb(255 200 120 / 0.7);
+}
+
+.pcard[data-effect="rain"] .pcard-banner::before {
+  width: 1px;
+  height: 14px;
+  border-radius: 1px;
+  animation: pcard-rain 0.9s linear infinite;
+  box-shadow:
+    536px 256px 0 0 rgb(170 200 255 / 0.35),
+    366px 528px 0 0 rgb(170 200 255 / 0.5),
+    90px 326px 0 0 rgb(170 200 255 / 0.35),
+    467px 407px 0 0 rgb(170 200 255 / 0.5),
+    462px 490px 0 0 rgb(170 200 255 / 0.5),
+    58px 421px 0 0 rgb(170 200 255 / 0.35),
+    55px 271px 0 0 rgb(170 200 255 / 0.35),
+    483px 269px 0 0 rgb(170 200 255 / 0.5),
+    436px 238px 0 0 rgb(170 200 255 / 0.6),
+    445px 389px 0 0 rgb(170 200 255 / 0.5),
+    194px 320px 0 0 rgb(170 200 255 / 0.5),
+    291px 289px 0 0 rgb(170 200 255 / 0.6),
+    456px 26px 0 0 rgb(170 200 255 / 0.6),
+    92px 280px 0 0 rgb(170 200 255 / 0.35),
+    120px 509px 0 0 rgb(170 200 255 / 0.6),
+    480px 327px 0 0 rgb(170 200 255 / 0.5),
+    337px 399px 0 0 rgb(170 200 255 / 0.35),
+    538px 265px 0 0 rgb(170 200 255 / 0.35),
+    142px 181px 0 0 rgb(170 200 255 / 0.6),
+    79px 205px 0 0 rgb(170 200 255 / 0.5),
+    414px 525px 0 0 rgb(170 200 255 / 0.5),
+    502px 108px 0 0 rgb(170 200 255 / 0.6),
+    148px 88px 0 0 rgb(170 200 255 / 0.6),
+    408px 505px 0 0 rgb(170 200 255 / 0.35),
+    426px 232px 0 0 rgb(170 200 255 / 0.35),
+    282px 211px 0 0 rgb(170 200 255 / 0.35),
+    172px 207px 0 0 rgb(170 200 255 / 0.35),
+    341px 406px 0 0 rgb(170 200 255 / 0.6),
+    202px 113px 0 0 rgb(170 200 255 / 0.5),
+    288px 95px 0 0 rgb(170 200 255 / 0.6),
+    275px 37px 0 0 rgb(170 200 255 / 0.6),
+    250px 496px 0 0 rgb(170 200 255 / 0.5),
+    433px 353px 0 0 rgb(170 200 255 / 0.35),
+    382px 489px 0 0 rgb(170 200 255 / 0.6),
+    278px 25px 0 0 rgb(170 200 255 / 0.35),
+    130px 33px 0 0 rgb(170 200 255 / 0.5),
+    396px 322px 0 0 rgb(170 200 255 / 0.6),
+    475px 82px 0 0 rgb(170 200 255 / 0.6),
+    276px 51px 0 0 rgb(170 200 255 / 0.5),
+    325px 314px 0 0 rgb(170 200 255 / 0.35),
+    42px 135px 0 0 rgb(170 200 255 / 0.6),
+    173px 37px 0 0 rgb(170 200 255 / 0.5),
+    523px 165px 0 0 rgb(170 200 255 / 0.5),
+    535px 230px 0 0 rgb(170 200 255 / 0.35),
+    84px 265px 0 0 rgb(170 200 255 / 0.5),
+    89px 536px 0 0 rgb(170 200 255 / 0.5),
+    389px 485px 0 0 rgb(170 200 255 / 0.5),
+    256px 72px 0 0 rgb(170 200 255 / 0.5),
+    348px 249px 0 0 rgb(170 200 255 / 0.6),
+    344px 222px 0 0 rgb(170 200 255 / 0.35),
+    160px 488px 0 0 rgb(170 200 255 / 0.6),
+    404px 168px 0 0 rgb(170 200 255 / 0.35),
+    15px 491px 0 0 rgb(170 200 255 / 0.5),
+    73px 147px 0 0 rgb(170 200 255 / 0.35),
+    266px 41px 0 0 rgb(170 200 255 / 0.35),
+    229px 489px 0 0 rgb(170 200 255 / 0.6),
+    206px 207px 0 0 rgb(170 200 255 / 0.5),
+    494px 321px 0 0 rgb(170 200 255 / 0.35),
+    147px 133px 0 0 rgb(170 200 255 / 0.6),
+    356px 289px 0 0 rgb(170 200 255 / 0.5),
+    286px 305px 0 0 rgb(170 200 255 / 0.5),
+    395px 379px 0 0 rgb(170 200 255 / 0.35),
+    187px 349px 0 0 rgb(170 200 255 / 0.6),
+    33px 273px 0 0 rgb(170 200 255 / 0.35),
+    264px 417px 0 0 rgb(170 200 255 / 0.35),
+    322px 347px 0 0 rgb(170 200 255 / 0.35),
+    9px 49px 0 0 rgb(170 200 255 / 0.6),
+    37px 471px 0 0 rgb(170 200 255 / 0.35),
+    505px 433px 0 0 rgb(170 200 255 / 0.5),
+    537px 158px 0 0 rgb(170 200 255 / 0.6),
+    446px 446px 0 0 rgb(170 200 255 / 0.6),
+    233px 151px 0 0 rgb(170 200 255 / 0.6),
+    529px 43px 0 0 rgb(170 200 255 / 0.5),
+    493px 121px 0 0 rgb(170 200 255 / 0.6),
+    515px 436px 0 0 rgb(170 200 255 / 0.5),
+    271px 436px 0 0 rgb(170 200 255 / 0.35),
+    291px 18px 0 0 rgb(170 200 255 / 0.5),
+    252px 312px 0 0 rgb(170 200 255 / 0.5),
+    190px 68px 0 0 rgb(170 200 255 / 0.5),
+    342px 473px 0 0 rgb(170 200 255 / 0.6),
+    352px 453px 0 0 rgb(170 200 255 / 0.35),
+    447px 366px 0 0 rgb(170 200 255 / 0.6),
+    495px 227px 0 0 rgb(170 200 255 / 0.6),
+    524px 191px 0 0 rgb(170 200 255 / 0.6),
+    249px 502px 0 0 rgb(170 200 255 / 0.6),
+    81px 385px 0 0 rgb(170 200 255 / 0.35),
+    78px 361px 0 0 rgb(170 200 255 / 0.35),
+    456px 299px 0 0 rgb(170 200 255 / 0.6),
+    484px 393px 0 0 rgb(170 200 255 / 0.5),
+    82px 202px 0 0 rgb(170 200 255 / 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pcard .pcard-banner::before,
+  .pcard .pcard-banner::after,
+  .pcard-jukebox:hover .pcard-disc {
+    animation: none;
+  }
+}
+
+.pedit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.pedit-preview {
+  position: sticky;
+  top: 0;
+}
+
+.pedit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.pedit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pedit-head h2 {
+  margin: 0;
+}
+
+.pedit-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--frost-edge);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.pedit-group h3 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.pedit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pedit-field > span {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.pedit-field textarea {
+  resize: vertical;
+  min-height: 84px;
+  font: inherit;
+}
+
+.pedit-clan {
+  width: 120px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.pedit-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.pedit-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pedit-swatch {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--frost-edge);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.pedit-swatch[aria-pressed="true"] {
+  border-color: var(--text);
+}
+
+.pedit-custom {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.pedit-custom input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pedit-choice {
+  flex-wrap: wrap;
+  align-self: flex-start;
+}
+
+.pedit-plates {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+.pedit-plate {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 12px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: var(--plate, var(--surface-2));
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pedit-plate small {
+  color: rgb(255 255 255 / 0.7);
+  font-size: 11px;
+}
+
+.pedit-plate[aria-pressed="true"] {
+  border-color: var(--text);
+}
+
+.pedit-fonts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+.pedit-font {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pedit-font b {
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pedit-font small {
+  font-size: 11px;
+}
+
+.pedit-font[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+
+.pedit-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.pedit-text .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.pedit-field input[type="range"] {
+  accent-color: var(--accent);
+}
+
+.pedit-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.pedit-tags .input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.pedit-shot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pedit-shot img {
+  width: 128px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.pedit-shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+}
+
+.pedit-shot-pick {
+  position: relative;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.pedit-shot-pick:hover {
+  border-color: var(--accent);
+}
+
+.pedit-shot-pick img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.pedit-shot-pick span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 12px;
+}
+
+.pedit-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.pedit-check input {
+  accent-color: var(--accent);
+}
+
+.pedit-save {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  background: linear-gradient(transparent, var(--bg) 40%);
+}
+
+.pedit-save .error {
+  flex: 1;
+  margin: 0;
+}
+
+@media (max-width: 980px) {
+  .pedit {
+    grid-template-columns: 1fr;
+  }
+
+  .pedit-preview {
+    position: static;
+    order: -1;
+  }
+}

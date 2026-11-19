@@ -32,6 +32,7 @@ type ServerStatus = { online: number; max: number; version: string; latencyMs: n
 type Server = { name: string; address: string; color: string };
 
 const SERVERS_KEY = "kromvia.servers";
+const HIDDEN_KEY = "kromvia.serversHidden";
 const TINTS = ["#e0a53c", "#3a8fd9", "#5fb83f", "#d94a4a", "#b98cf0", "#12907e", "#d9466f"];
 const validAddress = (a: string) => /^[a-zA-Z0-9.:-]{1,253}$/.test(a) && !a.startsWith("-");
 
@@ -47,6 +48,15 @@ function savedServers(): Server[] {
   try {
     const list = JSON.parse(localStorage.getItem(SERVERS_KEY) ?? "[]");
     return Array.isArray(list) ? list.filter((s) => s && validAddress(s.address) && typeof s.name === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function hiddenServers(): string[] {
+  try {
+    const list = JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? "[]");
+    return Array.isArray(list) ? list.filter((a) => typeof a === "string") : [];
   } catch {
     return [];
   }
@@ -99,7 +109,8 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
   const [custom, setCustom] = useState<Server[]>(savedServers);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ name: "", address: "" });
-  const servers = [...SERVERS, ...custom];
+  const [hidden, setHidden] = useState<string[]>(hiddenServers);
+  const servers = [...SERVERS.filter((sv) => !hidden.includes(sv.address)), ...custom];
   const draftOk = draft.name.trim() !== "" && validAddress(draft.address.trim());
 
   const saveCustom = (list: Server[]) => {
@@ -108,6 +119,16 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
       localStorage.setItem(SERVERS_KEY, JSON.stringify(list));
     } catch {}
   };
+  const saveHidden = (list: string[]) => {
+    setHidden(list);
+    try {
+      localStorage.setItem(HIDDEN_KEY, JSON.stringify(list));
+    } catch {}
+  };
+  const removeServer = (address: string) =>
+    custom.some((c) => c.address === address)
+      ? saveCustom(custom.filter((c) => c.address !== address))
+      : saveHidden([...hidden, address]);
   const addServer = () => {
     if (!draftOk) return;
     const address = draft.address.trim();
@@ -246,7 +267,6 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
           <span className="quickbar-label">{t("home.quickPlay")}</span>
           {servers.map((sv) => {
             const st = status[sv.address];
-            const mine = custom.some((c) => c.address === sv.address);
             return (
               <span key={sv.address} className="server-wrap">
                 <button
@@ -266,15 +286,9 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
                     </span>
                   )}
                 </button>
-                {mine && (
-                  <button
-                    className="server-remove"
-                    aria-label={t("servers.remove")}
-                    onClick={() => saveCustom(custom.filter((c) => c.address !== sv.address))}
-                  >
-                    ✕
-                  </button>
-                )}
+                <button className="server-remove" aria-label={t("servers.remove")} onClick={() => removeServer(sv.address)}>
+                  ✕
+                </button>
               </span>
             );
           })}
@@ -312,6 +326,11 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
           ) : (
             <button className="server add" aria-label={t("servers.addTitle")} title={t("servers.addTitle")} onClick={() => setAdding(true)}>
               <Glyph name="plus" />
+            </button>
+          )}
+          {hidden.length > 0 && !adding && (
+            <button className="server add" aria-label={t("servers.restore")} title={t("servers.restore")} onClick={() => saveHidden([])}>
+              <Glyph name="refresh" />
             </button>
           )}
         </div>

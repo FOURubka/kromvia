@@ -8,9 +8,29 @@
 }
 
 .presence-dot[data-online="true"] {
-  background: #3ccf6e;
+  background: var(--presence, #3fb950);
   opacity: 1;
-  box-shadow: 0 0 6px rgb(60 207 110 / 0.6);
+}
+
+.friend-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.friend-text .friend-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.friend-activity {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .unread {
@@ -245,7 +265,13 @@ button.friend-row[aria-pressed="true"] {
 .player-view {
   display: flex;
   gap: var(--space-4);
-  align-items: center;
+  align-items: flex-start;
+}
+
+.player-info {
+  flex: 1;
+  max-width: 440px;
+  min-width: 0;
 }
 
 .player-art {

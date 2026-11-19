@@ -58,7 +58,8 @@ public final class Features {
 	}
 
 	public static final class Crosshair extends Flag {
-		final ChoiceSetting style = add(new ChoiceSetting("style", "Style", 0, "Cross", "Dot", "Plus gap", "Box", "Circle"));
+		final ChoiceSetting style = add(new ChoiceSetting("style", "Style", 0, "Cross", "Dot", "Plus gap", "Box", "Circle", "Pixel"));
+		public final com.kromvia.client.module.setting.TextSetting pixels = add(new com.kromvia.client.module.setting.TextSetting("pixels", "Pixels", CrosshairGrid.DEFAULT, CrosshairGrid.N * CrosshairGrid.N));
 		final ColorSetting color = add(new ColorSetting("color", "Colour", 0xFF8B5CF6));
 		final SliderSetting size = add(new SliderSetting("size", "Size", 5, 2, 12, 1, "px"));
 		final SliderSetting gap = add(new SliderSetting("gap", "Gap", 2, 0, 6, 1, "px"));
@@ -68,6 +69,7 @@ public final class Features {
 		Crosshair() {
 			super("crosshair", "Crosshair", Module.Category.PVP, false);
 			icon(Items.TARGET);
+			pixels.shown = false;
 		}
 
 		private void bar(Gfx g, int x1, int y1, int x2, int y2) {
@@ -75,7 +77,19 @@ public final class Features {
 			g.fill(x1, y1, x2, y2, color.argb());
 		}
 
+		public boolean pixel() {
+			return style.index() == 5;
+		}
+
+		public int argb() {
+			return color.argb();
+		}
+
 		public void draw(Gfx g, int cx, int cy) {
+			if (pixel()) {
+				CrosshairGrid.draw(g, pixels.get(), cx, cy, color.argb(), outline.on(), null);
+				return;
+			}
 			int s = Math.round(size.value()), gp = Math.round(gap.value()), t = Math.round(thickness.value());
 			int h = t / 2, h2 = t - h;
 			switch (style.index()) {

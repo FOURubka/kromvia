@@ -151,7 +151,7 @@ function Swatches({ value, onPick }: { value: number; onPick: (c: number) => voi
   );
 }
 
-function CapePainter({ art, onChange }: { art: string; onChange: (art: string) => void }) {
+export function CapePainter({ art, onChange }: { art: string; onChange: (art: string) => void }) {
   const { t } = useI18n();
   const canvas = useRef<HTMLCanvasElement>(null);
   const px = useRef<Uint8ClampedArray>(decodeArt(art) ?? decodeArt(artFrom("kromvia"))!);

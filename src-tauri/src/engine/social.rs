@@ -18,6 +18,11 @@ use tokio_tungstenite::tungstenite::{Error as WsError, Message};
 use crate::engine::core::{http, paths};
 
 const API: &str = "https://api.kromvia.com";
+const SITE: &str = "https://kromvia.com";
+
+pub fn page(code: &str) -> String {
+    format!("{SITE}/s/{code}")
+}
 
 pub fn base() -> String {
     std::env::var("KROMVIA_API").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| API.into())
@@ -135,6 +140,33 @@ pub async fn request_delete(other: &str) -> Result<Value, String> {
 
 pub async fn friend_remove(other: &str) -> Result<Value, String> {
     send(Method::DELETE, &format!("/v1/friends/{}", id(other)?), None).await
+}
+
+pub async fn clan_call(method: &str, path: &str, body: Option<Value>) -> Result<Value, String> {
+    let ok = path == "/v1/me/clan"
+        || path == "/v1/me/clan/messages"
+        || path.strip_prefix("/v1/me/clan/messages?before=").is_some_and(|n| !n.is_empty() && n.len() <= 16 && n.bytes().all(|b| b.is_ascii_digit()))
+        || path == "/v1/clans"
+        || path.strip_prefix("/v1/clans?q=").is_some_and(|q| q.len() <= 72 && q.bytes().all(|b| b.is_ascii_alphanumeric() || b"%_-.".contains(&b)))
+        || path.strip_prefix("/v1/clans/").is_some_and(|rest| {
+            let parts: Vec<&str> = rest.split('/').collect();
+            parts.len() <= 3 && parts.iter().all(|p| !p.is_empty() && p.len() <= 64 && p.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-'))
+        });
+    if !ok {
+        return Err("bad clan path".into());
+    }
+    let method = match method {
+        "GET" => Method::GET,
+        "POST" => Method::POST,
+        "PATCH" => Method::PATCH,
+        "DELETE" => Method::DELETE,
+        _ => return Err("bad method".into()),
+    };
+    send(method, path, body).await
+}
+
+pub async fn set_profile(profile: Value) -> Result<Value, String> {
+    send(Method::PUT, "/v1/me/profile", Some(json!({ "profile": profile }))).await
 }
 
 pub async fn set_cosmetics(cosmetics: Value) -> Result<Value, String> {
@@ -293,7 +325,13 @@ pub fn norm_host(raw: &str) -> String {
 }
 
 #[derive(Default)]
-pub struct Live(Mutex<Option<UnboundedSender<String>>>, Arc<Mutex<Option<String>>>);
+pub struct Live(Mutex<Option<UnboundedSender<String>>>, Arc<Mutex<Option<String>>>, std::sync::atomic::AtomicBool, Sticky);
+
+#[derive(Default, Clone)]
+pub struct Sticky {
+    status: Arc<Mutex<String>>,
+    game: Arc<Mutex<Option<String>>>,
+}
 
 impl Live {
     pub fn start(&self, emit: impl Fn(Value) + Send + Sync + 'static) {
@@ -303,15 +341,47 @@ impl Live {
         }
         let (tx, rx) = unbounded_channel();
         *slot = Some(tx);
-        tauri::async_runtime::spawn(run(rx, self.1.clone(), emit));
+        tauri::async_runtime::spawn(run(rx, self.1.clone(), self.3.clone(), emit));
     }
 
     pub fn set_playing(&self, at: Option<(&str, &str)>) {
-        let msg = json!({ "type": "server", "host": at.map(|a| a.0), "nick": at.map(|a| a.1) }).to_string();
+        let hide = self.2.load(std::sync::atomic::Ordering::Relaxed);
+        let msg = json!({ "type": "server", "host": at.map(|a| a.0), "nick": at.map(|a| a.1), "hide": hide }).to_string();
         *self.1.lock().unwrap_or_else(|e| e.into_inner()) = at.map(|_| msg.clone());
         let slot = self.0.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(tx) = slot.as_ref() {
             let _ = tx.send(msg);
+        }
+    }
+
+    pub fn set_status(&self, status: &str) -> Result<(), String> {
+        if !["online", "idle", "dnd", "invisible"].contains(&status) {
+            return Err("bad status".into());
+        }
+        *self.3.status.lock().unwrap_or_else(|e| e.into_inner()) = status.to_string();
+        let _ = self.send(json!({ "type": "status", "status": status }));
+        Ok(())
+    }
+
+    pub fn set_game(&self, game: Option<(&str, i64)>) {
+        let msg = json!({ "type": "game", "game": game.map(|(mc, since)| json!({ "mc": mc, "since": since })) }).to_string();
+        *self.3.game.lock().unwrap_or_else(|e| e.into_inner()) = game.map(|_| msg.clone());
+        let slot = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(tx) = slot.as_ref() {
+            let _ = tx.send(msg);
+        }
+    }
+
+    pub fn set_hidden(&self, hide: bool) {
+        if self.2.swap(hide, std::sync::atomic::Ordering::Relaxed) == hide {
+            return;
+        }
+        let Some(msg) = self.1.lock().unwrap_or_else(|e| e.into_inner()).as_deref().and_then(|m| serde_json::from_str::<Value>(m).ok()) else {
+            return;
+        };
+        let (host, nick) = (msg["host"].as_str().map(str::to_string), msg["nick"].as_str().map(str::to_string));
+        if let (Some(host), Some(nick)) = (host, nick) {
+            self.set_playing(Some((&host, &nick)));
         }
     }
 
@@ -333,10 +403,10 @@ enum Ended {
 
 type Playing = Arc<Mutex<Option<String>>>;
 
-async fn run(mut outbox: UnboundedReceiver<String>, playing: Playing, emit: impl Fn(Value)) {
+async fn run(mut outbox: UnboundedReceiver<String>, playing: Playing, sticky: Sticky, emit: impl Fn(Value)) {
     let mut backoff = 1;
     loop {
-        match session(&mut outbox, &playing, &emit, &mut backoff).await {
+        match session(&mut outbox, &playing, &sticky, &emit, &mut backoff).await {
             Ended::NoAccount => return emit(json!({ "type": "stopped" })),
             Ended::Lost => emit(json!({ "type": "disconnected" })),
         }
@@ -347,13 +417,17 @@ async fn run(mut outbox: UnboundedReceiver<String>, playing: Playing, emit: impl
 
 const RESEND_PLAYING: u32 = 10;
 
-async fn session(outbox: &mut UnboundedReceiver<String>, playing: &Playing, emit: &impl Fn(Value), backoff: &mut u64) -> Ended {
+async fn session(outbox: &mut UnboundedReceiver<String>, playing: &Playing, sticky: &Sticky, emit: &impl Fn(Value), backoff: &mut u64) -> Ended {
     let Ok(mut req) = format!("{}/v1/ws", base().replacen("http", "ws", 1)).into_client_request() else { return Ended::NoAccount };
     let Ok(headers) = signed("GET", "/v1/ws", b"") else { return Ended::Lost };
     for (name, value) in headers {
         if let Ok(v) = value.parse() {
             req.headers_mut().insert(name, v);
         }
+    }
+    let status = sticky.status.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    if let Ok(v) = (if status.is_empty() { "online" } else { status.as_str() }).parse() {
+        req.headers_mut().insert("x-kromvia-status", v);
     }
     let mut ws = match connect_async(req).await {
         Ok((ws, _)) => ws,
@@ -390,6 +464,14 @@ async fn session(outbox: &mut UnboundedReceiver<String>, playing: &Playing, emit
                 if pings.is_multiple_of(RESEND_PLAYING) {
                     let msg = playing.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     if let Some(msg) = msg {
+                        if ws.send(Message::Text(msg.into())).await.is_err() {
+                            return Ended::Lost;
+                        }
+                    }
+                }
+                if pings == 0 {
+                    let game = sticky.game.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                    if let Some(msg) = game {
                         if ws.send(Message::Text(msg.into())).await.is_err() {
                             return Ended::Lost;
                         }

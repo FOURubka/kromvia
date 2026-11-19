@@ -7,6 +7,12 @@ import { useLauncher } from "../lib/launcher";
 import { headOf } from "./Head";
 import { outfitWorn, pushOutfit, savedOutfit, storeOutfit } from "../lib/outfit";
 import { pushNote } from "../lib/notes";
+import type { Game, Presence } from "../profile/card";
+
+export type MyStatus = Exclude<Presence, "offline">;
+export type ClanMessage = { id: number; from: string; name: string; text: string; time: number };
+export type ClanMember = { id: string; name: string; verified: boolean; role: string; online: boolean; status: Presence; server: string | null; game: Game | null };
+const STATUS_KEY = "kromvia.status";
 
 export type ChatMessage = { id: number; from: string; to: string; text: string; time: number };
 type Player = { id: string; name: string; verified: boolean };
@@ -16,15 +22,24 @@ export type FriendRoom = { room: string; mc: string };
 
 type HubEvent =
   | { type: "connected" | "disconnected" | "stopped" }
-  | { type: "presence"; online: string[]; rooms?: Record<string, FriendRoom> }
+  | { type: "presence"; online: string[]; rooms?: Record<string, FriendRoom>; servers?: Record<string, string>; statuses?: Record<string, Presence>; games?: Record<string, Game> }
+  | { type: "status"; id: string; status: Presence }
+  | ({ type: "clan.chat" } & ClanMessage)
+  | { type: "clan.presence"; clan: string | null; members: ClanMember[] }
+  | { type: "game"; id: string; game: Game | null }
+  | { type: "server"; id: string; host: string | null }
   | { type: "room"; id: string; room: FriendRoom | null }
-  | { type: "online" | "offline"; id: string }
+  | { type: "online"; id: string; status?: Presence; quiet?: boolean }
+  | { type: "offline"; id: string }
   | ({ type: "chat" } & ChatMessage)
   | { type: "error"; error: string }
   | { type: "party" }
   | { type: "party.invite"; party: string; from: Player };
 
 type GameAsk = { do?: string; id?: string; to?: string; text?: string; party?: string; url?: string };
+
+const LOCAL_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|[^.]*$)/;
+const joinable = (servers: Record<string, string>) => Object.fromEntries(Object.entries(servers).filter(([, h]) => !LOCAL_HOST.test(h)));
 
 const SHOT = /^https:\/\/api\.kromvia\.com\/share\/[A-Za-z0-9]{4,16}$/;
 
@@ -34,6 +49,63 @@ function useSocialState() {
   const [connected, setConnected] = useState(false);
   const [online, setOnline] = useState<Set<string>>(new Set());
   const [rooms, setRooms] = useState<Record<string, FriendRoom>>({});
+  const [servers, setServers] = useState<Record<string, string>>({});
+  const [statuses, setStatuses] = useState<Record<string, Presence>>({});
+  const [games, setGames] = useState<Record<string, Game>>({});
+  const [myClan, setMyClan] = useState<{ id: string; tag: string } | null>(null);
+  const [clanChat, setClanChat] = useState<ClanMessage[]>([]);
+  const [clanMembers, setClanMembers] = useState<ClanMember[]>([]);
+  const [clanUnread, setClanUnread] = useState(0);
+  const clanOpen = useRef(false);
+  const addClan = (msgs: ClanMessage[]) =>
+    setClanChat((c) => {
+      const known = new Set(c.map((m) => m.id));
+      return [...c, ...msgs.filter((m) => !known.has(m.id))].sort((a, b) => a.id - b.id).slice(-200);
+    });
+  const [myStatus, setMyStatusState] = useState<MyStatus>(() => {
+    try {
+      const v = localStorage.getItem(STATUS_KEY);
+      return v === "idle" || v === "dnd" || v === "invisible" ? v : "online";
+    } catch {
+      return "online";
+    }
+  });
+  const dnd = useRef(myStatus === "dnd");
+  dnd.current = myStatus === "dnd";
+  const setMyStatus = (v: MyStatus) => {
+    setMyStatusState(v);
+    try {
+      localStorage.setItem(STATUS_KEY, v);
+    } catch {}
+  };
+  useEffect(() => {
+    invoke("social_status", { status: myStatus }).catch(() => {});
+  }, [myStatus]);
+  useEffect(() => {
+    setClanChat([]);
+    setClanMembers([]);
+    if (!myClan) return;
+    invoke<ClanMessage[]>("social_clan", { method: "GET", path: "/v1/me/clan/messages", body: null }).then(addClan, () => {});
+    invoke("social_clan_presence").catch(() => {});
+    const id = setInterval(() => invoke("social_clan_presence").catch(() => {}), 30_000);
+    return () => clearInterval(id);
+  }, [myClan?.id]);
+  const [hideServer, setHideServerState] = useState(() => {
+    try {
+      return localStorage.getItem("kromvia.hideServer") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setHideServer = (hide: boolean) => {
+    setHideServerState(hide);
+    try {
+      localStorage.setItem("kromvia.hideServer", hide ? "1" : "0");
+    } catch {}
+  };
+  useEffect(() => {
+    invoke("social_hide_server", { hide: hideServer }).catch(() => {});
+  }, [hideServer]);
   const [chats, setChats] = useState<Record<string, ChatMessage[]>>({});
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
@@ -77,22 +149,48 @@ function useSocialState() {
 
   useEffect(() => {
     const off = listen<HubEvent>("social", ({ payload: e }) => {
-      if (e.type === "connected") setConnected(true);
+      if (e.type === "connected") {
+        setConnected(true);
+        invoke("social_clan_presence").catch(() => {});
+      }
       else if (e.type === "disconnected" || e.type === "stopped") {
         setConnected(false);
         setOnline(new Set());
         setRooms({});
+        setServers({});
+        setStatuses({});
+        setGames({});
       } else if (e.type === "presence") {
         setOnline(new Set(e.online));
         setRooms(e.rooms ?? {});
-      } else if (e.type === "room")
+        setServers(joinable(e.servers ?? {}));
+        setStatuses(e.statuses ?? {});
+        setGames(e.games ?? {});
+      } else if (e.type === "status") setStatuses((m) => ({ ...m, [e.id]: e.status }));
+      else if (e.type === "clan.presence") setClanMembers(e.members);
+      else if (e.type === "clan.chat") {
+        addClan([e]);
+        if (e.from !== me.current) {
+          if (!clanOpen.current) setClanUnread((n) => n + 1);
+          if (!dnd.current) invoke("game_toast", { title: "Kromvia", text: `[${t("clan.title")}] ${e.name}: ${e.text}`, action: null }).catch(() => {});
+        }
+      }
+      else if (e.type === "game")
+        setGames(({ [e.id]: _, ...rest }) => (e.game ? { ...rest, [e.id]: e.game } : rest));
+      else if (e.type === "server")
+        setServers(({ [e.id]: _, ...rest }) => (e.host ? { ...rest, ...joinable({ [e.id]: e.host }) } : rest));
+      else if (e.type === "room")
         setRooms(({ [e.id]: _, ...rest }) => (e.room ? { ...rest, [e.id]: e.room } : rest));
       else if (e.type === "online") {
         setOnline((s) => new Set(s).add(e.id));
-        toast(e.id, (name) => t("friends.toastOnline", { name }), { chat: e.id });
+        setStatuses(({ [e.id]: _, ...rest }) => (e.status && e.status !== "online" ? { ...rest, [e.id]: e.status } : rest));
+        if (!e.quiet && !dnd.current) toast(e.id, (name) => t("friends.toastOnline", { name }), { chat: e.id });
       }
       else if (e.type === "offline") {
         setRooms(({ [e.id]: _, ...rest }) => rest);
+        setServers(({ [e.id]: _, ...rest }) => rest);
+        setStatuses(({ [e.id]: _, ...rest }) => rest);
+        setGames(({ [e.id]: _, ...rest }) => rest);
         setOnline((s) => {
           const n = new Set(s);
           n.delete(e.id);
@@ -105,9 +203,9 @@ function useSocialState() {
         if (e.from !== me.current && open.current !== other && gameChat.current !== other) {
           setUnread((u) => ({ ...u, [other]: (u[other] ?? 0) + 1 }));
           const name = names.current[other];
-          if (name) pushNote({ id: `chat:${other}`, kind: "message", text: `${name}: ${e.text}`, page: "friends" });
+          if (name && !dnd.current) pushNote({ id: `chat:${other}`, kind: "message", text: `${name}: ${e.text}`, page: "friends" });
         }
-        if (e.from !== me.current) toast(e.from, (name) => `${name}: ${e.text}`, { chat: e.from });
+        if (e.from !== me.current && !dnd.current) toast(e.from, (name) => `${name}: ${e.text}`, { chat: e.from });
       } else if (e.type === "party") loadParty();
       else if (e.type === "party.invite") {
         loadParty();
@@ -135,13 +233,14 @@ function useSocialState() {
         pushOutfit(next).catch(() => {});
       }
     };
-    invoke<{ id: string; dev?: boolean } | null>("social_me").then((m) => {
+    invoke<{ id: string; dev?: boolean; clan?: { id: string; tag: string } | null } | null>("social_me").then((m) => {
       if (!m) return;
+      setMyClan(m.clan ?? null);
       connect(m.id);
       syncDev(m);
       invoke("social_cosmetics", { worn: outfitWorn(savedOutfit()) }).catch(() => {});
     }, () => {});
-    const onFocus = () => invoke<{ dev?: boolean } | null>("social_me").then((m) => m && syncDev(m), () => {});
+    const onFocus = () => invoke<{ dev?: boolean; clan?: { id: string; tag: string } | null } | null>("social_me").then((m) => m && (syncDev(m), setMyClan(m.clan ?? null)), () => {});
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
@@ -152,6 +251,16 @@ function useSocialState() {
     setUnread((u) => ({ ...u, [id]: 0 }));
     invoke<ChatMessage[]>("social_messages", { id }).then((m) => add(id, m), (e) => setError(String(e)));
   };
+  const sendClan = (text: string) => {
+    setError(null);
+    return invoke("social_clan_chat", { text }).catch((e) => setError(String(e)));
+  };
+  const openClan = (open: boolean) => {
+    clanOpen.current = open;
+    if (open) setClanUnread(0);
+  };
+  const reloadClan = () =>
+    invoke<{ clan?: { id: string; tag: string } | null } | null>("social_me").then((m) => setMyClan(m?.clan ?? null), () => {});
   const send = (to: string, text: string) => {
     setError(null);
     return invoke("social_chat", { to, text }).catch((e) => setError(String(e)));
@@ -168,6 +277,11 @@ function useSocialState() {
     setRoom: (room: string | null) => partyAct(invoke("social_party_room", { room })),
   };
   const l = useLauncher();
+  const playingInst = l.running.length ? l.instances.find((i) => i.id === l.running[0].instanceId) : undefined;
+  const playingMc = playingInst?.mcVersion ?? null;
+  useEffect(() => {
+    invoke("social_game", playingMc ? { mc: playingMc, since: Date.now() } : { mc: null, since: null }).catch(() => {});
+  }, [playingMc]);
   const hostedRoom = (l.hosting && l.rooms[l.hosting]) || null;
   const leads = !!party && party.leader === myId;
   const hostedMc = (l.hosting && l.instances.find((i) => i.id === l.hosting)?.mcVersion) || null;
@@ -191,6 +305,11 @@ function useSocialState() {
           invoke<ChatMessage[]>("social_messages", { id }).then((m) => add(id, m), () => {});
         }
       } else if (a.do === "send" && a.to && a.text?.trim()) send(a.to, a.text.trim().slice(0, 500));
+      else if (a.do === "clanSend" && a.text?.trim()) sendClan(a.text.trim().slice(0, 500));
+      else if (a.do === "clanOpen") {
+        setClanUnread(0);
+        invoke("social_clan_presence").catch(() => {});
+      }
       else if (a.do === "invite" && a.id) partyActions.invite(a.id);
       else if (a.do === "join" && a.party) partyActions.join(a.party);
       else if (a.do === "decline" && a.party) partyActions.decline(a.party);
@@ -208,15 +327,23 @@ function useSocialState() {
     const chatWith = gameChat.current;
     const state = {
       me: myId,
+      clan: myClan
+        ? {
+            ...myClan,
+            unread: clanUnread,
+            members: clanMembers.map((m) => ({ id: m.id, name: m.name, online: m.online, server: m.server && !LOCAL_HOST.test(m.server) ? m.server : null, me: m.id === myId })),
+            chat: clanChat.slice(-50).map((m) => ({ from: m.name, text: m.text, time: m.time })),
+          }
+        : null,
       connected,
       error,
-      friends: gameFriends.map((f) => ({ ...f, online: online.has(f.id), unread: unread[f.id] ?? 0, head: heads[f.id] ?? null, room: rooms[f.id]?.room ?? null })),
+      friends: gameFriends.map((f) => ({ ...f, online: online.has(f.id), unread: unread[f.id] ?? 0, head: heads[f.id] ?? null, room: rooms[f.id]?.room ?? null, server: servers[f.id] ?? null })),
       party,
       invites,
       chat: chatWith ? { with: chatWith, messages: (chats[chatWith] ?? []).slice(-50).map((m) => ({ from: m.from, text: m.text, time: m.time })) } : null,
     };
     invoke("game_social", { state }).catch(() => {});
-  }, [gameTick, myId, connected, error, gameFriends, online, unread, party, invites, chats, heads, rooms]);
+  }, [gameTick, myId, myClan, clanChat, clanMembers, clanUnread, connected, error, gameFriends, online, unread, party, invites, chats, heads, rooms, servers]);
   const totalUnread = Object.values(unread).reduce((a, b) => a + b, 0);
   const join = (id: string) => {
     const r = rooms[id];
@@ -225,8 +352,15 @@ function useSocialState() {
     if (!l.joinRoom(r.room, r.mc, id)) setError(t("friends.noBuildFor", { mc: r.mc }));
   };
   joinFriend.current = join;
+  const joinServer = (id: string) => {
+    const host = servers[id];
+    if (!host) return;
+    setError(null);
+    if (!l.current) return setError(t("friends.noInstance"));
+    l.play(l.current, { join: host });
+  };
 
-  return { party, invites, partyActions, myId, connected, online, rooms, join, chats, unread, totalUnread, error, connect, openChat, send, refreshPresence: () => invoke("social_presence").catch(() => {}) };
+  return { party, invites, partyActions, myId, connected, online, rooms, join, servers, joinServer, hideServer, setHideServer, statuses, games, myStatus, setMyStatus, myClan, reloadClan, clanChat, clanMembers, clanUnread, sendClan, openClan, chats, unread, totalUnread, error, connect, openChat, send, refreshPresence: () => invoke("social_presence").catch(() => {}) };
 }
 
 type Social = ReturnType<typeof useSocialState>;

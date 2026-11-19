@@ -252,6 +252,12 @@
   "text": "Shows your frames per second."
  },
  {
+  "id": "frame-report",
+  "name": "Frame Report",
+  "cat": "Utility & visuals",
+  "text": "Tells the launcher your FPS and 1% lows, so it can warn you when a mod update makes the game slower."
+ },
+ {
   "id": "free-slots",
   "name": "Free Slots",
   "cat": "HUD",
@@ -274,6 +280,12 @@
   "name": "Gamma per Dimension",
   "cat": "Utility & visuals",
   "text": "A brightness level for each dimension."
+ },
+ {
+  "id": "ghosts",
+  "name": "Ghost Race",
+  "cat": "Utility & visuals",
+  "text": "Press K to start a run after a 3 second count, K again to stop. Start at the same spot to race your best run as a ghost, or load a friend's ghost by code from Ghosts in the pause menu."
  },
  {
   "id": "glint",
@@ -388,6 +400,12 @@
   "name": "Keystrokes",
   "cat": "PvP",
   "text": "Shows WASD, jump and mouse buttons as you press them."
+ },
+ {
+  "id": "kromvia-font",
+  "name": "Kromvia Font",
+  "cat": "Utility & visuals",
+  "text": "Draws all text with the Kromvia font. Switch it off for the normal Minecraft font."
  },
  {
   "id": "kromvia-players",
@@ -508,6 +526,12 @@
   "name": "Particles",
   "cat": "Utility & visuals",
   "text": "Fewer particles, and hides block breaking or explosions if you want."
+ },
+ {
+  "id": "party-pings",
+  "name": "Party Pings",
+  "cat": "Utility & visuals",
+  "text": "Press Z to mark the block you look at. Your party sees the mark on any server, except PvP servers where it is off."
  },
  {
   "id": "ping",
