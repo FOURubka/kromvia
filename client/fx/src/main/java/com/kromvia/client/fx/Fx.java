@@ -308,6 +308,8 @@ public final class Fx {
 		private static final int LIFE = 20;
 		final ColorSetting color = add(new ColorSetting("color", "Colour", VIOLET));
 		final SliderSetting radius = add(new SliderSetting("radius", "Size", 1.2F, 0.5F, 3, 0.1F, "m"));
+		final BoolSetting landing = add(new BoolSetting("landing", "Also when landing", true));
+		final BoolSetting rainbow = add(new BoolSetting("rainbow", "Rainbow", false));
 
 		private record Circle(Vec3 pos, int born) {}
 
@@ -327,6 +329,7 @@ public final class Fx {
 			if (mc.player == null) return;
 			boolean onGround = mc.player.onGround();
 			if (wasOnGround && !onGround && mc.player.getDeltaMovement().y > 0) circles.add(new Circle(mc.player.position(), age));
+			if (!wasOnGround && onGround && landing.on() && !mc.player.isInWater()) circles.add(new Circle(mc.player.position(), age));
 			wasOnGround = onGround;
 		}
 
@@ -341,7 +344,8 @@ public final class Fx {
 				float t = Mth.clamp((age - c.born + partial) / LIFE, 0, 1);
 				float r = radius.value() * (1 - (1 - t) * (1 - t) * (1 - t));
 				Vec3 at = c.pos.subtract(cam);
-				int col = Draw.alpha(color.argb(), 1 - t);
+				int base = rainbow.on() ? rainbow((age + partial) / 40F + c.born / 13F) : color.argb();
+				int col = Draw.alpha(base, 1 - t);
 				Draw.ring(b, p, at.x, at.y + 0.02, at.z, r * 0.75F, r, Draw.alpha(col, 0), col, 48);
 			}
 		}
@@ -384,7 +388,9 @@ public final class Fx {
 	}
 
 	public static final class TargetMarker extends WorldFx {
+		final ChoiceSetting style = add(new ChoiceSetting("style", "Style", 0, "Wave", "Spinning ring", "Souls"));
 		final ColorSetting color = add(new ColorSetting("color", "Colour", VIOLET));
+		final BoolSetting rainbow = add(new BoolSetting("rainbow", "Rainbow", false));
 
 		TargetMarker() {
 			super("target_marker", "Target Marker", Category.PVP);
@@ -397,11 +403,54 @@ public final class Fx {
 			if (e == null || e == mc.player) return;
 			Vec3 at = e.getPosition(partial).subtract(cam);
 			float time = e.tickCount + partial;
-			float h = e.getBbHeight(), y = h * (0.5F + 0.42F * Mth.sin(time * 0.1F));
+			float h = e.getBbHeight();
 			float r = e.getBbWidth() * 0.75F + 0.15F;
-			int c = color.argb();
-			Draw.band(b, p, at.x, at.y + y, at.z, r, 0.35F, Draw.alpha(c, 0.6F), Draw.alpha(c, 0), 40);
-			Draw.ring(b, p, at.x, at.y + y, at.z, r - 0.03F, r + 0.03F, Draw.alpha(c, 0.9F), Draw.alpha(c, 0.9F), 40);
+			int c = rainbow.on() ? rainbow(time / 60F) : color.argb();
+			switch (style.index()) {
+				case 1 -> spinningRing(b, p, at, r, time, c);
+				case 2 -> souls(b, p, at, r, h, time, c);
+				default -> {
+					float y = h * (0.5F + 0.42F * Mth.sin(time * 0.1F));
+					Draw.band(b, p, at.x, at.y + y, at.z, r, 0.35F, Draw.alpha(c, 0.6F), Draw.alpha(c, 0), 40);
+					Draw.ring(b, p, at.x, at.y + y, at.z, r - 0.03F, r + 0.03F, Draw.alpha(c, 0.9F), Draw.alpha(c, 0.9F), 40);
+				}
+			}
+		}
+
+		private static void spinningRing(VertexConsumer b, PoseStack.Pose p, Vec3 at, float r, float time, int c) {
+			int segments = 48;
+			float spin = time * 0.08F, r0 = r + 0.05F, r1 = r + 0.2F;
+			double y = at.y + 0.03;
+			for (int i = 0; i < segments; i++) {
+				if (i % 8 >= 5) continue;
+				float a0 = spin + Mth.TWO_PI * i / segments, a1 = spin + Mth.TWO_PI * (i + 1) / segments;
+				int col = Draw.alpha(c, 0.85F);
+				Draw.vertex(b, p, at.x + Mth.cos(a0) * r0, y, at.z + Mth.sin(a0) * r0, col);
+				Draw.vertex(b, p, at.x + Mth.cos(a0) * r1, y, at.z + Mth.sin(a0) * r1, Draw.alpha(c, 0.2F));
+				Draw.vertex(b, p, at.x + Mth.cos(a1) * r1, y, at.z + Mth.sin(a1) * r1, Draw.alpha(c, 0.2F));
+				Draw.vertex(b, p, at.x + Mth.cos(a1) * r0, y, at.z + Mth.sin(a1) * r0, col);
+			}
+		}
+
+		private static void souls(VertexConsumer b, PoseStack.Pose p, Vec3 at, float r, float h, float time, int c) {
+			for (int soul = 0; soul < 3; soul++) {
+				for (int k = 0; k < 8; k++) {
+					float t = time - k * 1.2F;
+					float a = t * 0.12F + soul * Mth.TWO_PI / 3;
+					float y = h * (0.5F + 0.4F * Mth.sin(t * 0.07F + soul * 2.1F));
+					float size = 0.09F * (1 - k / 8F);
+					int col = Draw.alpha(c, 0.9F * (1 - k / 8F));
+					double x = at.x + Mth.cos(a) * r, z = at.z + Mth.sin(a) * r, cy = at.y + y;
+					Draw.vertex(b, p, x - size, cy - size, z, col);
+					Draw.vertex(b, p, x - size, cy + size, z, col);
+					Draw.vertex(b, p, x + size, cy + size, z, col);
+					Draw.vertex(b, p, x + size, cy - size, z, col);
+					Draw.vertex(b, p, x, cy - size, z - size, col);
+					Draw.vertex(b, p, x, cy + size, z - size, col);
+					Draw.vertex(b, p, x, cy + size, z + size, col);
+					Draw.vertex(b, p, x, cy - size, z + size, col);
+				}
+			}
 		}
 	}
 
@@ -501,16 +550,131 @@ public final class Fx {
 
 	public static final Hitboxes HITBOXES = new Hitboxes();
 
-	private static final List<WorldFx> WORLD = List.of(TRAILS, JUMP_CIRCLES, CHINA_HAT, TARGET_MARKER, HIT_BUBBLES, HITBOXES);
+	public static final Module ITEM_PHYSICS = new Flag("item_physics", "Item Physics", Module.Category.UTILITY) {
+		{
+			icon(Items.DIAMOND);
+			shown = false;
+		}
+	};
+
+	public static final class SmoothHotbar extends Flag {
+		final SliderSetting speed = add(new SliderSetting("speed", "Speed", 18, 6, 40, 2, ""));
+		private float x = Float.NaN;
+		private long last;
+
+		SmoothHotbar() {
+			super("smooth_hotbar", "Smooth Hotbar", Category.UTILITY);
+			icon(Items.CHEST);
+			shown = false;
+		}
+
+		public int x(int target) {
+			long now = System.nanoTime();
+			float dt = Math.min(0.1F, (now - last) / 1e9F);
+			last = now;
+			if (!enabled || Float.isNaN(x) || Math.abs(target - x) > 200) x = target;
+			else x += (target - x) * (1 - (float) Math.exp(-dt * speed.value()));
+			return Math.round(x);
+		}
+	}
+
+	public static final SmoothHotbar SMOOTH_HOTBAR = new SmoothHotbar();
+
+	public static final class TotemPop extends WorldFx {
+		private static final int LIFE = 24;
+		final ColorSetting color = add(new ColorSetting("color", "Colour", 0xFFFFC83D));
+		final BoolSetting rainbow = add(new BoolSetting("rainbow", "Rainbow", false));
+		public final SliderSetting size = add(new SliderSetting("size", "Screen animation size", 1, 0, 1.5F, 0.1F, "x"));
+
+		private record Burst(Vec3 pos, float width, float height, int born) {}
+
+		private final List<Burst> bursts = new ArrayList<>();
+		private int age;
+
+		TotemPop() {
+			super("totem_pop", "Totem Pop Effect", Category.PVP);
+			icon(Items.TOTEM_OF_UNDYING);
+			size.shown = false;
+		}
+
+		void pop(Entity e) {
+			if (enabled) bursts.add(new Burst(e.position(), e.getBbWidth(), e.getBbHeight(), age));
+		}
+
+		@Override
+		public void tick(Minecraft mc) {
+			age++;
+			bursts.removeIf(b -> age - b.born > LIFE);
+		}
+
+		@Override
+		public void disable(Minecraft mc) {
+			bursts.clear();
+		}
+
+		@Override
+		void draw(Minecraft mc, VertexConsumer b, PoseStack.Pose p, Vec3 cam, float partial) {
+			for (Burst bu : bursts) {
+				float t = Mth.clamp((age - bu.born + partial) / LIFE, 0, 1);
+				float ease = 1 - (1 - t) * (1 - t) * (1 - t);
+				int c = rainbow.on() ? rainbow(t + bu.born / 17F) : color.argb();
+				Vec3 at = bu.pos.subtract(cam);
+				float r = bu.width * 0.6F + ease * 1.6F;
+				Draw.ring(b, p, at.x, at.y + 0.03, at.z, r * 0.8F, r, Draw.alpha(c, 0), Draw.alpha(c, 1 - t), 48);
+				Draw.band(b, p, at.x, at.y, at.z, bu.width * 0.6F + ease * 0.5F, bu.height * (0.6F + ease), Draw.alpha(c, 0.7F * (1 - t)), Draw.alpha(c, 0), 32);
+				Draw.ring(b, p, at.x, at.y + bu.height * (0.2F + ease), at.z, r * 0.45F, r * 0.55F, Draw.alpha(c, 0.9F * (1 - t)), Draw.alpha(c, 0), 40);
+			}
+		}
+	}
+
+	public static final TotemPop TOTEM_POP = new TotemPop();
+
+	public static final class CustomSky extends Flag {
+		final ChoiceSetting style = add(new ChoiceSetting("style", "Style", 0, "Starry night", "Sunset", "Custom colour"));
+		final ColorSetting color = add(new ColorSetting("color", "Colour (custom)", 0xFF1B2A6B));
+		final SliderSetting stars = add(new SliderSetting("stars", "Stars", 100, 0, 100, 10, "%"));
+
+		CustomSky() {
+			super("custom_sky", "Custom Sky", Category.UTILITY);
+			icon(Items.ENDER_EYE);
+			shown = false;
+		}
+
+		public void sky(Vector3f rgb) {
+			switch (style.index()) {
+				case 0 -> rgb.set(0.02F, 0.03F, 0.09F);
+				case 1 -> rgb.set(0.95F, 0.45F, 0.28F);
+				default -> {
+					int c = color.argb();
+					rgb.set((c >> 16 & 0xFF) / 255F, (c >> 8 & 0xFF) / 255F, (c & 0xFF) / 255F);
+				}
+			}
+		}
+
+		public float stars(float vanilla) {
+			return Math.max(vanilla, stars.value() / 100);
+		}
+
+		public void fog(Vector4f rgba) {
+			Vector3f sky = new Vector3f();
+			sky(sky);
+			rgba.set(Mth.lerp(0.5F, rgba.x, sky.x), Mth.lerp(0.5F, rgba.y, sky.y), Mth.lerp(0.5F, rgba.z, sky.z), rgba.w);
+		}
+	}
+
+	public static final CustomSky CUSTOM_SKY = new CustomSky();
+
+	private static final List<WorldFx> WORLD = List.of(TRAILS, JUMP_CIRCLES, CHINA_HAT, TARGET_MARKER, HIT_BUBBLES, HITBOXES, TOTEM_POP);
 
 	public static final Players PLAYERS = new Players();
 
 	static {
 		Toasts.listen();
+		com.kromvia.client.module.Extras.totemListener = TOTEM_POP::pop;
 	}
 
 	public static List<Module> modules() {
-		List<Module> all = new ArrayList<>(List.of(AMBIENCE, OLD_ANIMATIONS, HAND, TRAILS, JUMP_CIRCLES, CHINA_HAT, TARGET_MARKER, HIT_BUBBLES, HITBOXES));
+		List<Module> all = new ArrayList<>(List.of(AMBIENCE, CUSTOM_SKY, OLD_ANIMATIONS, HAND, TRAILS, JUMP_CIRCLES, CHINA_HAT, TARGET_MARKER, HIT_BUBBLES, HITBOXES, TOTEM_POP, ITEM_PHYSICS, SMOOTH_HOTBAR));
 		if (BlurBackend.SUPPORTED) all.add(0, MOTION_BLUR);
 		if (BlurBackend.SUPPORTED) all.add(1, SATURATION);
 		if (BlurBackend.SUPPORTED) all.add(2, COLOUR_FILTER);

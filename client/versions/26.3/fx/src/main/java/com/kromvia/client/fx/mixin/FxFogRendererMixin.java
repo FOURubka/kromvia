@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class FxFogRendererMixin {
 	@Inject(method = "computeFogColor", at = @At("TAIL"))
 	private void kromvia$ambience(Camera camera, float partial, ClientLevel level, int renderDistance, float darken, Vector4f dest, CallbackInfo ci) {
-		if (Fx.AMBIENCE.enabled) Fx.AMBIENCE.fog(dest);
+		if (Fx.CUSTOM_SKY.enabled) Fx.CUSTOM_SKY.fog(dest);
+		else if (Fx.AMBIENCE.enabled) Fx.AMBIENCE.fog(dest);
 	}
 }

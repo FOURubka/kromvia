@@ -123,9 +123,29 @@ public final class Media extends Module {
 	}
 
 	@Override
-	public boolean click(Minecraft mc) {
+	public boolean click(Minecraft mc, double x, double y) {
+		Track t = track;
+		if (t != null && cover.on() && x >= 3 && x < 3 + ART && y >= 3 && y < 3 + ART) {
+			local(t.with(!t.playing, t.now(), t.shuffle, t.repeat));
+			send("play_pause", null);
+			return true;
+		}
+		if (t != null && bar.on() && t.length > 0 && y >= H - 11) {
+			int bx = barX(mc, t);
+			if (x >= bx) {
+				long to = (long) (Math.min(1, (x - bx) / (W - 3 - bx)) * t.length);
+				local(t.with(t.playing, to, t.shuffle, t.repeat));
+				send("seek", to);
+				return true;
+			}
+		}
 		Mc.setScreen(new MusicScreen());
 		return true;
+	}
+
+	private int barX(Minecraft mc, Track t) {
+		int tx = 3 + (cover.on() ? ART + 4 : 0);
+		return tx + mc.font.width(time(t.now())) + 3;
 	}
 
 	@Override
@@ -165,6 +185,10 @@ public final class Media extends Module {
 			Identifier id = art.get(mc, t.art, px);
 			if (id != null) g.blit(id, x + 3, y + 3, 0, 0, ART, ART, px, px, px, px);
 			else g.fill(x + 3, y + 3, x + 3 + ART, y + 3 + ART, 0xFF1F1F23);
+			if (Mc.screen() instanceof net.minecraft.client.gui.screens.ChatScreen) {
+				g.fill(x + 3, y + 3, x + 3 + ART, y + 3 + ART, 0x70000000);
+				com.kromvia.client.ui.Icons.draw(g, t.playing ? "pause" : "play", x + 3 + ART / 2 - 8, y + 3 + ART / 2 - 8, 16, 0xFFFFFFFF);
+			}
 			tx += ART + 4;
 		}
 		int tw = x + W - 3 - tx;

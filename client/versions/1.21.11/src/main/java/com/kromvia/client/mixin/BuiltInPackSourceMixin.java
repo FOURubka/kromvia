@@ -39,7 +39,7 @@ public abstract class BuiltInPackSourceMixin {
 		if (root == null) return;
 		PackLocationInfo info = new PackLocationInfo("kromvia", Component.literal("Kromvia"), PackSource.BUILT_IN, Optional.empty());
 		Pack.Metadata meta = new Pack.Metadata(Component.literal("Kromvia client"), PackCompatibility.COMPATIBLE, FeatureFlagSet.of(), List.of());
-		out.accept(new Pack(info, new net.minecraft.server.packs.PathPackResources.PathResourcesSupplier(root), meta, new PackSelectionConfig(true, Pack.Position.TOP, false)));
+		out.accept(new Pack(info, new net.minecraft.server.packs.PathPackResources.PathResourcesSupplier(root), meta, new PackSelectionConfig(true, Pack.Position.BOTTOM, false)));
 	}
 
 	private static Path kromvia$root() {

@@ -5,6 +5,7 @@ import com.google.gson.JsonPrimitive;
 
 public final class ChoiceSetting extends Setting<Integer> {
 	public final String[] options;
+	public Runnable changed;
 
 	public ChoiceSetting(String id, String name, int value, String... options) {
 		super(id, name, value);
@@ -21,6 +22,7 @@ public final class ChoiceSetting extends Setting<Integer> {
 
 	public void next() {
 		value = (value + 1) % options.length;
+		if (changed != null) changed.run();
 	}
 
 	@Override

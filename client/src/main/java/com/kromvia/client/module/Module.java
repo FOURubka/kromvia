@@ -74,7 +74,7 @@ public abstract class Module {
 		return true;
 	}
 
-	public boolean click(Minecraft mc) {
+	public boolean click(Minecraft mc, double x, double y) {
 		return false;
 	}
 

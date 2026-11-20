@@ -156,12 +156,6 @@
   text-align: center;
 }
 
-.profile-avatar.small-avatar {
-  width: 32px;
-  height: 32px;
-  font-size: 15px;
-}
-
 .badge-medal[data-locked] {
   filter: grayscale(1);
   opacity: 0.4;
@@ -585,4 +579,10 @@
   .clan-columns {
     grid-template-columns: 1fr;
   }
+}
+
+.profile-top-open {
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-3);
 }

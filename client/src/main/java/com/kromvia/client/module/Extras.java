@@ -185,21 +185,62 @@ public final class Extras {
 	};
 
 	public static final class HitSound extends Flag {
-		final ChoiceSetting sound = add(new ChoiceSetting("sound", "Sound", 0, "Ding", "Pling", "Click"));
+		private static final String[] BUILT_IN = {"Ding", "Pling", "Click"};
+		final ChoiceSetting sound = add(new ChoiceSetting("sound", "Sound", 0, sounds()));
 		final SliderSetting volume = add(new SliderSetting("volume", "Volume", 60, 10, 100, 10, "%"));
 		final SliderSetting pitch = add(new SliderSetting("pitch", "Pitch", 1.2F, 0.5F, 2, 0.1F, "x"));
+		final BoolSetting variant = add(new BoolSetting("variant", "Random variant (moan-1..4 etc.)", true));
+		final BoolSetting combo = add(new BoolSetting("combo", "Rise with combo", false));
+		private int hits;
+		private long lastHit;
 
 		HitSound() {
 			super("hit_sound", "Hit Sound", Module.Category.PVP, false);
 			icon(Items.NOTE_BLOCK);
+			sound.changed = () -> play(Minecraft.getInstance());
+		}
+
+		void play(Minecraft mc) {
+			playHitSound(mc);
+		}
+
+		private static String[] sounds() {
+			java.util.List<String> all = new java.util.ArrayList<>(java.util.Arrays.asList(BUILT_IN));
+			all.addAll(java.util.Arrays.asList(CustomSounds.TEMPLATES));
+			all.addAll(java.util.Arrays.asList(CustomSounds.list()));
+			return all.toArray(new String[0]);
 		}
 	}
 
 	public static final HitSound HIT_SOUND = new HitSound();
 
+	private static String variant(String name) {
+		int dash = name.lastIndexOf('-');
+		if (dash < 0 || !name.substring(dash + 1).matches("\\d+")) return name;
+		String prefix = name.substring(0, dash + 1);
+		java.util.List<String> same = new java.util.ArrayList<>();
+		for (String t : CustomSounds.TEMPLATES) if (t.startsWith(prefix) && t.substring(prefix.length()).matches("\\d+")) same.add(t);
+		return same.isEmpty() ? name : same.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(same.size()));
+	}
+
 	public static void onAttack(Minecraft mc, Entity target) {
 		if (!HIT_SOUND.enabled) return;
+		long now = System.currentTimeMillis();
+		boolean hurt = mc.player != null && mc.player.hurtTime > 0;
+		HIT_SOUND.hits = hurt || now - HIT_SOUND.lastHit > 2500 ? 1 : HIT_SOUND.hits + 1;
+		HIT_SOUND.lastHit = now;
+		HIT_SOUND.play(mc);
+	}
+
+	private static void playHitSound(Minecraft mc) {
 		float v = HIT_SOUND.volume.value() / 100F, p = HIT_SOUND.pitch.value();
+		if (HIT_SOUND.combo.on()) p *= 1 + Math.min(HIT_SOUND.hits - 1, 12) * 0.06F;
+		if (HIT_SOUND.sound.index() >= HitSound.BUILT_IN.length) {
+			String name = HIT_SOUND.sound.current();
+			if (HIT_SOUND.variant.on()) name = variant(name);
+			CustomSounds.play(name, v * mc.options.getSoundSourceVolume(net.minecraft.sounds.SoundSource.MASTER), p);
+			return;
+		}
 		mc.getSoundManager().play(switch (HIT_SOUND.sound.index()) {
 			case 1 -> SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_PLING.value(), p, v);
 			case 2 -> SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), p, v);
@@ -259,7 +300,10 @@ public final class Extras {
 		}
 	};
 
+	public static java.util.function.Consumer<Entity> totemListener = e -> {};
+
 	public static void onTotem(Minecraft mc, Entity e) {
+		totemListener.accept(e);
 		if (!TOTEM_POPS.enabled || e == mc.player) return;
 		int n = pops.merge(e.getUUID(), 1, Integer::sum);
 		chat(mc, "§f" + e.getName().getString() + " §7popped §e" + n + " §7totem" + (n == 1 ? "" : "s"));

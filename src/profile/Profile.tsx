@@ -13,6 +13,7 @@ import type { MessageKey } from "../i18n/en";
 import { SkinArt } from "../art/SkinArt";
 import { outfitWorn, savedOutfit } from "../lib/outfit";
 import { useSocial } from "../friends/social";
+import { Head } from "../friends/Head";
 import { Glyph } from "../ui/Glyph";
 import { Empty } from "../ui/Empty";
 import { ProfileCard } from "./ProfileCard";
@@ -28,7 +29,7 @@ type Stats = { playSeconds: number; launches: number; lastPlayed: number };
 type World = { folder: string; name: string; lastPlayed: number; mode: string; icon: string | null };
 type LibrarySkin = { id: string; slim: boolean; dataUrl: string };
 
-export function Profile({ onFriends }: { onFriends: () => void }) {
+export function Profile({ onFriends, onPlayer }: { onFriends: () => void; onPlayer: (name: string) => void }) {
   const { t } = useI18n();
   const l = useLauncher();
   const social = useSocial();
@@ -326,13 +327,13 @@ export function Profile({ onFriends }: { onFriends: () => void }) {
             {top.map((p, i) => (
               <li key={p.id} className="list-row" data-selected={p.id === me?.id}>
                 <span className="profile-rank">{i + 1}</span>
-                <span className="profile-avatar small-avatar" aria-hidden>
-                  {p.name[0].toUpperCase()}
-                </span>
-                <div className="list-main">
-                  <span className="instance-name">{p.name}</span>
-                  <span className="muted">{t("profile.likes", { n: p.likes })}</span>
-                </div>
+                <button className="friend-row profile-top-open" onClick={() => onPlayer(p.name)}>
+                  <Head name={p.name} size={32} />
+                  <div className="list-main">
+                    <span className="instance-name">{p.name}</span>
+                    <span className="muted">{t("profile.likes", { n: p.likes })}</span>
+                  </div>
+                </button>
                 {likeButton(p.id)}
               </li>
             ))}

@@ -54,6 +54,10 @@ const HIDEABLE = PAGES.filter((p) => p !== "home" && p !== "settings");
 function App() {
   const { t } = useI18n();
   const [page, setPage] = useState<Page>("home");
+  const [player, setPlayer] = useState<string | null>(null);
+  useEffect(() => {
+    if (page !== "friends") setPlayer(null);
+  }, [page]);
   const [slim, setSlimState] = useState(() => {
     try {
       return localStorage.getItem("kromvia.railSlim") === "1";
@@ -176,9 +180,9 @@ function App() {
             <div className="page" key={page} data-page={page}>
               <Recover page>
                 {page === "home" && <Home onNavigate={setPage} />}
-                {page === "profile" && <Profile onFriends={() => setPage("friends")} />}
+                {page === "profile" && <Profile onFriends={() => setPage("friends")} onPlayer={(n) => (setPlayer(n), setPage("friends"))} />}
                 {page === "rooms" && <Rooms />}
-                {page === "friends" && <Friends />}
+                {page === "friends" && <Friends player={player} />}
                 {page === "builds" && (
                   <Builds
                     dropped={dropped}

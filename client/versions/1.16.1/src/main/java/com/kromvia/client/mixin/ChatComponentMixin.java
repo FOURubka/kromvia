@@ -22,6 +22,6 @@ public class ChatComponentMixin {
 			at = @At("HEAD"), argsOnly = true, ordinal = 0)
 	private Component kromvia$timestamp(Component message) {
 		if (!Features.CHAT_TIME.enabled) return message;
-		return new TextComponent("[" + LocalTime.now().format(KROMVIA_TIME) + "] ").withStyle(ChatFormatting.DARK_GRAY).append(message);
+		return new TextComponent("").append(new TextComponent("[" + LocalTime.now().format(KROMVIA_TIME) + "] ").withStyle(ChatFormatting.DARK_GRAY)).append(message);
 	}
 }

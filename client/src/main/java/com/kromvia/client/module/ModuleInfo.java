@@ -45,7 +45,7 @@ public final class ModuleInfo {
 		put("durability", "durability", "Warns you when your held tool or weapon is low on durability.");
 		put("bow_charge", "bow_charge", "Shows how far your bow or crossbow is drawn.");
 		put("low_health", "low_health", "Tints the screen red when your health gets low.");
-		put("hit_sound", "hit_sound", "Plays a sound when you hit someone.");
+		put("hit_sound", "hit_sound", "Plays a sound when you hit someone: 36 built-in sounds, or drop your own .ogg files into config/kromvia/sounds and restart.");
 		put("totem_pops", "totem_pops", "Tells you when someone pops a Totem of Undying, and how many times.");
 		put("death_coords", "death_coords", "Posts where you died in chat so you can find your things.");
 		put("tab_ping", "tab_ping", "Shows ping as a number in the player list.");
@@ -86,7 +86,11 @@ public final class ModuleInfo {
 		put("hand_sway", "hand_sway", "Changes how much your hand sways when you turn.");
 		put("hand_position", "hand_position", "Moves and resizes your hand in first person.");
 		put("trails", "trails", "Leaves a coloured trail behind you.");
-		put("jump_circles", "jump_circles", "Draws a ring on the ground when you jump.");
+		put("jump_circles", "jump_circles", "Draws a ring on the ground when you jump and land.");
+		put("item_physics", "item_physics", "Dropped items lie flat on the ground instead of spinning in the air.");
+		put("smooth_hotbar", "smooth_hotbar", "The hotbar selection slides between slots instead of jumping.");
+		put("totem_pop", "totem_pop", "A coloured burst around anyone who pops a totem, and a size slider for the totem animation.");
+		put("custom_sky", "custom_sky", "Replaces the sky colour: starry night, sunset or your own colour.");
 		put("china_hat", "china_hat", "A see-through cone hat over your head.");
 		put("motion_blur", "motion_blur", "Blurs the screen when you move the camera.");
 		put("ambience", "ambience", "Tints the sky and fog.");

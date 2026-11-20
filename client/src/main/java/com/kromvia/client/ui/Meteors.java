@@ -26,6 +26,7 @@ final class Meteors {
 	}
 
 	static void draw(Gfx g) {
+		if (g.pose() == null) return;
 		long now = System.currentTimeMillis();
 		int sw = g.guiWidth(), sh = g.guiHeight();
 		for (int i = 0; i < COUNT; i++) {

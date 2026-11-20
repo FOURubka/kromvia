@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { emblemUrl } from "../art/emblems";
@@ -30,7 +31,7 @@ export function BadgesDialog({ facts, onClose }: { facts: Facts; onClose: () => 
   const series = seriesOf(pick);
   const got = BADGES.filter((b) => earned(b, facts)).length;
 
-  return (
+  return createPortal(
     <div className="overlay" role="dialog" aria-modal="true" aria-label={t("profile.badges")} onClick={onClose}>
       <section className="badges-dialog" onClick={(e) => e.stopPropagation()}>
         <button className="btn btn-ghost btn-icon badges-close" aria-label={t("common.close")} onClick={onClose}>
@@ -82,6 +83,7 @@ export function BadgesDialog({ facts, onClose }: { facts: Facts; onClose: () => 
           )}
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -212,6 +212,28 @@
   --presence: #6b6880;
 }
 
+.status-dot[data-presence="idle"],
+.presence-dot[data-presence="idle"],
+.pcard-online[data-presence="idle"]::before {
+  -webkit-mask: radial-gradient(circle at 22% 22%, transparent 36%, #000 37%);
+  mask: radial-gradient(circle at 22% 22%, transparent 36%, #000 37%);
+}
+
+.status-dot[data-presence="dnd"],
+.presence-dot[data-presence="dnd"],
+.pcard-online[data-presence="dnd"]::before {
+  -webkit-mask: linear-gradient(#000 0 0) center / 60% 24% no-repeat, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) center / 60% 24% no-repeat exclude, linear-gradient(#000 0 0);
+}
+
+.status-dot[data-presence="invisible"],
+.presence-dot[data-presence="invisible"],
+.pcard-online[data-presence="invisible"]::before {
+  -webkit-mask: radial-gradient(circle, transparent 35%, #000 37%);
+  mask: radial-gradient(circle, transparent 35%, #000 37%);
+}
+
 .pcard-clan {
   display: inline-flex;
   align-items: center;
@@ -235,13 +257,13 @@ button.pcard-clan:hover {
 }
 
 .pcard-badges {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
 
 .pcard-badge {
-  position: relative;
   display: inline-grid;
   place-items: center;
   width: 32px;
@@ -259,12 +281,11 @@ button.pcard-clan:hover {
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 50%;
+  left: 0;
   z-index: 5;
   width: max-content;
   max-width: 220px;
   padding: 8px 10px;
-  transform: translateX(-50%);
   border: 1px solid var(--frost-edge);
   border-radius: 10px;
   background: var(--surface-2);

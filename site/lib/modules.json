@@ -411,7 +411,7 @@
   "id": "kromvia-players",
   "name": "Kromvia Players",
   "cat": "Utility & visuals",
-  "text": "Shows the capes and cosmetics of other Kromvia players."
+  "text": "Shows the capes, cosmetics and clan tags of other Kromvia players. Pick what goes next to their names."
  },
  {
   "id": "light-level",
@@ -531,7 +531,7 @@
   "id": "party-pings",
   "name": "Party Pings",
   "cat": "Utility & visuals",
-  "text": "Press Z to mark the block you look at. Your party sees the mark on any server, except PvP servers where it is off."
+  "text": "Press Z to mark the block you look at. Your party and clanmates on the same server see the mark, except on PvP servers where it is off."
  },
  {
   "id": "ping",

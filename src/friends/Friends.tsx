@@ -23,7 +23,7 @@ type View = { chat: string } | { profile: string } | null;
 
 const SHOT = /^https:\/\/api\.kromvia\.com\/share\/[A-Za-z0-9]{4,16}$/;
 
-export function Friends() {
+export function Friends({ player }: { player?: string | null }) {
   const { t } = useI18n();
   const l = useLauncher();
   const [me, setMe] = useState<Me | null | undefined>(undefined);
@@ -34,7 +34,7 @@ export function Friends() {
   const [found, setFound] = useState<Player[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const social = useSocial();
-  const [view, setView] = useState<View>(null);
+  const [view, setView] = useState<View>(player ? { profile: player } : null);
   const chat = view && "chat" in view ? view.chat : null;
 
   const tried = useRef(false);

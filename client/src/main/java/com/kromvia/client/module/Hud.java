@@ -79,7 +79,8 @@ public final class Hud {
 		double mx = mc.mouseHandler.xpos() * w.getGuiScaledWidth() / w.getScreenWidth();
 		double my = mc.mouseHandler.ypos() * w.getGuiScaledHeight() / w.getScreenHeight();
 		for (Box b : layout(mc, w.getGuiScaledWidth(), w.getGuiScaledHeight(), false)) {
-			if (mx >= b.x && mx < b.x + b.w && my >= b.y && my < b.y + b.h && b.module.click(mc)) return true;
+			if (mx >= b.x && mx < b.x + b.w && my >= b.y && my < b.y + b.h
+					&& b.module.click(mc, (mx - b.x) / b.module.scale(), (my - b.y) / b.module.scale())) return true;
 		}
 		return false;
 	}
