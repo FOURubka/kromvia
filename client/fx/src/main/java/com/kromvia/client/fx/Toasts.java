@@ -65,11 +65,6 @@ final class Toasts {
 						Social.set(social);
 						continue;
 					}
-					JsonObject ghost = msg.getAsJsonObject("ghost");
-					if (ghost != null) {
-						com.kromvia.client.Ghosts.answer(ghost);
-						continue;
-					}
 					JsonObject room = msg.getAsJsonObject("room");
 					if (room != null) {
 						com.kromvia.client.ui.ModsScreen.room(room);

@@ -246,6 +246,48 @@ public final class Config {
 		for (Module m : wasOn) if (!m.enabled) m.disable(mc);
 	}
 
+	public static JsonObject exportSetup() {
+		JsonObject modules = new JsonObject(), settings = new JsonObject(), hud = new JsonObject();
+		for (Module m : KromviaClient.MODULES) {
+			modules.addProperty(m.id, m.enabled);
+			if (m.hudX >= 0) {
+				com.google.gson.JsonArray pos = new com.google.gson.JsonArray();
+				pos.add(m.hudX);
+				pos.add(m.hudY);
+				hud.add(m.id, pos);
+			}
+			if (m.settings.isEmpty()) continue;
+			JsonObject values = new JsonObject();
+			for (Setting<?> st : m.settings) values.add(st.id, st.save());
+			settings.add(m.id, values);
+		}
+		JsonObject out = new JsonObject();
+		out.add("modules", modules);
+		out.add("settings", settings);
+		out.add("hud", hud);
+		return out;
+	}
+
+	/** Saves `from`'s modules, settings and HUD as a profile and loads it; keys, cosmetics and stars stay the player's own. */
+	public static String importSetup(net.minecraft.client.Minecraft mc, String from, JsonObject setup) {
+		String name = from + " setup";
+		if (!validProfile(name)) return null;
+		saveProfile("Backup");
+		try {
+			JsonObject mine = GSON.fromJson(new String(Files.readAllBytes(FILE), StandardCharsets.UTF_8), JsonObject.class);
+			for (String part : new String[] {"modules", "settings", "hud"}) {
+				if (setup.has(part) && setup.get(part).isJsonObject()) mine.add(part, setup.get(part));
+			}
+			Files.createDirectories(PROFILES);
+			Files.write(PROFILES.resolve(name + ".json"), GSON.toJson(mine).getBytes(StandardCharsets.UTF_8));
+		} catch (IOException | RuntimeException e) {
+			LOG.warn("Could not copy {}'s setup", from, e);
+			return null;
+		}
+		apply(mc, name);
+		return name;
+	}
+
 	public static void deleteProfile(String name) {
 		if (!validProfile(name)) return;
 		try {

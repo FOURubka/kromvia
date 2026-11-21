@@ -252,11 +252,16 @@ public final class Fx {
 	public static final HandPosition HAND = new HandPosition();
 
 	public static final class Trails extends WorldFx {
-		final ColorSetting color = add(new ColorSetting("color", "Colour", VIOLET));
-		final BoolSetting rainbow = add(new BoolSetting("rainbow", "Rainbow", false));
-		final SliderSetting length = add(new SliderSetting("length", "Length", 20, 5, 60, 5, "t"));
-		final SliderSetting height = add(new SliderSetting("height", "Height", 0.4F, 0.1F, 1.8F, 0.1F, "m"));
-		private final ArrayDeque<Vec3> points = new ArrayDeque<>();
+		final ColorSetting color = add(new ColorSetting("color", "Colour", 0xFF22F5C8));
+		final BoolSetting rainbow = add(new BoolSetting("rainbow", "Rainbow", true));
+		final SliderSetting length = add(new SliderSetting("life", "Fade time", 10, 4, 30, 2, "t"));
+		final SliderSetting gap = add(new SliderSetting("gap", "Gap", 1, 1, 4, 1, "t"));
+		final SliderSetting opacity = add(new SliderSetting("opacity", "Opacity", 45, 10, 90, 5, "%"));
+
+		private record Pose(double x, double y, double z, float body, float head, float pitch, float walk, float speed, boolean crouch, int born) {}
+
+		private final ArrayDeque<Pose> poses = new ArrayDeque<>();
+		private int age;
 
 		Trails() {
 			super("trails", "Trails", Category.UTILITY);
@@ -266,39 +271,70 @@ public final class Fx {
 		@Override
 		public void tick(Minecraft mc) {
 			if (mc.player == null) {
-				points.clear();
+				poses.clear();
 				return;
 			}
-			points.addFirst(mc.player.position());
-			while (points.size() > length.value()) points.removeLast();
+			age++;
+			int life = Math.round(length.value());
+			while (!poses.isEmpty() && age - poses.peekLast().born > life) poses.removeLast();
+			LivingEntity e = mc.player;
+			Pose last = poses.peekFirst();
+			if (age % Math.round(gap.value()) != 0) return;
+			if (last != null && e.distanceToSqr(last.x, last.y, last.z) < 0.04) return;
+			poses.addFirst(new Pose(e.getX(), e.getY(), e.getZ(), e.yBodyRot, e.getYHeadRot(), e.getXRot(), Ver.walkPos(e, 1), Ver.walkSpeed(e, 1), e.isCrouching(), age));
 		}
 
 		@Override
 		public void disable(Minecraft mc) {
-			points.clear();
+			poses.clear();
 		}
 
 		@Override
 		void draw(Minecraft mc, VertexConsumer b, PoseStack.Pose p, Vec3 cam, float partial) {
-			if (mc.player.isInvisible() || points.isEmpty()) return;
-			Vec3 prev = mc.player.getPosition(partial).subtract(cam);
-			float h = height.value(), n = points.size();
-			int i = 0;
-			for (Vec3 point : points) {
-				Vec3 cur = point.subtract(cam);
-				int c0 = segmentColor(i, n), c1 = segmentColor(i + 1, n);
-				Draw.vertex(b, p, prev.x, prev.y, prev.z, c0);
-				Draw.vertex(b, p, prev.x, prev.y + h, prev.z, Draw.alpha(c0, 0));
-				Draw.vertex(b, p, cur.x, cur.y + h, cur.z, Draw.alpha(c1, 0));
-				Draw.vertex(b, p, cur.x, cur.y, cur.z, c1);
-				prev = cur;
-				i++;
+			if (mc.player.isInvisible() || poses.isEmpty()) return;
+			float life = length.value(), now = age + partial;
+			boolean first = mc.options.getCameraType().isFirstPerson();
+			Vec3 at = mc.player.getPosition(partial);
+			for (Pose s : poses) {
+				float t = (now - s.born) / life;
+				if (t >= 1) continue;
+				if (first && at.distanceToSqr(s.x, s.y, s.z) < 0.5) continue;
+				int c = rainbow.on() ? rainbow(s.born / 24F) : color.argb();
+				figure(b, p, s, s.x - cam.x, s.y - cam.y, s.z - cam.z, Draw.alpha(c, opacity.value() / 100F * (1 - t) * (1 - t)));
 			}
 		}
 
-		private int segmentColor(int i, float n) {
-			int c = rainbow.on() ? rainbow(i / 30F) : color.argb();
-			return Draw.alpha(c, 0.7F * (1 - i / n));
+		private static void figure(VertexConsumer b, PoseStack.Pose p, Pose s, double x, double y, double z, int c) {
+			float yaw = (float) Math.toRadians(s.body);
+			double fx = -Mth.sin(yaw), fz = Mth.cos(yaw), rx = -Mth.cos(yaw), rz = -Mth.sin(yaw);
+			float swing = s.walk * 0.6662F, amount = Math.min(s.speed, 1);
+			float arm = Mth.cos(swing) * amount, leg = Mth.cos(swing) * 1.4F * amount;
+			float lean = s.crouch ? 0.5F : 0, reach = s.crouch ? 0.4F : 0;
+			double drop = s.crouch ? -3.2 : 0, back = s.crouch ? -4 : 0;
+			float headYaw = (float) Math.toRadians(Mth.wrapDegrees(s.head - s.body)), pitch = (float) Math.toRadians(s.pitch);
+			double[] o = {x, y, z, rx, rz, fx, fz};
+			part(b, p, o, 1.9, 12, back, -2, 2, -12, 0, -2, 2, -leg, 0, c);
+			part(b, p, o, -1.9, 12, back, -2, 2, -12, 0, -2, 2, leg, 0, c);
+			part(b, p, o, 0, 24 + drop, 0, -4, 4, -12, 0, -2, 2, lean, 0, c);
+			part(b, p, o, 6, 22 + drop, 0, -2, 2, -12, 2, -2, 2, arm - reach, 0, c);
+			part(b, p, o, -6, 22 + drop, 0, -2, 2, -12, 2, -2, 2, -arm - reach, 0, c);
+			part(b, p, o, 0, 24 + drop, 0, -4, 4, 0, 8, -4, 4, pitch, -headYaw, c);
+		}
+
+		private static void part(VertexConsumer b, PoseStack.Pose p, double[] o, double px, double py, double pz, double x0, double x1, double y0, double y1, double z0, double z1, float pitch, float yaw, int c) {
+			double[][] v = new double[8][];
+			float cp = Mth.cos(pitch), sp = Mth.sin(pitch), cy = Mth.cos(yaw), sy = Mth.sin(yaw);
+			for (int i = 0; i < 8; i++) {
+				double lx = (i & 1) == 0 ? x0 : x1, ly = (i & 2) == 0 ? y0 : y1, lz = (i & 4) == 0 ? z0 : z1;
+				double ry = ly * cp - lz * sp, rz = ly * sp + lz * cp;
+				double yx = lx * cy - rz * sy, yz = lx * sy + rz * cy;
+				double mx = (px + yx) / 16, my = (py + ry) / 16, mz = (pz + yz) / 16;
+				v[i] = new double[] {o[0] + mx * o[3] + mz * o[5], o[1] + my, o[2] + mx * o[4] + mz * o[6]};
+			}
+			int[][] faces = {{0, 1, 3, 2}, {4, 6, 7, 5}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 2, 6, 4}, {1, 5, 7, 3}};
+			for (int[] f : faces) {
+				for (int k : f) Draw.vertex(b, p, v[k][0], v[k][1], v[k][2], c);
+			}
 		}
 	}
 

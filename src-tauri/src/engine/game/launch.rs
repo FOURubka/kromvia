@@ -1149,10 +1149,6 @@ fn playing<R: Runtime>(app: &AppHandle<R>, run_id: u64, text: &str) {
         }
         return;
     }
-    if v["ghost"].is_object() {
-        ghost(app, run_id, &v["ghost"]);
-        return;
-    }
     if v["restart"].is_object() {
         restart_game(app, run_id, &v["restart"]);
         return;
@@ -1172,28 +1168,6 @@ fn playing<R: Runtime>(app: &AppHandle<R>, run_id: u64, text: &str) {
     let at = v["host"].as_str().zip(v["nick"].as_str());
     app.state::<Live>().set_playing(at);
     let _ = app.emit("game-server", serde_json::json!({ "runId": run_id, "host": at.map(|a| a.0) }));
-}
-
-fn ghost<R: Runtime>(app: &AppHandle<R>, run_id: u64, v: &serde_json::Value) {
-    let Some(stdin) = app.state::<Games>().running.lock().unwrap().get(&run_id).map(|r| r.stdin.clone()) else { return };
-    let v = v.clone();
-    tauri::async_runtime::spawn(async move {
-        let reply = if v["share"].is_object() {
-            match crate::engine::social::share("ghost", v["share"].clone()).await {
-                Ok(code) => serde_json::json!({ "code": code }),
-                Err(e) => serde_json::json!({ "error": e }),
-            }
-        } else if let Some(code) = v["load"].as_str() {
-            match crate::engine::social::shared(code).await {
-                Ok(s) if s["kind"] == "ghost" => serde_json::json!({ "data": s["data"], "from": s["from"]["name"] }),
-                Ok(_) => serde_json::json!({ "error": "That code is not a ghost." }),
-                Err(e) => serde_json::json!({ "error": e }),
-            }
-        } else {
-            return;
-        };
-        let _ = stdin.send(serde_json::json!({ "ghost": reply }).to_string() + "\n");
-    });
 }
 
 fn restart_game<R: Runtime>(app: &AppHandle<R>, run_id: u64, v: &serde_json::Value) {
@@ -1274,7 +1248,7 @@ fn scene_of(text: &str) -> Option<&'static str> {
 }
 
 /// Keys of client messages that are not presence updates; see `playing`.
-const NOT_PRESENCE: [&str; 14] = ["switch", "social", "wardrobe", "discord_screenshot", "share_screenshot", "media", "install", "lookup", "value", "ping", "restart", "mods", "frames", "ghost"];
+const NOT_PRESENCE: [&str; 13] = ["switch", "social", "wardrobe", "discord_screenshot", "share_screenshot", "media", "install", "lookup", "value", "ping", "restart", "mods", "frames"];
 
 /// `Some(host)` for a presence update from the client: the server it joined, or `None` when it is on none.
 fn presence_host(text: &str) -> Option<Option<String>> {

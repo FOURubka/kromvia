@@ -169,6 +169,22 @@ pub async fn set_profile(profile: Value) -> Result<Value, String> {
     send(Method::PUT, "/v1/me/profile", Some(json!({ "profile": profile }))).await
 }
 
+pub async fn set_setup(setup: Value) -> Result<Value, String> {
+    send(Method::PUT, "/v1/me/setup", Some(json!({ "setup": setup }))).await
+}
+
+pub async fn user_setup(name: &str) -> Result<Value, String> {
+    let name = name.trim();
+    if name.is_empty() || name.len() > 16 || !name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
+        return Err("bad player name".into());
+    }
+    send(Method::GET, &format!("/v1/users/{name}/setup"), None).await
+}
+
+pub async fn set_stats(stats: Value) -> Result<Value, String> {
+    send(Method::PUT, "/v1/me/stats", Some(json!({ "stats": stats }))).await
+}
+
 pub async fn set_cosmetics(cosmetics: Value) -> Result<Value, String> {
     send(Method::PUT, "/v1/me/cosmetics", Some(json!({ "cosmetics": cosmetics }))).await
 }

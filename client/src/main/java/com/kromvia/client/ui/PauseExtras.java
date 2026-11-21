@@ -47,7 +47,6 @@ public final class PauseExtras {
 		right.put("Mods", b -> Mc.setScreen(new ModsScreen(screen, true)));
 		right.put("Edit HUD", b -> Mc.setScreen(new HudEditor(screen)));
 		right.put("Profiles", b -> Mc.setScreen(new ProfilesScreen(screen)));
-		if (com.kromvia.client.module.Info.GHOSTS.enabled) right.put("Ghosts", b -> Mc.setScreen(new GhostsScreen(screen)));
 		int y = mid - right.size() * 24 / 2;
 		for (java.util.Map.Entry<String, Button.OnPress> e : right.entrySet()) {
 			add.accept(new KButton(rx - BUTTON_W / 2, y, BUTTON_W, 20, Component.literal(e.getKey()), e.getValue()));

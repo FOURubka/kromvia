@@ -1,5 +1,5 @@
 
-import { readProfile } from "./profile";
+import { readProfile, readStats } from "./profile";
 import { clanOf, privateClans, publicClans } from "./clans";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -31,7 +31,7 @@ type Vars = { key: string; body: unknown; raw: Uint8Array; account: Account };
 
 const MAX_BODY = 16 * 1024;
 const MAX_BIG_BODY = 256 * 1024;
-const BIG_PATHS = /^\/v1\/(sync|shares)(\/|$)/;
+const BIG_PATHS = /^\/v1\/(sync|shares|me\/setup)(\/|$)/;
 const MAX_PARTY = 8;
 const MAX_SYNC_KEYS = 64;
 const SYNC_KEY = /^[A-Za-z0-9._-]{1,64}$/;
@@ -43,6 +43,7 @@ const IMAGE_TYPES: [string, number[]][] = [
   ["image/jpeg", [0xff, 0xd8, 0xff]],
 ];
 const SHARE_DAYS = 30;
+const MAX_SETUP = 96 * 1024;
 const MAX_SHARES = 50;
 const SHARE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const MAX_COSMETICS = 4 * 1024;
@@ -304,10 +305,10 @@ app.get("/v1/users", async (c) => {
 
 app.get("/v1/users/:name", async (c) => {
   const a = await c.env.DB.prepare(
-    "SELECT a.id, a.name, a.name_lower, a.mc_uuid, a.cosmetics, a.profile, a.created, (SELECT COUNT(*) FROM likes WHERE to_id = a.id) AS likes, (SELECT l.ext_id FROM links l WHERE l.account = a.id AND l.provider = 'discord') AS discord FROM accounts a WHERE a.name_lower = ?",
+    "SELECT a.id, a.name, a.name_lower, a.mc_uuid, a.cosmetics, a.profile, a.stats, a.setup IS NOT NULL AS has_setup, a.created, (SELECT COUNT(*) FROM likes WHERE to_id = a.id) AS likes, (SELECT l.ext_id FROM links l WHERE l.account = a.id AND l.provider = 'discord') AS discord FROM accounts a WHERE a.name_lower = ?",
   )
     .bind(c.req.param("name").toLowerCase())
-    .first<Pick<Account, "id" | "name" | "mc_uuid" | "cosmetics" | "profile" | "created"> & { name_lower: string; likes: number; discord: string | null }>();
+    .first<Pick<Account, "id" | "name" | "mc_uuid" | "cosmetics" | "profile" | "created"> & { name_lower: string; likes: number; discord: string | null; stats: string; has_setup: number }>();
   if (!a) return fail(404, "no such player");
   const cosmetics = JSON.parse(a.cosmetics);
   delete cosmetics.dev;
@@ -318,11 +319,17 @@ app.get("/v1/users/:name", async (c) => {
     const { results } = await c.env.DB.prepare("SELECT provider, name FROM links WHERE account = ?").bind(a.id).all<{ provider: string; name: string }>();
     links = Object.fromEntries(results.map((l) => [l.provider, l.name]));
   }
-  return c.json({ ...publicAccount(a), mc_uuid: a.mc_uuid, created: a.created, likes: a.likes, cosmetics, profile, links, clan: await clanOf(c.env.DB, a.id) });
+  return c.json({ ...publicAccount(a), mc_uuid: a.mc_uuid, created: a.created, likes: a.likes, cosmetics, profile, stats: JSON.parse(a.stats), hasSetup: !!a.has_setup, links, clan: await clanOf(c.env.DB, a.id) });
+});
+
+app.get("/v1/users/:name/setup", async (c) => {
+  const a = await c.env.DB.prepare("SELECT name, setup FROM accounts WHERE name_lower = ?").bind(c.req.param("name").toLowerCase()).first<{ name: string; setup: string | null }>();
+  if (!a?.setup) return fail(404, "this player shares no setup");
+  return c.json({ name: a.name, setup: JSON.parse(a.setup) });
 });
 
 app.get("/share/:code", async (c) => {
-  const row = await c.env.DB.prepare("SELECT s.kind, s.data, s.created, a.id, a.name, a.mc_uuid FROM shares s JOIN accounts a ON a.id = s.account WHERE s.code = ? AND s.created > ?")
+  const row = await c.env.DB.prepare("SELECT s.kind, s.data, s.created, a.id, a.name, a.mc_uuid FROM shares s JOIN accounts a ON a.id = s.account WHERE s.code = ? AND (s.created > ? OR s.pinned = 1)")
     .bind(c.req.param("code").toUpperCase(), Date.now() - SHARE_DAYS * DAY_MS)
     .first<{ kind: string; data: string; created: number; id: string; name: string; mc_uuid: string | null }>();
   if (!row) return fail(404, "no such share, or it expired");
@@ -562,8 +569,37 @@ app.delete("/v1/me", async (c) => {
 app.put("/v1/me/profile", async (c) => {
   const profile = readProfile(field(c.var.body, "profile"));
   if (typeof profile === "string") return fail(400, profile);
-  await c.env.DB.prepare("UPDATE accounts SET profile = ? WHERE id = ?").bind(JSON.stringify(profile), c.var.account.id).run();
+  const me = c.var.account.id;
+  const pinned = [...new Set([profile.shot, ...(profile.shots ?? [])].filter((x): x is string => !!x))];
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE accounts SET profile = ? WHERE id = ?").bind(JSON.stringify(profile), me),
+    c.env.DB.prepare("UPDATE shares SET pinned = 0 WHERE account = ? AND pinned = 1").bind(me),
+    ...(pinned.length ? [c.env.DB.prepare(`UPDATE shares SET pinned = 1 WHERE account = ? AND kind = 'screenshot' AND code IN (${pinned.map(() => "?").join(",")})`).bind(me, ...pinned)] : []),
+  ]);
   return c.json(profile);
+});
+
+app.put("/v1/me/stats", async (c) => {
+  const stats = readStats(field(c.var.body, "stats"));
+  if (typeof stats === "string") return fail(400, stats);
+  await c.env.DB.prepare("UPDATE accounts SET stats = ? WHERE id = ?").bind(JSON.stringify(stats), c.var.account.id).run();
+  return c.json(stats);
+});
+
+app.put("/v1/me/setup", async (c) => {
+  const setup = field(c.var.body, "setup");
+  if (setup === null) {
+    await c.env.DB.prepare("UPDATE accounts SET setup = NULL WHERE id = ?").bind(c.var.account.id).run();
+    return c.json({ ok: true });
+  }
+  if (!setup || typeof setup !== "object" || Array.isArray(setup)) return fail(400, "setup must be an object");
+  const keys = Object.keys(setup);
+  if (keys.some((k) => !["modules", "settings", "hud"].includes(k))) return fail(400, "setup holds modules, settings and hud only");
+  if (keys.some((k) => { const v = (setup as Record<string, unknown>)[k]; return !v || typeof v !== "object" || Array.isArray(v); })) return fail(400, "setup parts must be objects");
+  const json = JSON.stringify(setup);
+  if (json.length > MAX_SETUP) return fail(413, "setup too large");
+  await c.env.DB.prepare("UPDATE accounts SET setup = ? WHERE id = ?").bind(json, c.var.account.id).run();
+  return c.json({ ok: true });
 });
 
 app.put("/v1/me/cosmetics", async (c) => {
@@ -825,10 +861,10 @@ app.delete("/v1/sync/:key", async (c) => {
 
 async function newShare(env: Env, account: string): Promise<string | null> {
   const cutoff = Date.now() - SHARE_DAYS * DAY_MS;
-  const { results } = await env.DB.prepare("SELECT code FROM shares WHERE created < ? AND kind = 'screenshot'").bind(cutoff).all<{ code: string }>();
+  const { results } = await env.DB.prepare("SELECT code FROM shares WHERE created < ? AND pinned = 0 AND kind = 'screenshot'").bind(cutoff).all<{ code: string }>();
   if (results.length && env.SHOTS) await env.SHOTS.delete(results.map((r) => `screenshots/${r.code}`));
-  await env.DB.prepare("DELETE FROM shares WHERE created < ?").bind(cutoff).run();
-  const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM shares WHERE account = ?").bind(account).first<number>("n");
+  await env.DB.prepare("DELETE FROM shares WHERE created < ? AND pinned = 0").bind(cutoff).run();
+  const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM shares WHERE account = ? AND pinned = 0").bind(account).first<number>("n");
   if ((count ?? 0) >= MAX_SHARES) return null;
   return Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => SHARE_ALPHABET[b % SHARE_ALPHABET.length]).join("");
 }

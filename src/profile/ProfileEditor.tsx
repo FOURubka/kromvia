@@ -107,6 +107,7 @@ export function ProfileEditor({ initial, owner, badges, onSaved, onClose }: { in
   const [error, setError] = useState<string | null>(null);
   const [shots, setShots] = useState<Shot[] | null>(null);
   const [sharing, setSharing] = useState<string | null>(null);
+  const [target, setTarget] = useState<"shot" | "gallery">("shot");
   const set = <K extends keyof Card>(k: K, v: Card[K]) => setCard((c) => ({ ...c, [k]: v === "" ? undefined : v }));
   const dirty = JSON.stringify(card) !== JSON.stringify(initial);
   const bannerMode: BannerMode = card.bannerShot && card.shot ? "shot" : card.banner2 ? "gradient" : "color";
@@ -126,12 +127,12 @@ export function ProfileEditor({ initial, owner, badges, onSaved, onClose }: { in
       .finally(() => setSaving(false));
   };
 
-  const pickShots = () =>
-    shots
+  const pickShots = (to: "shot" | "gallery") =>
+    shots && target === to
       ? setShots(null)
       : l.current
-        ? invoke<Shot[]>("screenshot_list", { instanceId: l.current.id }).then((s) => setShots(s.slice(0, 24)), () => setShots([]))
-        : setShots([]);
+        ? (setTarget(to), invoke<Shot[]>("screenshot_list", { instanceId: l.current.id }).then((s) => setShots(s.slice(0, 24)), () => setShots([])))
+        : (setTarget(to), setShots([]));
   const chooseShot = (name: string) => {
     if (!l.current) return;
     setSharing(name);
@@ -139,13 +140,30 @@ export function ProfileEditor({ initial, owner, badges, onSaved, onClose }: { in
     invoke<string>("share_screenshot", { instanceId: l.current.id, name })
       .then(
         (url) => {
-          set("shot", url.split("/").pop()!.toUpperCase());
+          const code = url.split("/").pop()!.toUpperCase();
+          if (target === "gallery") setCard((c) => ({ ...c, shots: [...new Set([...(c.shots ?? []), code])].slice(0, 6) }));
+          else set("shot", code);
           setShots(null);
         },
         (e) => setError(String(e)),
       )
       .finally(() => setSharing(null));
   };
+  const picker = (
+    <>
+        {shots && shots.length === 0 && <p className="muted small">{t("card.shotNone")}</p>}
+        {shots && shots.length > 0 && (
+          <div className="pedit-shots">
+            {shots.map((s) => (
+              <button key={s.name} className="pedit-shot-pick" disabled={!!sharing} onClick={() => chooseShot(s.name)} title={s.name}>
+                <img src={convertFileSrc(s.path)} alt="" loading="lazy" />
+                {sharing === s.name && <span>{t("card.uploading")}</span>}
+              </button>
+            ))}
+          </div>
+        )}
+    </>
+  );
   const setBannerMode = (m: BannerMode) =>
     setCard((c) => ({
       ...c,
@@ -314,7 +332,7 @@ export function ProfileEditor({ initial, owner, badges, onSaved, onClose }: { in
           <div className="pedit-shot">
             {card.shot && <img src={SHOT_URL(card.shot)} alt="" />}
             <div className="actions">
-              <button className="btn btn-ghost" onClick={pickShots}>
+              <button className="btn btn-ghost" onClick={() => pickShots("shot")}>
                 <Glyph name="photo" /> {t("card.shotPick")}
               </button>
               {card.shot && (
@@ -324,17 +342,28 @@ export function ProfileEditor({ initial, owner, badges, onSaved, onClose }: { in
               )}
             </div>
           </div>
-          {shots && shots.length === 0 && <p className="muted small">{t("card.shotNone")}</p>}
-          {shots && shots.length > 0 && (
-            <div className="pedit-shots">
-              {shots.map((s) => (
-                <button key={s.name} className="pedit-shot-pick" disabled={!!sharing} onClick={() => chooseShot(s.name)} title={s.name}>
-                  <img src={convertFileSrc(s.path)} alt="" loading="lazy" />
-                  {sharing === s.name && <span>{t("card.uploading")}</span>}
+{target === "shot" && picker}
+        </Group>
+
+        <Group title={t("card.gallery")}>
+          <div className="pedit-gallery">
+            {(card.shots ?? []).map((code) => (
+              <span key={code} className="pedit-gallery-item">
+                <img src={SHOT_URL(code)} alt="" loading="lazy" />
+                <button className="btn btn-ghost btn-icon" title={t("card.shotRemove")} onClick={() => setCard((c) => ({ ...c, shots: c.shots?.filter((x) => x !== code) }))}>
+                  <Glyph name="x" />
                 </button>
-              ))}
+              </span>
+            ))}
+          </div>
+          {(card.shots?.length ?? 0) < 6 && (
+            <div className="actions">
+              <button className="btn btn-ghost" onClick={() => pickShots("gallery")}>
+                <Glyph name="plus" /> {t("card.galleryAdd")}
+              </button>
             </div>
           )}
+          {target === "gallery" && picker}
         </Group>
 
         <Group title={t("card.privacy")}>

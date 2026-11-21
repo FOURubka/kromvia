@@ -1335,3 +1335,37 @@ button.pcard-chip:hover,
     order: -1;
   }
 }
+
+.pcard-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.pcard-gallery .pcard-shot {
+  border-radius: 10px;
+}
+
+.pedit-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+}
+
+.pedit-gallery-item {
+  position: relative;
+}
+
+.pedit-gallery-item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.pedit-gallery-item .btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}

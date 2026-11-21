@@ -304,6 +304,7 @@ public final class Extras {
 
 	public static void onTotem(Minecraft mc, Entity e) {
 		totemListener.accept(e);
+		com.kromvia.client.GameStats.totem(mc, e);
 		if (!TOTEM_POPS.enabled || e == mc.player) return;
 		int n = pops.merge(e.getUUID(), 1, Integer::sum);
 		chat(mc, "§f" + e.getName().getString() + " §7popped §e" + n + " §7totem" + (n == 1 ? "" : "s"));

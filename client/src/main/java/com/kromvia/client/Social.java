@@ -79,6 +79,13 @@ public final class Social {
 
 	public static volatile int version;
 	private static volatile boolean received;
+	private static volatile JsonObject card;
+	private static String sentStarred;
+	private static volatile int[] nameColors;
+	private static volatile String wantSetup;
+	private static volatile long wantSetupAt;
+	private static volatile String setupStatus;
+	private static String sentSetup;
 	private static volatile String me;
 	private static volatile String clanId;
 	private static volatile String clanTag;
@@ -148,6 +155,24 @@ public final class Social {
 			}
 		}
 		lines = Collections.unmodifiableList(ls);
+		card = s.has("card") && s.get("card").isJsonObject() ? s.getAsJsonObject("card") : null;
+		JsonObject su = s.has("setup") && s.get("setup").isJsonObject() ? s.getAsJsonObject("setup") : null;
+		String want = wantSetup;
+		if (su != null && want != null && want.equalsIgnoreCase(str(su, "name")) && su.has("at") && su.get("at").getAsLong() >= wantSetupAt - 2000) {
+			wantSetup = null;
+			ask("setupDone", null, null);
+			if (su.has("data") && su.get("data").isJsonObject()) {
+				JsonObject data = su.getAsJsonObject("data");
+				String from = str(su, "name");
+				net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+				mc.execute(() -> {
+					String profile = Config.importSetup(mc, from, data);
+					setupStatus = profile == null ? "Could not copy the setup." : "Copied. Your old setup is in Profiles as Backup.";
+				});
+			} else setupStatus = str(su, "error") != null ? str(su, "error") : "Could not copy the setup.";
+		}
+		JsonObject nm = s.has("name") && s.get("name").isJsonObject() ? s.getAsJsonObject("name") : null;
+		nameColors = nm == null ? null : new int[] {rgb(str(nm, "a")), rgb(str(nm, "b"))};
 		received = true;
 		version++;
 	}
@@ -262,6 +287,85 @@ public final class Social {
 
 	public static void sendScreenshot(String to) {
 		ask("shot", "to", to);
+	}
+
+	private static boolean sentShare;
+
+	public static boolean gameStats(JsonObject delta, boolean share) {
+		if (Accounts.sender == null || delta == null && share == sentShare) return false;
+		sentShare = share;
+		JsonObject a = new JsonObject();
+		a.addProperty("do", "gameStats");
+		a.addProperty("share", share);
+		if (delta != null) a.add("data", delta);
+		send(a);
+		return true;
+	}
+
+	public static void like(String id, String name, boolean on) {
+		JsonObject a = new JsonObject();
+		a.addProperty("do", "like");
+		a.addProperty("id", id);
+		a.addProperty("name", name);
+		a.addProperty("text", on ? "on" : "off");
+		send(a);
+	}
+
+	public static void addFriend(String name) {
+		ask("friendAdd", "name", name);
+	}
+
+	public static void askSetup(String name) {
+		wantSetup = name;
+		wantSetupAt = System.currentTimeMillis();
+		setupStatus = "Copying " + name + "'s setup…";
+		ask("getSetup", "name", name);
+	}
+
+	public static void clearSetupStatus() {
+		setupStatus = null;
+	}
+
+	public static String setupStatus() {
+		return setupStatus;
+	}
+
+	public static void shareSetup(JsonObject setup) {
+		String key = setup == null ? "" : setup.toString();
+		if (key.equals(sentSetup) || Accounts.sender == null) return;
+		sentSetup = key;
+		JsonObject a = new JsonObject();
+		a.addProperty("do", "setup");
+		a.add("data", setup);
+		send(a);
+	}
+
+	public static int[] nameColors() {
+		return nameColors;
+	}
+
+	public static int rgb(String hex) {
+		return hex != null && hex.matches("#[0-9a-fA-F]{6}") ? Integer.parseInt(hex.substring(1), 16) : -1;
+	}
+
+	public static JsonObject card() {
+		return card;
+	}
+
+	public static void askCard(String name) {
+		ask("card", "name", name);
+	}
+
+	public static void starred(java.util.Collection<String> ids) {
+		String key = String.join(",", ids);
+		if (key.equals(sentStarred) || Accounts.sender == null) return;
+		sentStarred = key;
+		JsonObject a = new JsonObject();
+		a.addProperty("do", "starred");
+		JsonArray list = new JsonArray();
+		ids.forEach(list::add);
+		a.add("ids", list);
+		send(a);
 	}
 
 	public static void openUrl(String url) {

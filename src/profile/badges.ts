@@ -14,9 +14,12 @@ export type Facts = {
   clan: boolean;
   profile: number;
   dev: boolean;
+  kills: number;
+  elytra: number;
+  totems: number;
 };
 
-type Metric = "hours" | "launches" | "builds" | "worlds" | "friends" | "likes" | "days" | "profile";
+type Metric = "hours" | "launches" | "builds" | "worlds" | "friends" | "likes" | "days" | "profile" | "kills" | "elytra" | "totems";
 
 export type Badge = {
   id: string;
@@ -49,6 +52,10 @@ export const BADGES: Badge[] = [
   { id: "clan", emblem: "shield", tier: "violet", check: (f) => f.clan },
   { id: "profile", emblem: "crown", tier: "silver", metric: "profile", goal: 5 },
   { id: "veteran", emblem: "medal", tier: "gold", metric: "days", goal: 365 },
+  { id: "kills100", emblem: "sword", tier: "silver", series: "kills", metric: "kills", goal: 100 },
+  { id: "kills1000", emblem: "sword", tier: "gold", series: "kills", metric: "kills", goal: 1000 },
+  { id: "elytra100", emblem: "rocket", tier: "silver", metric: "elytra", goal: 100 },
+  { id: "totems50", emblem: "potion", tier: "silver", metric: "totems", goal: 50 },
 ];
 
 export const earned = (b: Badge, f: Facts) => f.dev || (b.check ? b.check(f) : f[b.metric!] >= b.goal!);

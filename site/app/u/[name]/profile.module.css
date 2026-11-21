@@ -115,3 +115,7 @@
     width: 100%;
   }
 }
+
+.badge img {
+  margin-bottom: 4px;
+}

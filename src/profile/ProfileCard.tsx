@@ -7,6 +7,7 @@ import { Glyph } from "../ui/Glyph";
 import { emblemUrl } from "../art/emblems";
 import { FONT_FAMILY, SHOT_URL, bannerBg, nameStyle, type Card, type CardOwner, type ClanTag, type Game } from "./card";
 import { Rich } from "./Rich";
+import type { PublicStats } from "./stats";
 import "./fonts";
 import "./card.css";
 
@@ -55,6 +56,7 @@ export function ProfileCard({
   actions,
   onJoinServer,
   onClan,
+  stats,
 }: {
   card: Card;
   owner: CardOwner;
@@ -62,6 +64,7 @@ export function ProfileCard({
   actions?: ReactNode;
   onJoinServer?: (host: string) => void;
   onClan?: () => void;
+  stats?: PublicStats;
 }) {
   const { t } = useI18n();
   const favs = (
@@ -138,6 +141,43 @@ export function ProfileCard({
                 </button>
               )}
             </div>
+          </section>
+        )}
+
+        {stats && (stats.hours !== undefined || !!stats.game || (stats.modules?.length ?? 0) > 0) && (
+          <section>
+            <h3>{t("card.client")}</h3>
+            <div className="pcard-chips">
+              {stats.hours !== undefined && (
+                <span className="pcard-chip">
+                  <Glyph name="device-gamepad" size={13} /> {t("card.hours", { n: stats.hours })}
+                </span>
+              )}
+              {stats.launches !== undefined && (
+                <span className="pcard-chip">
+                  <Glyph name="player-play" size={13} /> {t("card.launches", { n: stats.launches })}
+                </span>
+              )}
+            </div>
+            {stats.game && (
+              <div className="pcard-chips">
+                <span className="pcard-chip">{t("card.kills", { n: stats.game.kills })}</span>
+                <span className="pcard-chip">{t("card.deaths", { n: stats.game.deaths })}</span>
+                {stats.game.deaths > 0 && <span className="pcard-chip">K/D {Math.round((stats.game.kills / stats.game.deaths) * 100) / 100}</span>}
+                {stats.game.cps > 0 && <span className="pcard-chip">{t("card.cps", { n: stats.game.cps })}</span>}
+                {stats.game.elytra > 0 && <span className="pcard-chip">{t("card.elytra", { n: stats.game.elytra })}</span>}
+                {stats.game.totems > 0 && <span className="pcard-chip">{t("card.totems", { n: stats.game.totems })}</span>}
+              </div>
+            )}
+            {(stats.modules?.length ?? 0) > 0 && (
+              <div className="pcard-chips" title={t("card.modules")}>
+                {stats.modules!.map((m) => (
+                  <span key={m} className="pcard-chip" data-on>
+                    {m.replace(/_/g, " ").replace(/^\w/, (x) => x.toUpperCase())}
+                  </span>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
@@ -234,6 +274,19 @@ export function ProfileCard({
             <button className="pcard-shot" onClick={() => open(`https://kromvia.com/s/${card.shot}`)}>
               <img src={SHOT_URL(card.shot)} alt="" loading="lazy" />
             </button>
+          </section>
+        )}
+
+        {(card.shots?.length ?? 0) > 0 && (
+          <section>
+            <h3>{t("card.gallery")}</h3>
+            <div className="pcard-gallery">
+              {card.shots!.map((code) => (
+                <button key={code} className="pcard-shot" onClick={() => open(`https://kromvia.com/s/${code}`)}>
+                  <img src={SHOT_URL(code)} alt="" loading="lazy" />
+                </button>
+              ))}
+            </div>
           </section>
         )}
 

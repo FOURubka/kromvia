@@ -12,6 +12,10 @@ import c from "./card.module.css";
 import { NAME_FONTS } from "@/lib/nameFonts";
 import { Rich, clanIcon } from "@/lib/rich";
 import { bannerBg, nameStyle } from "@launcher/profile/card";
+import { BADGES } from "@launcher/profile/badges";
+import { emblemUrl } from "@launcher/art/emblems";
+import { MODULE_LIST } from "@/lib/content";
+import BADGE_TEXT from "@/lib/badges.json";
 
 const T = {
   en: {
@@ -20,6 +24,7 @@ const T = {
     early: ["Early bird", "Joined in Kromvia's first year"], verifiedBadge: ["Verified", "Linked a Minecraft account"], liked: ["Liked", "10 likes or more"], famous: ["Famous", "100 likes or more"],
     like: (n: string) => `Like ${n} from the launcher: Profile → Top.`, get: "Get Kromvia",
     about: "About me", music: "On repeat", listen: "Listen", favourites: "Favourites", mob: "Mob", block: "Block", biome: "Biome", version: "Version",
+    hours: "hours played", launches: "launches", worlds: "worlds", modules: "Favourite modules", gallery: "Gallery", inGame: "In game", kills: "kills", deaths: "deaths", cps: "best CPS", elytra: "km on elytra", totems: "totems popped",
     server: "Main server", looking: "Looking to play", mods: "Mods I use", shot: "Showcase", links: "Connections",
     look: { pvp: "PvP", smp: "SMP", build: "Building", minigames: "Minigames", modded: "Modded", redstone: "Redstone", chat: "Just hanging out" } as Record<string, string>,
   },
@@ -29,6 +34,7 @@ const T = {
     early: ["Рання пташка", "Приєднався в перший рік Kromvia"], verifiedBadge: ["Підтверджений", "Привʼязав акаунт Minecraft"], liked: ["Улюбленець", "10 лайків і більше"], famous: ["Зірка", "100 лайків і більше"],
     like: (n: string) => `Лайкнути ${n} можна в лаунчері: Профіль → Топ.`, get: "Отримати Kromvia",
     about: "Про мене", music: "Зараз слухаю", listen: "Слухати", favourites: "Улюблене", mob: "Моб", block: "Блок", biome: "Біом", version: "Версія",
+    hours: "годин у грі", launches: "запусків", worlds: "світів", modules: "Улюблені модулі", gallery: "Галерея", inGame: "У грі", kills: "вбивств", deaths: "смертей", cps: "рекорд CPS", elytra: "км на елітрі", totems: "тотемів",
     server: "Основний сервер", looking: "Шукаю з ким грати", mods: "Мої моди", shot: "Вітрина", links: "Звʼязки",
     look: { pvp: "PvP", smp: "SMP", build: "Будівництво", minigames: "Мініігри", modded: "З модами", redstone: "Редстоун", chat: "Просто потусити" } as Record<string, string>,
   },
@@ -45,14 +51,18 @@ export default async function Profile({ params }: PageProps<"/u/[name]">) {
   const t = T[lang];
   const worn = [...(p.cosmetics.items ?? []), ...(p.cosmetics.models ?? [])];
   const joined = new Date(p.created).toLocaleDateString(lang, { month: "long", year: "numeric" });
-  const badges = [
+  const stats = p.stats ?? {};
+  const names = (BADGE_TEXT as Record<string, Record<string, string[]>>)[lang] ?? BADGE_TEXT.en;
+  const modules = (stats.modules ?? []).map((id) => MODULE_LIST.find((m) => m.id === id.replace(/_/g, "-"))).filter((m) => !!m);
+  const earned = BADGES.filter((b) => stats.badges?.includes(b.id) && names[b.id]).map((b) => ({ name: names[b.id][0], text: names[b.id][1], emblem: b.emblem, tier: b.tier }));
+  const badges = earned.length ? earned : [
     p.created < Date.UTC(2027, 0, 1) && t.early,
     p.verified && t.verifiedBadge,
     p.likes >= 10 && t.liked,
     p.likes >= 100 && t.famous,
   ]
     .filter((b): b is string[] => !!b)
-    .map(([name, text]) => ({ name, text }));
+    .map(([name, text]) => ({ name, text, emblem: null as string | null, tier: null as string | null }));
   const card = p.profile ?? {};
   const favs = (["mob", "block", "biome", "version"] as const).filter((k) => card[k]);
   const links = card.showLinks ? Object.entries(p.links ?? {}).filter(([, v]) => v) : [];
@@ -104,7 +114,55 @@ export default async function Profile({ params }: PageProps<"/u/[name]">) {
             <b>{joined}</b>
             <span>{t.joined}</span>
           </div>
+          {stats.hours !== undefined && (
+            <div className="block">
+              <b>{stats.hours}</b>
+              <span>{t.hours}</span>
+            </div>
+          )}
+          {stats.launches !== undefined && (
+            <div className="block">
+              <b>{stats.launches}</b>
+              <span>{t.launches}</span>
+            </div>
+          )}
         </div>
+
+        {stats.game && (
+          <>
+            <h2 className={s.h2}>{t.inGame}</h2>
+            <div className={s.facts}>
+              {(
+                [
+                  [stats.game.kills, t.kills],
+                  [stats.game.deaths, t.deaths],
+                  ...(stats.game.deaths > 0 ? [[Math.round((stats.game.kills / stats.game.deaths) * 100) / 100, "K/D"]] : []),
+                  ...(stats.game.cps > 0 ? [[stats.game.cps, t.cps]] : []),
+                  ...(stats.game.elytra > 0 ? [[stats.game.elytra, t.elytra]] : []),
+                  ...(stats.game.totems > 0 ? [[stats.game.totems, t.totems]] : []),
+                ] as [number, string][]
+              ).map(([v, label]) => (
+                <div key={label} className="block">
+                  <b>{v}</b>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {modules.length > 0 && (
+          <>
+            <h2 className={s.h2}>{t.modules}</h2>
+            <div className={s.chips}>
+              {modules.map((m) => (
+                <Link key={m.id} href={`/features/${m.id}`} className="chip on">
+                  {m.name}
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
 
         {card.bio && (
           <>
@@ -190,6 +248,19 @@ export default async function Profile({ params }: PageProps<"/u/[name]">) {
           </>
         )}
 
+        {(card.shots?.length ?? 0) > 0 && (
+          <>
+            <h2 className={s.h2}>{t.gallery}</h2>
+            <div className={c.gallery}>
+              {card.shots!.map((code) => (
+                <Link key={code} href={`/s/${code}`} className={c.shot}>
+                  <img src={`https://api.kromvia.com/share/${code}`} alt={t.gallery} loading="lazy" />
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+
         {links.length > 0 && (
           <>
             <h2 className={s.h2}>{t.links}</h2>
@@ -220,7 +291,8 @@ export default async function Profile({ params }: PageProps<"/u/[name]">) {
             <h2 className={s.h2}>{t.badges}</h2>
             <div className={s.badges}>
               {badges.map((b) => (
-                <div key={b.name} className={`block ${s.badge}`}>
+                <div key={b.name} className={`block ${s.badge}`} data-tier={b.tier ?? undefined}>
+                  {b.emblem && <img src={emblemUrl(b.emblem)} alt="" width={28} height={28} />}
                   <b>{b.name}</b>
                   <span>{b.text}</span>
                 </div>

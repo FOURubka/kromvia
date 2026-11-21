@@ -36,6 +36,7 @@ public class ModuleSettingsScreen extends KScreen {
 	private int px, py, pw, ph, scroll, contentH;
 	private KButton keyButton;
 	private boolean listening;
+	private KButton clearKey;
 	private Boolean painting;
 
 	private static final class Placed {
@@ -91,11 +92,10 @@ public class ModuleSettingsScreen extends KScreen {
 			if (!s.shown) continue;
 			if (s instanceof BoolSetting) {
 				BoolSetting b = (BoolSetting) s;
-				place(new KButton(x, 0, w, 20, Component.literal(b.name + ": " + (b.on() ? "On" : "Off")), btn -> {
+				place(new KButton(x, 0, w, 20, Component.literal(b.name), btn -> {
 					b.set(!b.on());
-					btn.setMessage(Component.literal(b.name + ": " + (b.on() ? "On" : "Off")));
 					Config.save();
-				}, b::on), y);
+				}, b::on).toggle(), y);
 			} else if (s instanceof ChoiceSetting) {
 				ChoiceSetting c = (ChoiceSetting) s;
 				place(new KButton(x, 0, w, 20, Component.literal(c.name + ": " + c.current()), btn -> {
@@ -143,18 +143,26 @@ public class ModuleSettingsScreen extends KScreen {
 		py = (height - ph) / 2;
 
 		addRenderableWidget(new KButton(px + 10, py + ph - 28, preview ? pw / 2 - 26 : 80, 20, Component.literal("Back"), b -> onClose()));
-		addRenderableWidget(new KButton(px + pw - 90, py + 8, 80, 18, Component.literal(module.enabled ? "On" : "Off"), b -> {
+		addRenderableWidget(new KButton(px + pw - 90, py + 8, 80, 18, Component.literal("Enabled"), b -> {
 			module.enabled = !module.enabled;
 			if (!module.enabled) module.disable(minecraft);
-			b.setMessage(Component.literal(module.enabled ? "On" : "Off"));
 			Config.save();
-		}, () -> module.enabled));
+		}, () -> module.enabled).toggle());
 
 		keyButton = new KButton(px + pw - 176, py + 8, 82, 18, Component.literal(keyLabel()), b -> {
 			listening = !listening;
 			b.setMessage(Component.literal(keyLabel()));
 		}, () -> listening);
 		addRenderableWidget(keyButton);
+		clearKey = new KButton(px + pw - 196, py + 8, 18, 18, Component.literal("x"), b -> {
+			module.key = -1;
+			listening = false;
+			keyButton.setMessage(Component.literal(keyLabel()));
+			b.visible = false;
+			Config.save();
+		});
+		clearKey.visible = module.key >= 0;
+		addRenderableWidget(clearKey);
 
 		scroll = Math.min(scroll, maxScroll());
 		layout();
@@ -234,7 +242,7 @@ public class ModuleSettingsScreen extends KScreen {
 			g.renderItem(module.icon(), 0, 0);
 			g.pose().popMatrix();
 		}
-		g.drawString(font, font.plainSubstrByWidth(module.name, pw - 34 - 182), px + 34, py + 12, UiStyle.TEXT, false);
+		g.drawString(font, font.plainSubstrByWidth(module.name, pw - 34 - 202), px + 34, py + 12, UiStyle.TEXT, false);
 
 		for (Label l : labels) {
 			int y = top() + l.y - scroll;
@@ -334,16 +342,17 @@ public class ModuleSettingsScreen extends KScreen {
 	}
 
 	private String keyLabel() {
-		return listening ? "Press a key" : "Key: " + Keys.name(module.key);
+		return listening ? "Esc = none" : "Key: " + Keys.name(module.key);
 	}
 
 	@Override
 	protected boolean keyDown(int key) {
 		if (!listening) return false;
-		module.key = key == 256 || key == 259 ? -1 : key;
+		module.key = key == 256 || key == 259 || key == 261 ? -1 : key;
 		module.keyHeld = true;
 		listening = false;
 		keyButton.setMessage(Component.literal(keyLabel()));
+		clearKey.visible = module.key >= 0;
 		Config.save();
 		return true;
 	}

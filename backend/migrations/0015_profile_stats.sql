@@ -1,0 +1,1 @@
+ALTER TABLE accounts ADD COLUMN stats TEXT NOT NULL DEFAULT '{}';

@@ -266,6 +266,7 @@ public final class Features {
 	private static int combo;
 
 	public static void onAttack(Minecraft mc, Entity target) {
+		com.kromvia.client.GameStats.attack(target);
 		if (mc.player == null) return;
 		var eye = mc.player.getEyePosition();
 		var box = target.getBoundingBox();

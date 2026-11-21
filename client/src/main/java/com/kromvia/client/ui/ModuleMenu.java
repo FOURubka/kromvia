@@ -75,6 +75,7 @@ public class ModuleMenu extends KScreen {
 
 	@Override
 	protected void init() {
+		com.kromvia.client.Social.starred(Config.STARRED);
 		cards.clear();
 		tabs.clear();
 		cols = Math.max(2, Math.min(5, (width - 60 - SIDEBAR - 20) / (ModuleCard.W + GAP)));
@@ -141,6 +142,7 @@ public class ModuleMenu extends KScreen {
 				if (!Config.STARRED.remove(m.id)) Config.STARRED.add(m.id);
 				b.setMessage(Component.literal(starLabel(m)));
 				Config.save();
+				com.kromvia.client.Social.starred(Config.STARRED);
 				if (favOnly) refilter();
 				else order();
 			}).flat();

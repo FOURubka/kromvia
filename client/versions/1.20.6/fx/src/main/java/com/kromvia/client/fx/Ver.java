@@ -39,6 +39,14 @@ final class Ver {
 		return mc.getFrameTime();
 	}
 
+	static float walkPos(net.minecraft.world.entity.LivingEntity e, float partial) {
+		return e.walkAnimation.position(partial);
+	}
+
+	static float walkSpeed(net.minecraft.world.entity.LivingEntity e, float partial) {
+		return e.walkAnimation.speed(partial);
+	}
+
 	static boolean showsEffects(Screen screen) {
 		return screen instanceof EffectRenderingInventoryScreen<?> inventory && inventory.canSeeEffects();
 	}

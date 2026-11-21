@@ -1,4 +1,9 @@
 import { ProfileCard } from "../profile/ProfileCard";
+import type { PublicStats } from "../profile/stats";
+import { BADGES } from "../profile/badges";
+import { badgeTip } from "../profile/BadgesView";
+import { emblemUrl } from "../art/emblems";
+import type { MessageKey } from "../i18n/en";
 import type { Card, CardOwner, ClanTag } from "../profile/card";
 import { ClanChip } from "../profile/ProfileCard";
 import { Rich } from "../profile/Rich";
@@ -18,7 +23,7 @@ import "./friends.css";
 type Player = { id: string; name: string; verified: boolean };
 type Me = Player & { cosmetics: Record<string, unknown> };
 type FriendList = { friends: (Player & { seen: number; clan?: ClanTag | null; note?: string | null })[]; incoming: Player[]; outgoing: Player[] };
-type PublicProfile = Player & { created: number; likes: number; cosmetics: Record<string, unknown>; profile?: Card; links?: CardOwner["links"]; clan?: ClanTag | null };
+type PublicProfile = Player & { created: number; likes: number; cosmetics: Record<string, unknown>; profile?: Card; links?: CardOwner["links"]; clan?: ClanTag | null; stats?: PublicStats };
 type View = { chat: string } | { profile: string } | null;
 
 const SHOT = /^https:\/\/api\.kromvia\.com\/share\/[A-Za-z0-9]{4,16}$/;
@@ -340,6 +345,16 @@ function PlayerView({
       <div className="player-info">
         <ProfileCard
           card={p.profile ?? {}}
+          stats={p.stats}
+          badges={
+            (p.stats?.badges?.length ?? 0) > 0
+              ? BADGES.filter((b) => p.stats!.badges!.includes(b.id)).map((b) => (
+                  <span key={b.id} className="pcard-badge" data-tier={b.tier} data-tip={badgeTip(t, b)} aria-label={t(`badge.${b.id}` as MessageKey)}>
+                    <img src={emblemUrl(b.emblem)} width={20} height={20} alt="" />
+                  </span>
+                ))
+              : undefined
+          }
           owner={{
             name: p.name,
             verified: p.verified,

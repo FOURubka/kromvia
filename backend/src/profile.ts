@@ -29,6 +29,7 @@ export type Profile = {
   looking?: (typeof LOOKING)[number][];
   mods?: string[];
   shot?: string;
+  shots?: string[];
 };
 
 const SLUG = /^[a-z0-9_-]{2,64}$/;
@@ -138,9 +139,60 @@ export function readProfile(raw: unknown): Profile | string {
     if (!SHARE.test(shot)) return "shot: bad share code";
     out.shot = shot;
   }
+  if (r.shots !== undefined && r.shots !== null) {
+    if (!Array.isArray(r.shots) || r.shots.length > 6 || r.shots.some((x) => typeof x !== "string" || !SHARE.test(x.trim().toUpperCase()))) return "shots: up to 6 share codes";
+    const shots = [...new Set((r.shots as string[]).map((x) => x.trim().toUpperCase()))];
+    if (shots.length) out.shots = shots;
+  }
   if (r.bannerShot !== undefined && typeof r.bannerShot !== "boolean") return "bannerShot: must be true or false";
   if (r.bannerShot) out.bannerShot = true;
   if (r.showLinks !== undefined && typeof r.showLinks !== "boolean") return "showLinks: must be true or false";
   if (r.showLinks) out.showLinks = true;
+  return out;
+}
+
+export type Game = { kills: number; deaths: number; totems: number; cps: number; elytra: number };
+export type Stats = { hours?: number; launches?: number; worlds?: number; badges?: string[]; modules?: string[]; game?: Game; at?: number };
+
+function ids(v: unknown, max: number, re: RegExp): string[] | undefined | Error {
+  if (v === undefined || v === null) return undefined;
+  if (!Array.isArray(v) || v.length > max || v.some((x) => typeof x !== "string" || !re.test(x))) return new Error(`up to ${max} ids`);
+  const out = [...new Set(v as string[])];
+  return out.length ? out : undefined;
+}
+
+function count(v: unknown, max: number): number | undefined | Error {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > max) return new Error(`0–${max}`);
+  return v;
+}
+
+export function readStats(raw: unknown): Stats | string {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return "stats must be an object";
+  const r = raw as Record<string, unknown>;
+  const out: Stats = {};
+  const fields: [keyof Stats, unknown][] = [
+    ["hours", count(r.hours, 1_000_000)],
+    ["launches", count(r.launches, 10_000_000)],
+    ["worlds", count(r.worlds, 100_000)],
+    ["badges", ids(r.badges, 60, /^[A-Za-z0-9]{1,32}$/)],
+    ["modules", ids(r.modules, 8, /^[a-z0-9_]{1,32}$/)],
+  ];
+  for (const [k, v] of fields) {
+    if (v instanceof Error) return `${k}: ${v.message}`;
+    if (v !== undefined) (out as Record<string, unknown>)[k] = k === "hours" ? Math.round((v as number) * 10) / 10 : k === "launches" || k === "worlds" ? Math.round(v as number) : v;
+  }
+  if (r.game !== undefined && r.game !== null) {
+    if (typeof r.game !== "object" || Array.isArray(r.game)) return "game: must be an object";
+    const g = r.game as Record<string, unknown>;
+    const game = {} as Game;
+    for (const [k, max] of [["kills", 10_000_000], ["deaths", 10_000_000], ["totems", 10_000_000], ["cps", 50], ["elytra", 10_000_000]] as const) {
+      const v = count(g[k], max);
+      if (v instanceof Error) return `game.${k}: ${v.message}`;
+      game[k] = k === "elytra" ? Math.round((v ?? 0) * 10) / 10 : Math.round(v ?? 0);
+    }
+    out.game = game;
+  }
+  out.at = Date.now();
   return out;
 }

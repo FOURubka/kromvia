@@ -16,6 +16,7 @@ export type Player = {
   profile?: Card;
   clan?: ClanTag | null;
   links?: Partial<Record<"discord" | "telegram", string>>;
+  stats?: { hours?: number; launches?: number; worlds?: number; badges?: string[]; modules?: string[]; game?: { kills: number; deaths: number; totems: number; cps: number; elytra: number } };
 };
 
 export type Ranked = { id: string; name: string; verified: boolean; likes: number };

@@ -133,6 +133,8 @@ public class SocialScreen extends KScreen {
 			builtH = height;
 		}
 		if (Social.chatWith() != null) {
+			String with = nameOf(Social.chatWith());
+			addRenderableWidget(new KButton(rx + rw - 54, chatTop() - 4, 54, 16, Component.literal("Profile"), b -> Mc.setScreen(new CardScreen(this, with))).flat());
 			addRenderableWidget(input);
 			addRenderableWidget(new KButton(rx + rw - 76, bottom() - 20, 24, 20, Component.literal("F2"), b -> Social.sendScreenshot(Social.chatWith())).flat());
 			addRenderableWidget(new KButton(rx + rw - 50, bottom() - 20, 50, 20, Component.literal("Send"), b -> send()));
@@ -152,7 +154,9 @@ public class SocialScreen extends KScreen {
 			String dot = m.online ? "§a● §r" : "§8● §7";
 			int y = TOP + 14 + i * ROW;
 			boolean join = m.online && !m.me && m.server != null;
-			addRenderableWidget(new KButton(x, y, LEFT_W - (join ? 38 : 0), ROW - 2, Component.literal(fit(" " + dot + m.name + (m.me ? " §8(you)" : m.online && m.server != null ? " §8" + m.server : ""), LEFT_W - (join ? 46 : 8))), b -> {}).flat());
+			addRenderableWidget(new KButton(x, y, LEFT_W - (join ? 38 : 0), ROW - 2, Component.literal(fit(" " + dot + m.name + (m.me ? " §8(you)" : m.online && m.server != null ? " §8" + m.server : ""), LEFT_W - (join ? 46 : 8))), b -> {
+				if (!m.me) Mc.setScreen(new CardScreen(this, m.name));
+			}).flat());
 			if (join) addRenderableWidget(new KButton(x + LEFT_W - 36, y, 34, ROW - 2, Component.literal("Join"), b -> joinServer(m.server)));
 		}
 		int rx = right(), rw = rightW();
@@ -225,7 +229,7 @@ public class SocialScreen extends KScreen {
 		else connect(this, room);
 	}
 
-	private void joinServer(String host) {
+	static void joinServer(String host) {
 		net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
 		if (mc.getCurrentServer() != null && host.equalsIgnoreCase(mc.getCurrentServer().ip.trim())) return;
 		if (mc.level != null) com.kromvia.client.compat.Mc.leaveWorld(null);

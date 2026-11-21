@@ -93,6 +93,8 @@ public final class Hud {
 		g.pose().popMatrix();
 	}
 
+	private static boolean cardHeld;
+
 	public static void tick(Minecraft mc) {
 		com.kromvia.client.Config.tick();
 		com.kromvia.client.Config.serverChanged(mc, com.kromvia.client.Config.currentServer(mc));
@@ -111,6 +113,13 @@ public final class Hud {
 		for (Module m : KromviaClient.MODULES) {
 			if (m.enabled) m.tick(mc);
 		}
+		boolean card = free && mc.player.isShiftKeyDown() && mc.options.keyUse.isDown();
+		if (card && !cardHeld && com.kromvia.client.Launcher.PRESENT && mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult) {
+			net.minecraft.world.entity.Entity e = ((net.minecraft.world.phys.EntityHitResult) mc.hitResult).getEntity();
+			if (e instanceof net.minecraft.world.entity.player.Player && e != mc.player) Mc.setScreen(new com.kromvia.client.ui.CardScreen(null, e.getName().getString()));
+		}
+		cardHeld = card;
+		com.kromvia.client.GameStats.tick(mc);
 		com.kromvia.client.ui.UiFont.tick(mc);
 	}
 }

@@ -30,20 +30,22 @@ public final class Players extends Module {
 	private static final int BATCH = 100;
 	private static final long ANSWER_MS = 10_000;
 
-	private record Seen(List<String> models, String cape, boolean dev, String clanId, String clanTag, long at) {}
+	private record Seen(List<String> models, String cape, boolean dev, String clanId, String clanTag, int[] colors, long at) {}
 
 	final BoolSetting mark = add(new BoolSetting("mark", "Kromvia mark", true));
 	final BoolSetting clan = add(new BoolSetting("clan", "Clan tag", true));
 	final BoolSetting mates = add(new BoolSetting("mates", "Clanmates in green", true));
-	final BoolSetting devBadge = add(new BoolSetting("dev", "Developer badge", true));
+	final BoolSetting colors = add(new BoolSetting("colors", "Profile name colours", true));
 	final BoolSetting tab = add(new BoolSetting("tab", "Also in the tab list", true));
+	final BoolSetting stats = add(new BoolSetting("share_stats", "Share game stats (kills, CPS, elytra)", false));
+	final BoolSetting share = add(new BoolSetting("share_setup", "Let others copy my setup", true));
 
 	private final Map<String, Seen> seen = new ConcurrentHashMap<>();
 	private String reported;
 	private String host;
 	private List<String> asked;
 	private long askedAt;
-	private int ticks;
+	private int ticks, shareTicks;
 
 	Players() {
 		super("kromvia_players", "Kromvia Players", Category.UTILITY, Corner.TOP_LEFT, com.kromvia.client.Launcher.PRESENT);
@@ -76,6 +78,8 @@ public final class Players extends Module {
 			asked = null;
 		}
 		if (host != null && mc.getConnection() != null && ++ticks % LOOKUP_TICKS == 0) lookup(mc, nick);
+		com.kromvia.client.GameStats.share = stats.on();
+		if (++shareTicks % 1200 == 20) com.kromvia.client.Social.shareSetup(share.on() ? com.kromvia.client.Config.exportSetup() : null);
 	}
 
 	@Override
@@ -135,8 +139,14 @@ public final class Players extends Module {
 			JsonObject cl = worn != null && worn.isJsonObject() && worn.getAsJsonObject().get("clan") instanceof JsonObject o ? o : null;
 			String clanId = cl != null && cl.get("id") != null && cl.get("id").isJsonPrimitive() ? cl.get("id").getAsString() : null;
 			String clanTag = cl != null && cl.get("tag") != null && cl.get("tag").isJsonPrimitive() ? cl.get("tag").getAsString() : null;
-			self.seen.put(name, new Seen(worn == null ? null : models(worn), cape, dev, clanId, clanTag, at));
+			JsonObject nm = worn != null && worn.isJsonObject() && worn.getAsJsonObject().get("name") instanceof JsonObject o ? o : null;
+			int[] colors = nm == null ? null : new int[] {com.kromvia.client.Social.rgb(text(nm, "a")), com.kromvia.client.Social.rgb(text(nm, "b"))};
+			self.seen.put(name, new Seen(worn == null ? null : models(worn), cape, dev, clanId, clanTag, colors, at));
 		}
+	}
+
+	private static String text(JsonObject o, String key) {
+		return o.get(key) != null && o.get(key).isJsonPrimitive() ? o.get(key).getAsString() : null;
 	}
 
 	private static List<String> models(JsonElement worn) {
@@ -169,6 +179,18 @@ public final class Players extends Module {
 		return decorate(nick, name, true);
 	}
 
+	private static Component painted(String nick, int[] c) {
+		int a = c[0] >= 0 ? c[0] : c[1], b = c[1] >= 0 ? c[1] : a;
+		MutableComponent out = Component.literal("");
+		int n = Math.max(1, nick.length() - 1);
+		for (int i = 0; i < nick.length(); i++) {
+			float t = i / (float) n;
+			int rgb = Math.round((a >> 16 & 0xFF) + ((b >> 16 & 0xFF) - (a >> 16 & 0xFF)) * t) << 16 | Math.round((a >> 8 & 0xFF) + ((b >> 8 & 0xFF) - (a >> 8 & 0xFF)) * t) << 8 | Math.round((a & 0xFF) + ((b & 0xFF) - (a & 0xFF)) * t);
+			out.append(Component.literal(String.valueOf(nick.charAt(i))).withStyle(st -> st.withColor(net.minecraft.network.chat.TextColor.fromRgb(rgb))));
+		}
+		return out;
+	}
+
 	private static Component decorate(String nick, Component name, boolean inTab) {
 		Players p = Fx.PLAYERS;
 		if (name == null || !p.enabled || inTab && !p.tab.on()) return name;
@@ -184,9 +206,10 @@ public final class Players extends Module {
 			int colour = p.mates.on() && mate ? 0x7EE0B0 : 0xC9B5FF;
 			out.append(Component.literal("[" + clanTag + "]").withStyle(st -> st.withColor(net.minecraft.network.chat.TextColor.fromRgb(colour)))).append(" ");
 		}
-		out.append(name);
+		int[] colors = self ? com.kromvia.client.Social.nameColors() : s.colors;
+		out.append(p.colors.on() && colors != null && name.getString().equals(nick) ? painted(nick, colors) : name);
 		boolean dev = self ? Cosmetics.devSelf() : s.dev;
-		if (p.devBadge.on() && dev) out.append(" ").append(Badge.glyph(Badge.CHECK)).append(" ").append(Badge.glyph(Badge.DEV));
+		if (dev) out.append(" ").append(Badge.glyph(Badge.CHECK)).append(" ").append(Badge.glyph(Badge.DEV));
 		return out;
 	}
 }

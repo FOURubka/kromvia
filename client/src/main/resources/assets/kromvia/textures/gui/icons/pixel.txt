@@ -1,4 +1,4 @@
-11
+12
 fps
 cps
 ping
@@ -113,6 +113,10 @@ elytra
 nearby
 timer
 item_tips
+custom_sky
+smooth_hotbar
+totem_pop
+kromvia_font
 colour_filter
 party_pings
 frame_report

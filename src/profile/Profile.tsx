@@ -5,6 +5,7 @@ import { describe, formatDuration, useLauncher, type Instance } from "../lib/lau
 import { InstanceIcon } from "../art/ModelIcon";
 import { emblemUrl } from "../art/emblems";
 import { BADGES, earned as isEarned, type Facts } from "./badges";
+import { factsOf } from "./stats";
 import { BadgeMedal, BadgesDialog, badgeTip } from "./BadgesView";
 import { Clans } from "./Clans";
 import type { ClanTag } from "./card";
@@ -122,21 +123,7 @@ export function Profile({ onFriends, onPlayer }: { onFriends: () => void; onPlay
     .filter((i) => (stats[i.id]?.playSeconds ?? 0) > 0)
     .sort((a, b) => stats[b.id].playSeconds - stats[a.id].playSeconds)
     .slice(0, 5);
-  const facts: Facts = {
-    hours: played / 3600,
-    launches,
-    builds: l.instances.length,
-    worlds: worlds.length,
-    friends: friends.length,
-    likes: me?.likes ?? 0,
-    verified: !!me?.verified,
-    linked: !!me?.links && Object.keys(me.links).length > 0,
-    days: me?.created ? (Date.now() - me.created) / 86_400_000 : 0,
-    created: me?.created ?? 0,
-    clan: !!me?.clan,
-    dev: !!me?.dev,
-    profile: [me?.profile?.bio, me?.profile?.status, me?.profile?.music, me?.profile?.banner ?? me?.profile?.shot, me?.profile?.mob ?? me?.profile?.block ?? me?.profile?.biome].filter(Boolean).length,
-  };
+  const facts: Facts = factsOf(me ?? null, played, launches, l.instances.length, worlds.length, friends.length);
   const badges = BADGES.map((b) => ({ ...b, has: isEarned(b, facts) })).sort((a, b) => Number(b.has) - Number(a.has));
   const earned = [
     ...badges

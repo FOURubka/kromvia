@@ -33,6 +33,14 @@ final class Ver {
 		return mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 	}
 
+	static float walkPos(net.minecraft.world.entity.LivingEntity e, float partial) {
+		return e.walkAnimation.position(partial);
+	}
+
+	static float walkSpeed(net.minecraft.world.entity.LivingEntity e, float partial) {
+		return e.walkAnimation.speed(partial);
+	}
+
 	static boolean showsEffects(Screen screen) {
 		return screen.showsActiveEffects();
 	}

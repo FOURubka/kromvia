@@ -8,6 +8,8 @@ import { headOf } from "./Head";
 import { outfitWorn, pushOutfit, savedOutfit, storeOutfit } from "../lib/outfit";
 import { pushNote } from "../lib/notes";
 import type { Game, Presence } from "../profile/card";
+import { gameCard } from "../profile/gameCard";
+import { addGameStats, storeStarred, syncStats } from "../profile/stats";
 
 export type MyStatus = Exclude<Presence, "offline">;
 export type ClanMessage = { id: number; from: string; name: string; text: string; time: number };
@@ -36,10 +38,13 @@ type HubEvent =
   | { type: "party" }
   | { type: "party.invite"; party: string; from: Player };
 
-type GameAsk = { do?: string; id?: string; to?: string; text?: string; party?: string; url?: string };
+type GameAsk = { do?: string; id?: string; to?: string; text?: string; party?: string; url?: string; name?: string; ids?: unknown; data?: unknown; share?: unknown };
 
 const LOCAL_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|[^.]*$)/;
 const joinable = (servers: Record<string, string>) => Object.fromEntries(Object.entries(servers).filter(([, h]) => !LOCAL_HOST.test(h)));
+
+type MeLite = { id: string; dev?: boolean; clan?: { id: string; tag: string } | null; profile?: { nameColor?: string; nameColor2?: string } };
+const nameColors = (m: MeLite) => (m.profile?.nameColor || m.profile?.nameColor2 ? { a: m.profile.nameColor ?? null, b: m.profile.nameColor2 ?? null } : null);
 
 const SHOT = /^https:\/\/api\.kromvia\.com\/share\/[A-Za-z0-9]{4,16}$/;
 
@@ -124,6 +129,11 @@ function useSocialState() {
   const gameAsked = useRef(false);
   const [gameTick, setGameTick] = useState(0);
   const [heads, setHeads] = useState<Record<string, string>>({});
+  const [setup, setSetup] = useState<Record<string, unknown> | null>(null);
+  const [myName, setMyName] = useState<{ a: string | null; b: string | null } | null>(null);
+  const [card, setCard] = useState<Record<string, unknown> | null>(null);
+  const cardFor = useRef<(name: string) => void>(() => {});
+  const instancesRef = useRef<{ id: string }[]>([]);
   const joinFriend = useRef<(id: string) => void>(() => {});
   const loadFriends = () =>
     invoke<{ friends: { id: string; name: string }[] }>("social_friends").then((f) => {
@@ -233,14 +243,15 @@ function useSocialState() {
         pushOutfit(next).catch(() => {});
       }
     };
-    invoke<{ id: string; dev?: boolean; clan?: { id: string; tag: string } | null } | null>("social_me").then((m) => {
+    invoke<MeLite | null>("social_me").then((m) => {
       if (!m) return;
       setMyClan(m.clan ?? null);
+      setMyName(nameColors(m));
       connect(m.id);
       syncDev(m);
       invoke("social_cosmetics", { worn: outfitWorn(savedOutfit()) }).catch(() => {});
     }, () => {});
-    const onFocus = () => invoke<{ dev?: boolean; clan?: { id: string; tag: string } | null } | null>("social_me").then((m) => m && (syncDev(m), setMyClan(m.clan ?? null)), () => {});
+    const onFocus = () => invoke<MeLite | null>("social_me").then((m) => m && (syncDev(m), setMyClan(m.clan ?? null), setMyName(nameColors(m))), () => {});
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
@@ -277,6 +288,23 @@ function useSocialState() {
     setRoom: (room: string | null) => partyAct(invoke("social_party_room", { room })),
   };
   const l = useLauncher();
+  instancesRef.current = l.instances;
+  cardFor.current = (name: string) => {
+    const f = gameFriends.find((x) => x.name.toLowerCase() === name.toLowerCase());
+    const host = f && servers[f.id] && !LOCAL_HOST.test(servers[f.id]) ? servers[f.id] : null;
+    gameCard(name, t, host, f?.id ?? null, myId).then(
+      (c) => setCard({ ...c, at: Date.now() }),
+      (e) => setCard({ name, error: String(e), at: Date.now() }),
+    );
+  };
+  useEffect(() => {
+    if (!myId || !l.instances.length) return;
+    syncStats(instancesRef.current);
+    const off = listen("game-exit", () => syncStats(instancesRef.current));
+    return () => {
+      off.then((f) => f());
+    };
+  }, [myId, l.instances.length]);
   const playingInst = l.running.length ? l.instances.find((i) => i.id === l.running[0].instanceId) : undefined;
   const playingMc = playingInst?.mcVersion ?? null;
   useEffect(() => {
@@ -316,6 +344,28 @@ function useSocialState() {
       else if (a.do === "leave") partyActions.leave();
       else if (a.do === "url" && a.url && SHOT.test(a.url)) openUrl(a.url).catch(() => {});
       else if (a.do === "joinFriend" && a.id) joinFriend.current(a.id);
+      else if (a.do === "card" && a.name) cardFor.current(a.name);
+      else if (a.do === "setupDone") setSetup(null);
+      else if (a.do === "like" && a.id && a.name) {
+        const name = a.name;
+        invoke("social_like", { id: a.id, on: a.text !== "off" }).then(() => cardFor.current(name), () => {});
+      } else if (a.do === "friendAdd" && a.name) {
+        const name = a.name;
+        invoke("social_friend_request", { name }).then(
+          () => setCard((c) => (c && c.name === name ? { ...c, requested: true, at: Date.now() } : c)),
+          (e) => setCard((c) => (c && c.name === name ? { ...c, notice: String(e), at: Date.now() } : c)),
+        );
+      }
+      else if (a.do === "setup") invoke("social_setup", { setup: a.data ?? null }).catch(() => {});
+      else if (a.do === "getSetup" && a.name) {
+        const name = a.name;
+        invoke<{ name: string; setup: unknown }>("social_user_setup", { name }).then(
+          (r) => setSetup({ name: r.name, data: r.setup, at: Date.now() }),
+          (e) => setSetup({ name, error: String(e), at: Date.now() }),
+        );
+      }
+      else if (a.do === "starred" && storeStarred(a.ids)) syncStats(instancesRef.current);
+      else if (a.do === "gameStats" && addGameStats(a.data, a.share)) syncStats(instancesRef.current);
       setGameTick((n) => n + 1);
     });
     return () => {
@@ -340,10 +390,13 @@ function useSocialState() {
       friends: gameFriends.map((f) => ({ ...f, online: online.has(f.id), unread: unread[f.id] ?? 0, head: heads[f.id] ?? null, room: rooms[f.id]?.room ?? null, server: servers[f.id] ?? null })),
       party,
       invites,
+      card,
+      name: myName,
+      setup,
       chat: chatWith ? { with: chatWith, messages: (chats[chatWith] ?? []).slice(-50).map((m) => ({ from: m.from, text: m.text, time: m.time })) } : null,
     };
     invoke("game_social", { state }).catch(() => {});
-  }, [gameTick, myId, myClan, clanChat, clanMembers, clanUnread, connected, error, gameFriends, online, unread, party, invites, chats, heads, rooms, servers]);
+  }, [gameTick, card, setup, myName, myId, myClan, clanChat, clanMembers, clanUnread, connected, error, gameFriends, online, unread, party, invites, chats, heads, rooms, servers]);
   const totalUnread = Object.values(unread).reduce((a, b) => a + b, 0);
   const join = (id: string) => {
     const r = rooms[id];

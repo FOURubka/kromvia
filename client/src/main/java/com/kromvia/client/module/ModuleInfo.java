@@ -85,7 +85,7 @@ public final class ModuleInfo {
 		put("old_animations", "old_animations", "Brings back the 1.7 swing, block and eat animations.");
 		put("hand_sway", "hand_sway", "Changes how much your hand sways when you turn.");
 		put("hand_position", "hand_position", "Moves and resizes your hand in first person.");
-		put("trails", "trails", "Leaves a coloured trail behind you.");
+		put("trails", "trails", "Leaves fading coloured copies of you behind as you move, like a Sandevistan.");
 		put("jump_circles", "jump_circles", "Draws a ring on the ground when you jump and land.");
 		put("item_physics", "item_physics", "Dropped items lie flat on the ground instead of spinning in the air.");
 		put("smooth_hotbar", "smooth_hotbar", "The hotbar selection slides between slots instead of jumping.");
@@ -131,7 +131,6 @@ public final class ModuleInfo {
 		put("auto_gg", "auto_gg", "Says gg for you when a game ends. Knows the big servers, and you can add your own trigger words.");
 		put("party_pings", "party_pings", "Press Z to mark the block you look at. Your party and clanmates on the same server see the mark, except on PvP servers where it is off.");
 		put("frame_report", "frame_report", "Tells the launcher your FPS and 1% lows, so it can warn you when a mod update makes the game slower.");
-		put("ghosts", "ghosts", "Press K to start a run after a 3 second count, K again to stop. Start at the same spot to race your best run as a ghost, or load a friend's ghost by code from Ghosts in the pause menu.");
 		put("kromvia_font", "kromvia_font", "Draws all text with the Kromvia font. Switch it off for the normal Minecraft font.");
 		put("welcome_guide", "welcome_guide", "Opens the first-launch guide again.");
 	}

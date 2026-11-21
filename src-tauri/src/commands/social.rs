@@ -299,6 +299,21 @@ pub async fn wardrobe_push(
 }
 
 #[tauri::command]
+pub async fn social_setup(setup: Value) -> Result<Value, String> {
+    social::set_setup(setup).await
+}
+
+#[tauri::command]
+pub async fn social_user_setup(name: String) -> Result<Value, String> {
+    social::user_setup(&name).await
+}
+
+#[tauri::command]
+pub async fn social_stats(stats: Value) -> Result<Value, String> {
+    social::set_stats(stats).await
+}
+
+#[tauri::command]
 pub async fn social_profile(profile: Value) -> Result<Value, String> {
     social::set_profile(profile).await
 }

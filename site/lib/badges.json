@@ -1,0 +1,198 @@
+{
+ "en": {
+  "launches1000": [
+   "Addicted",
+   "Start the game 1000 times"
+  ],
+  "worlds50": [
+   "Cartographer",
+   "Have 50 worlds"
+  ],
+  "friends25": [
+   "Crew",
+   "Have 25 friends"
+  ],
+  "clan": [
+   "Clan member",
+   "Join or create a clan"
+  ],
+  "profile": [
+   "Show-off",
+   "Fill in your profile: about, status, music, banner and a favourite"
+  ],
+  "early": [
+   "Early bird",
+   "Joined Kromvia before 2027"
+  ],
+  "firstLaunch": [
+   "First launch",
+   "Start the game once"
+  ],
+  "launches100": [
+   "Regular",
+   "Start the game 100 times"
+  ],
+  "hours10": [
+   "Getting started",
+   "Play 10 hours"
+  ],
+  "hours100": [
+   "No-lifer",
+   "Play 100 hours"
+  ],
+  "hours500": [
+   "Legend",
+   "Play 500 hours"
+  ],
+  "builds5": [
+   "Collector",
+   "Have 5 instances"
+  ],
+  "worlds10": [
+   "World maker",
+   "Have 10 worlds"
+  ],
+  "friends1": [
+   "Not alone",
+   "Add your first friend"
+  ],
+  "friends10": [
+   "Squad",
+   "Have 10 friends"
+  ],
+  "likes10": [
+   "Liked",
+   "Get 10 likes"
+  ],
+  "likes100": [
+   "Star",
+   "Get 100 likes"
+  ],
+  "verified": [
+   "Licensed",
+   "Link a licensed Minecraft account"
+  ],
+  "linked": [
+   "Connected",
+   "Link Discord or Telegram"
+  ],
+  "veteran": [
+   "Veteran",
+   "Be a Kromvia player for a year"
+  ],
+  "kills100": [
+   "Fighter",
+   "Get 100 player kills"
+  ],
+  "kills1000": [
+   "Warlord",
+   "Get 1000 player kills"
+  ],
+  "elytra100": [
+   "Sky Rider",
+   "Fly 100 km on an elytra"
+  ],
+  "totems50": [
+   "Undying",
+   "Pop 50 totems"
+  ]
+ },
+ "uk": {
+  "launches1000": [
+   "Залежний",
+   "Запусти гру 1000 разів"
+  ],
+  "worlds50": [
+   "Картограф",
+   "Май 50 світів"
+  ],
+  "friends25": [
+   "Тусовка",
+   "Май 25 друзів"
+  ],
+  "clan": [
+   "У клані",
+   "Вступи в клан або створи свій"
+  ],
+  "profile": [
+   "Показушник",
+   "Заповни профіль: про себе, статус, музика, банер і щось улюблене"
+  ],
+  "early": [
+   "Ранній пташок",
+   "Приєднався до Kromvia до 2027"
+  ],
+  "firstLaunch": [
+   "Перший запуск",
+   "Запусти гру один раз"
+  ],
+  "launches100": [
+   "Завсідник",
+   "Запусти гру 100 разів"
+  ],
+  "hours10": [
+   "Початківець",
+   "Зіграй 10 годин"
+  ],
+  "hours100": [
+   "Задрот",
+   "Зіграй 100 годин"
+  ],
+  "hours500": [
+   "Легенда",
+   "Зіграй 500 годин"
+  ],
+  "builds5": [
+   "Колекціонер",
+   "Май 5 збірок"
+  ],
+  "worlds10": [
+   "Творець світів",
+   "Май 10 світів"
+  ],
+  "friends1": [
+   "Не сам",
+   "Додай першого друга"
+  ],
+  "friends10": [
+   "Тусовка",
+   "Май 10 друзів"
+  ],
+  "likes10": [
+   "Помічений",
+   "Отримай 10 лайків"
+  ],
+  "likes100": [
+   "Зірка",
+   "Отримай 100 лайків"
+  ],
+  "verified": [
+   "Ліцензія",
+   "Привʼяжи ліцензійний акаунт Minecraft"
+  ],
+  "linked": [
+   "На звʼязку",
+   "Привʼяжи Discord або Telegram"
+  ],
+  "veteran": [
+   "Ветеран",
+   "Будь гравцем Kromvia рік"
+  ],
+  "kills100": [
+   "Боєць",
+   "Вбий 100 гравців"
+  ],
+  "kills1000": [
+   "Полководець",
+   "Вбий 1000 гравців"
+  ],
+  "elytra100": [
+   "Небесний вершник",
+   "Пролети 100 км на елітрі"
+  ],
+  "totems50": [
+   "Безсмертний",
+   "Використай 50 тотемів"
+  ]
+ }
+}

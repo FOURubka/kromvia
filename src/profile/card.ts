@@ -47,6 +47,7 @@ export type Card = {
   looking?: (typeof LOOKING)[number][];
   mods?: string[];
   shot?: string;
+  shots?: string[];
 };
 
 export type ClanTag = { id: string; name: string; tag: string; icon: string };
