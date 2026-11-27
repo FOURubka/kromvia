@@ -30,12 +30,13 @@ public final class Players extends Module {
 	private static final int BATCH = 100;
 	private static final long ANSWER_MS = 10_000;
 
-	private record Seen(List<String> models, String cape, boolean dev, String clanId, String clanTag, int[] colors, long at) {}
+	private record Seen(List<String> models, String cape, boolean dev, String clanId, String clanTag, int[] colors, String font, long at) {}
 
 	final BoolSetting mark = add(new BoolSetting("mark", "Kromvia mark", true));
 	final BoolSetting clan = add(new BoolSetting("clan", "Clan tag", true));
 	final BoolSetting mates = add(new BoolSetting("mates", "Clanmates in green", true));
 	final BoolSetting colors = add(new BoolSetting("colors", "Profile name colours", true));
+	final BoolSetting fonts = add(new BoolSetting("fonts", "Profile name fonts", true));
 	final BoolSetting tab = add(new BoolSetting("tab", "Also in the tab list", true));
 	final BoolSetting stats = add(new BoolSetting("share_stats", "Share game stats (kills, CPS, elytra)", false));
 	final BoolSetting share = add(new BoolSetting("share_setup", "Let others copy my setup", true));
@@ -140,8 +141,9 @@ public final class Players extends Module {
 			String clanId = cl != null && cl.get("id") != null && cl.get("id").isJsonPrimitive() ? cl.get("id").getAsString() : null;
 			String clanTag = cl != null && cl.get("tag") != null && cl.get("tag").isJsonPrimitive() ? cl.get("tag").getAsString() : null;
 			JsonObject nm = worn != null && worn.isJsonObject() && worn.getAsJsonObject().get("name") instanceof JsonObject o ? o : null;
-			int[] colors = nm == null ? null : new int[] {com.kromvia.client.Social.rgb(text(nm, "a")), com.kromvia.client.Social.rgb(text(nm, "b"))};
-			self.seen.put(name, new Seen(worn == null ? null : models(worn), cape, dev, clanId, clanTag, colors, at));
+			int[] colors = nm == null || text(nm, "a") == null && text(nm, "b") == null ? null : new int[] {com.kromvia.client.Social.rgb(text(nm, "a")), com.kromvia.client.Social.rgb(text(nm, "b"))};
+			String font = nm == null ? null : fontId(text(nm, "font"));
+			self.seen.put(name, new Seen(worn == null ? null : models(worn), cape, dev, clanId, clanTag, colors, font, at));
 		}
 	}
 
@@ -179,6 +181,12 @@ public final class Players extends Module {
 		return decorate(nick, name, true);
 	}
 
+	private static final java.util.Set<String> FONTS = new java.util.HashSet<>(java.util.Arrays.asList("display", "mono", "pixel", "arcade", "comic", "script", "tech", "retro", "spooky", "slab", "heavy", "round", "hand"));
+
+	static String fontId(String id) {
+		return id != null && FONTS.contains(id) ? id : null;
+	}
+
 	private static Component painted(String nick, int[] c) {
 		int a = c[0] >= 0 ? c[0] : c[1], b = c[1] >= 0 ? c[1] : a;
 		MutableComponent out = Component.literal("");
@@ -207,7 +215,11 @@ public final class Players extends Module {
 			out.append(Component.literal("[" + clanTag + "]").withStyle(st -> st.withColor(net.minecraft.network.chat.TextColor.fromRgb(colour)))).append(" ");
 		}
 		int[] colors = self ? com.kromvia.client.Social.nameColors() : s.colors;
-		out.append(p.colors.on() && colors != null && name.getString().equals(nick) ? painted(nick, colors) : name);
+		String font = self ? fontId(com.kromvia.client.Social.nameFont()) : s.font;
+		boolean plain = name.getString().equals(nick);
+		Component nickPart = p.colors.on() && colors != null && plain ? painted(nick, colors) : name;
+		if (p.fonts.on() && font != null && plain) nickPart = nickPart.copy().withStyle(Badge.nameFont(font));
+		out.append(nickPart);
 		boolean dev = self ? Cosmetics.devSelf() : s.dev;
 		if (dev) out.append(" ").append(Badge.glyph(Badge.CHECK)).append(" ").append(Badge.glyph(Badge.DEV));
 		return out;

@@ -1,0 +1,48 @@
+{
+  "providers": [
+    {
+      "type": "ttf",
+      "file": "kromvia:manrope-latin.ttf",
+      "shift": [
+        0.0,
+        1.0
+      ],
+      "size": 10.0,
+      "oversample": 1.75,
+      "skip": ""
+    },
+    {
+      "type": "ttf",
+      "file": "kromvia:manrope-latin-ext.ttf",
+      "shift": [
+        0.0,
+        1.0
+      ],
+      "size": 10.0,
+      "oversample": 1.75,
+      "skip": ""
+    },
+    {
+      "type": "ttf",
+      "file": "kromvia:manrope-cyrillic.ttf",
+      "shift": [
+        0.0,
+        1.0
+      ],
+      "size": 10.0,
+      "oversample": 1.75,
+      "skip": ""
+    },
+    {
+      "type": "ttf",
+      "file": "kromvia:manrope-cyrillic-ext.ttf",
+      "shift": [
+        0.0,
+        1.0
+      ],
+      "size": 10.0,
+      "oversample": 1.75,
+      "skip": ""
+    }
+  ]
+}

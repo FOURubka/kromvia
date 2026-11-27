@@ -146,3 +146,5 @@ InputConstants.KEY_Z -> org.lwjgl.glfw.GLFW.GLFW_KEY_Z
 ConnectScreen.startConnecting(parent, mc, ServerAddress.parseString(data.ip), data) -> mc.setScreen(new ConnectScreen(parent, mc, data))
 com.mojang.blaze3d.systems.RenderSystem.getDevice().getRenderer() -> com.mojang.blaze3d.platform.GlUtil.getRenderer()
 InputConstants.KEY_K -> org.lwjgl.glfw.GLFW.GLFW_KEY_K
+InputConstants.KEY_F -> org.lwjgl.glfw.GLFW.GLFW_KEY_F
+.getProfile().name() -> .getProfile().getName()

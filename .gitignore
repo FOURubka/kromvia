@@ -36,3 +36,5 @@ NOTES*.md
 TODO*.md
 
 /discord-bot/
+
+/public/intro.*

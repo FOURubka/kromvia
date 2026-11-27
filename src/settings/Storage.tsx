@@ -7,6 +7,7 @@ import { useJobs } from "../lib/jobs";
 import { formatBytes } from "../lib/launcher";
 import { Progress } from "../ui/Progress";
 import { Glyph } from "../ui/Glyph";
+import { Skeleton } from "../ui/Skeleton";
 
 type Usage = {
   instances: number;
@@ -77,7 +78,7 @@ export function Storage() {
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
       {!usage ? (
-        <p className="muted">{t("common.loading")}</p>
+        <Skeleton rows={3} icon={false} />
       ) : (
         <dl className="stats">
           {ROWS.map((k) => (

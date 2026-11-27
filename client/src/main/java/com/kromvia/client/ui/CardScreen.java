@@ -24,6 +24,7 @@ public class CardScreen extends KScreen {
 	private JsonObject card;
 	private int px, py, pw, ph;
 	private boolean confirmSetup;
+	private int scroll, maxScroll;
 
 	public CardScreen(Screen parent, String name) {
 		super(Component.literal(name));
@@ -129,8 +130,9 @@ public class CardScreen extends KScreen {
 		String status = str(card, "status");
 		if (status != null) g.drawString(font, fit(status, pw - 140), px + 12 + HEAD + 8, py + BANNER - 12, 0xFFFFFFFF, true);
 
-		int ly = py + BANNER + HEAD / 2 + 10, lx = px + 12, lw = pw - 24, limit = py + ph - 46;
-		g.enableScissor(px, ly - 2, px + pw, limit);
+		int top0 = py + BANNER + HEAD / 2 + 10, lx = px + 12, lw = pw - 24, limit = py + ph - 46;
+		int ly = top0 - scroll;
+		g.enableScissor(px, top0 - 2, px + pw, limit);
 		String playing = str(card, "playing");
 		if (playing != null) ly = section(g, "PLAYING NOW", java.util.Collections.singletonList(playing), lx, ly, lw);
 		List<String> stats = new ArrayList<>();
@@ -174,8 +176,16 @@ public class CardScreen extends KScreen {
 		ly = chips(g, "FAVOURITES", favs, lx, ly, lw, UiStyle.TEXT);
 		ly = chips(g, "LOOKING FOR", list(card, "chips"), lx, ly, lw, UiStyle.TEXT);
 		String server = str(card, "server");
-		if (server != null) section(g, "SERVER", java.util.Collections.singletonList(server), lx, ly, lw);
+		ly = gallery(g, lx, ly, lw);
+		if (server != null) ly = section(g, "SERVER", java.util.Collections.singletonList(server), lx, ly, lw);
 		g.disableScissor();
+		maxScroll = Math.max(0, ly + scroll - limit);
+		scroll = Math.min(scroll, maxScroll);
+		if (maxScroll > 0) {
+			int track = limit - top0, thumb = Math.max(16, track * track / (track + maxScroll));
+			int ty = top0 + (track - thumb) * scroll / maxScroll;
+			g.fill(px + pw - 5, ty, px + pw - 3, ty + thumb, 0x66FFFFFF);
+		}
 		String note = Social.setupStatus() != null ? Social.setupStatus() : str(card, "notice");
 		if (note != null) g.drawCenteredString(font, fit(note, pw - 20), px + pw / 2, py + ph - 40, UiStyle.MUTED);
 		super.draw(g, mouseX, mouseY, delta);
@@ -224,6 +234,19 @@ public class CardScreen extends KScreen {
 			cx += cw + 4;
 		}
 		return y + 13 + 8;
+	}
+
+	private int gallery(Gfx g, int x, int y, int w) {
+		JsonArray shots = arr(card, "shots");
+		if (shots.size() == 0) return y;
+		g.drawString(font, "GALLERY", x, y, UiStyle.FRONT, false);
+		y += 11;
+		int tw = (w - 8) / 3, th = tw * 9 / 16;
+		for (int i = 0; i < shots.size(); i++) {
+			int cx = x + (i % 3) * (tw + 4), cy = y + (i / 3) * (th + 4);
+			Heads.image(g, "shot:" + name + ":" + i, shots.get(i).getAsString(), cx, cy, tw, th);
+		}
+		return y + ((shots.size() + 2) / 3) * (th + 4) + 6;
 	}
 
 	private int modules(Gfx g, int x, int y, int w, int mouseX, int mouseY) {
@@ -292,6 +315,12 @@ public class CardScreen extends KScreen {
 		List<String> out = new ArrayList<>();
 		for (JsonElement e : arr(o, key)) if (e.isJsonPrimitive()) out.add(e.getAsString());
 		return out;
+	}
+
+	@Override
+	public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+		scroll = Math.max(0, Math.min(maxScroll, scroll - (int) (scrollY * 20)));
+		return true;
 	}
 
 	@Override

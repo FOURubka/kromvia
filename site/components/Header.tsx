@@ -12,13 +12,13 @@ const T = {
   en: {
     nav: [
       { label: "Launcher", bee: "menu-launcher", title: "Launcher", links: [
-        { href: "/download", label: "Download" }, { href: "/features", label: "Features" }, { href: "/changelog", label: "Changelog" }, { href: "/roadmap", label: "Roadmap" }, { href: "/faq", label: "FAQ" },
+        { href: "/download", label: "Download" }, { href: "/features", label: "Features" }, { href: "/changelog", label: "Changelog" }, { href: "/compare", label: "Compare" }, { href: "/status", label: "Status" }, { href: "/faq", label: "FAQ" },
       ] },
       { label: "Client", bee: "menu-client", title: "Built-in client", links: [
         { href: "/features#client", label: "Modules" }, { href: "/cosmetics", label: "Cosmetics" },
       ] },
       { label: "Community", bee: "menu-community", title: "Community", links: [
-        { href: "/players", label: "Find players" }, { href: "/top", label: "Top players" }, { href: "/rooms", label: "Rooms" }, { href: DISCORD_INVITE, label: "Discord" },
+        { href: "/players", label: "Find players" }, { href: "/top", label: "Top players" }, { href: "/servers", label: "Servers" }, { href: "/builds", label: "Public builds" }, { href: "/rooms", label: "Rooms" }, { href: DISCORD_INVITE, label: "Discord" },
       ] },
     ],
     download: "Download", home: "Kromvia home", open: "Open menu", close: "Close menu",
@@ -26,13 +26,13 @@ const T = {
   uk: {
     nav: [
       { label: "Лаунчер", bee: "menu-launcher", title: "Лаунчер", links: [
-        { href: "/download", label: "Завантажити" }, { href: "/features", label: "Можливості" }, { href: "/changelog", label: "Зміни" }, { href: "/roadmap", label: "Роадмап" }, { href: "/faq", label: "FAQ" },
+        { href: "/download", label: "Завантажити" }, { href: "/features", label: "Можливості" }, { href: "/changelog", label: "Зміни" }, { href: "/compare", label: "Порівняння" }, { href: "/status", label: "Статус" }, { href: "/faq", label: "FAQ" },
       ] },
       { label: "Клієнт", bee: "menu-client", title: "Вбудований клієнт", links: [
         { href: "/features#client", label: "Модулі" }, { href: "/cosmetics", label: "Косметика" },
       ] },
       { label: "Спільнота", bee: "menu-community", title: "Спільнота", links: [
-        { href: "/players", label: "Пошук гравців" }, { href: "/top", label: "Топ гравців" }, { href: "/rooms", label: "Кімнати" }, { href: DISCORD_INVITE, label: "Discord" },
+        { href: "/players", label: "Пошук гравців" }, { href: "/top", label: "Топ гравців" }, { href: "/servers", label: "Сервери" }, { href: "/builds", label: "Публічні збірки" }, { href: "/rooms", label: "Кімнати" }, { href: DISCORD_INVITE, label: "Discord" },
       ] },
     ],
     download: "Завантажити", home: "Kromvia, головна", open: "Відкрити меню", close: "Закрити меню",

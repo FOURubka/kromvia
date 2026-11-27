@@ -74,3 +74,17 @@ export async function release(): Promise<Release | null> {
   const res = await get("/download");
   return res?.ok ? res.json() : null;
 }
+
+export type Now = { playing: number; servers: { host: string; players: number }[] };
+
+export async function now(): Promise<Now | null> {
+  const res = await get("/v1/now");
+  return res?.ok ? res.json() : null;
+}
+
+export type PublicBuild = { code: string; name: string; mc: string | null; loader: string; mods: number; created: number; from: { id: string; name: string; verified: boolean } };
+
+export async function builds(q: string, page: number): Promise<PublicBuild[] | null> {
+  const res = await get(`/v1/builds?q=${encodeURIComponent(q)}&page=${page}`);
+  return res?.ok ? res.json() : null;
+}

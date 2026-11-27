@@ -372,8 +372,50 @@ public final class Info {
 
 	private static final java.util.Map<String, Ping> PINGS_SHOWN = new java.util.concurrent.ConcurrentHashMap<>();
 
-	private static String dimension(Minecraft mc) {
+	static String dimension(Minecraft mc) {
 		return mc.level.dimension().identifier().toString();
+	}
+
+	static void marker(com.kromvia.client.compat.Gfx g, Minecraft mc, float[] v, double x, double y, double z, String name, int a, float pop, int color) {
+		double yaw = Math.toRadians(v[3]), pitch = Math.toRadians(v[4]);
+		double sy = Math.sin(yaw), cy = Math.cos(yaw), sp = Math.sin(pitch), cp = Math.cos(pitch);
+		double fx = -sy * cp, fy = -sp, fz = cy * cp;
+		double rx = -cy, rz = -sy;
+		double ux = -sy * sp, uy = cp, uz = cy * sp;
+		int w = g.guiWidth(), h = g.guiHeight();
+		double focal = h / 2.0 / Math.tan(Math.toRadians(Math.max(1, v[5])) / 2);
+		double dx = x - v[0], dy = y - v[1], dz = z - v[2];
+		double depth = dx * fx + dy * fy + dz * fz;
+		double right = dx * rx + dz * rz;
+		double up = dx * ux + dy * uy + dz * uz;
+		double px, py;
+		if (depth > 0.1) {
+			px = w / 2.0 + right / depth * focal;
+			py = h / 2.0 - up / depth * focal;
+		} else {
+			px = w / 2.0 + (right >= 0 ? w : -w);
+			py = h / 2.0;
+		}
+		double ax = px - w / 2.0, ay = py - h / 2.0;
+		double k = Math.min((w / 2.0 - 12) / Math.max(1e-6, Math.abs(ax)), (h / 2.0 - 12) / Math.max(1e-6, Math.abs(ay)));
+		if (k < 1) {
+			px = w / 2.0 + ax * k;
+			py = h / 2.0 + ay * k;
+		}
+		int cx = (int) Math.round(px), cyi = (int) Math.round(py);
+		int r = Math.round(3 * pop);
+		int accent = (a << 24) | (color & 0xFFFFFF), white = (a << 24) | 0xF4F5F7, rim = ((a * 3 / 4) << 24) | 0x18181D;
+		g.fill(cx - r - 1, cyi - r - 1, cx + r + 2, cyi + r + 2, rim);
+		g.fill(cx - r, cyi - r, cx + r + 1, cyi + r + 1, white);
+		g.fill(cx - r + 1, cyi - r + 1, cx + r, cyi + r, accent);
+		double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+		String label = name + "  " + Math.round(dist) + " m";
+		int tw = mc.font.width(label);
+		int ly = cyi + r + 4;
+		if (ly + 10 > h) ly = cyi - r - 14;
+		int lx = Math.max(2, Math.min(w - tw - 6, cx - tw / 2 - 3));
+		g.fill(lx, ly, lx + tw + 6, ly + 11, ((a * 2 / 3) << 24) | 0x18181D);
+		g.drawString(mc.font, label, lx + 3, ly + 2, white, false);
 	}
 
 	public static void pinged(com.google.gson.JsonObject o) {
@@ -450,13 +492,6 @@ public final class Info {
 			long life = (long) (seconds.value() * 1000);
 			String dim = dimension(mc);
 			float[] v = Mc.view();
-			double yaw = Math.toRadians(v[3]), pitch = Math.toRadians(v[4]);
-			double sy = Math.sin(yaw), cy = Math.cos(yaw), sp = Math.sin(pitch), cp = Math.cos(pitch);
-			double fx = -sy * cp, fy = -sp, fz = cy * cp;
-			double rx = -cy, rz = -sy;
-			double ux = -sy * sp, uy = cp, uz = cy * sp;
-			int w = g.guiWidth(), h = g.guiHeight();
-			double focal = h / 2.0 / Math.tan(Math.toRadians(Math.max(1, v[5])) / 2);
 			for (java.util.Iterator<Ping> it = PINGS_SHOWN.values().iterator(); it.hasNext(); ) {
 				Ping p = it.next();
 				long age = now - p.at;
@@ -465,41 +500,9 @@ public final class Info {
 					continue;
 				}
 				if (!p.dim.equals(dim)) continue;
-				double dx = p.x - v[0], dy = p.y - v[1], dz = p.z - v[2];
-				double depth = dx * fx + dy * fy + dz * fz;
-				double right = dx * rx + dz * rz;
-				double up = dx * ux + dy * uy + dz * uz;
-				double px, py;
-				if (depth > 0.1) {
-					px = w / 2.0 + right / depth * focal;
-					py = h / 2.0 - up / depth * focal;
-				} else {
-					px = w / 2.0 + (right >= 0 ? w : -w);
-					py = h / 2.0;
-				}
-				double ax = px - w / 2.0, ay = py - h / 2.0;
-				double k = Math.min((w / 2.0 - 12) / Math.max(1e-6, Math.abs(ax)), (h / 2.0 - 12) / Math.max(1e-6, Math.abs(ay)));
-				if (k < 1) {
-					px = w / 2.0 + ax * k;
-					py = h / 2.0 + ay * k;
-				}
 				float fade = age > life - 1000 ? (life - age) / 1000F : 1;
 				float pop = age < 180 ? 1 + (180 - age) / 180F * 0.6F : 1;
-				int a = Math.max(0, Math.min(255, Math.round(fade * 255)));
-				int cx = (int) Math.round(px), cyi = (int) Math.round(py);
-				int r = Math.round(3 * pop);
-				int accent = (a << 24) | 0x8B5CF6, white = (a << 24) | 0xF4F5F7, rim = ((a * 3 / 4) << 24) | 0x18181D;
-				g.fill(cx - r - 1, cyi - r - 1, cx + r + 2, cyi + r + 2, rim);
-				g.fill(cx - r, cyi - r, cx + r + 1, cyi + r + 1, white);
-				g.fill(cx - r + 1, cyi - r + 1, cx + r, cyi + r, accent);
-				double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-				String label = p.from + "  " + Math.round(dist) + " m";
-				int tw = mc.font.width(label);
-				int ly = cyi + r + 4;
-				if (ly + 10 > h) ly = cyi - r - 14;
-				int lx = Math.max(2, Math.min(w - tw - 6, cx - tw / 2 - 3));
-				g.fill(lx, ly, lx + tw + 6, ly + 11, ((a * 2 / 3) << 24) | 0x18181D);
-				g.drawString(mc.font, label, lx + 3, ly + 2, white, false);
+				marker(g, mc, v, p.x, p.y, p.z, p.from, Math.max(0, Math.min(255, Math.round(fade * 255))), pop, 0x8B5CF6);
 			}
 		}
 	}

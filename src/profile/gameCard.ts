@@ -11,6 +11,27 @@ type T = (key: MessageKey, vars?: Record<string, string | number>) => string;
 
 const plain = (s?: string) => s?.replace(/:([a-z0-9_]{1,24}):/gi, "").replace(/\s+/g, " ").trim() || undefined;
 
+function thumb(code: string) {
+  return invoke<string>("share_image", { code }).then(
+    (src) =>
+      new Promise<string | null>((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const c = document.createElement("canvas");
+          c.width = 192;
+          c.height = 108;
+          const k = Math.max(c.width / img.width, c.height / img.height);
+          const w = img.width * k, h = img.height * k;
+          c.getContext("2d")!.drawImage(img, (c.width - w) / 2, (c.height - h) / 2, w, h);
+          resolve(c.toDataURL("image/png"));
+        };
+        img.onerror = () => resolve(null);
+        img.src = src;
+      }),
+    () => null,
+  );
+}
+
 export async function gameCard(name: string, t: T, playing: string | null, friendId: string | null, myId: string | null) {
   const [u, likes] = await Promise.all([invoke<User>("social_user", { name }), invoke<string[]>("social_likes").catch(() => [] as string[])]);
   const p = u.profile ?? {};
@@ -53,5 +74,6 @@ export async function gameCard(name: string, t: T, playing: string | null, frien
     likes: u.likes ?? 0,
     hasSetup: !!u.hasSetup,
     game: s.game ?? null,
+    shots: (await Promise.all((p.shots ?? []).slice(0, 6).map(thumb))).filter((x): x is string => !!x),
   };
 }

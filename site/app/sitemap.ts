@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { MODULE_LIST } from "@/lib/content";
 
-const PAGES = ["", "download", "features", "cosmetics", "rooms", "players", "top", "faq", "changelog", "roadmap", "privacy", "terms"];
+const PAGES = ["", "download", "features", "cosmetics", "rooms", "players", "top", "servers", "builds", "compare", "status", "faq", "changelog", "privacy", "terms"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

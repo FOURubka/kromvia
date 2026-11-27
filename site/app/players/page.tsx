@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Glyph } from "@/components/Glyph";
+import { PlayerInput } from "@/components/PlayerInput";
 import { search } from "@/lib/api";
 import { getLang } from "@/lib/i18n";
 import s from "./players.module.css";
@@ -8,15 +9,15 @@ import s from "./players.module.css";
 const T = {
   en: {
     meta: { title: "Find players", description: "Look up any Kromvia player's profile, skin and cosmetics." },
-    head: "Find players", lede: "Type a nickname to open someone's profile, skin and cosmetics.",
+    head: "Find players", lede: "Type any part of a nickname to open someone's profile, skin and cosmetics.",
     placeholder: "Nickname", go: "Search", bad: "Nicknames use only letters, digits and _.",
-    offline: "Can't reach Kromvia servers right now. Try again in a minute.", empty: (q: string) => `No players whose nickname starts with “${q}”.`,
+    offline: "Can't reach Kromvia servers right now. Try again in a minute.", empty: (q: string) => `No players with “${q}” in their nickname.`,
   },
   uk: {
     meta: { title: "Пошук гравців", description: "Знайди профіль, скін і косметику будь-якого гравця Kromvia." },
-    head: "Пошук гравців", lede: "Введи нік, щоб відкрити профіль, скін і косметику гравця.",
+    head: "Пошук гравців", lede: "Введи нік або його частину, щоб відкрити профіль, скін і косметику гравця.",
     placeholder: "Нік", go: "Шукати", bad: "У ніку лише літери, цифри та _.",
-    offline: "Сервери Kromvia зараз недоступні. Спробуй за хвилину.", empty: (q: string) => `Нема гравців, чий нік починається з «${q}».`,
+    offline: "Сервери Kromvia зараз недоступні. Спробуй за хвилину.", empty: (q: string) => `Нема гравців з «${q}» у ніку.`,
   },
 };
 
@@ -37,7 +38,7 @@ export default async function Players({ searchParams }: PageProps<"/players">) {
         <p>{t.lede}</p>
       </header>
       <form className={s.form} action="/players" role="search">
-        <input className="field" name="q" defaultValue={q} placeholder={t.placeholder} maxLength={16} autoComplete="off" spellCheck={false} autoFocus />
+        <PlayerInput defaultValue={q} placeholder={t.placeholder} />
         <button className="btn" type="submit">
           <Glyph name="search" size={16} /> {t.go}
         </button>
@@ -53,7 +54,7 @@ export default async function Players({ searchParams }: PageProps<"/players">) {
           {list.map((p) => (
             <li key={p.id}>
               <Link href={`/u/${p.name}`} className={`block ${s.row}`}>
-                <img src={`https://mc-heads.net/avatar/${p.name}/40`} alt="" width={40} height={40} className={s.head} />
+                <img loading="lazy" decoding="async" src={`https://mc-heads.net/avatar/${p.name}/40`} alt="" width={40} height={40} className={s.head} />
                 <span className={s.name}>
                   {p.name}
                   {p.verified && <Glyph name="verified" size={16} />}
@@ -70,7 +71,7 @@ export default async function Players({ searchParams }: PageProps<"/players">) {
 function Empty({ bee, text }: { bee: string; text: string }) {
   return (
     <div className={s.empty}>
-      <img src={`/bee/${bee}.webp`} alt="" />
+      <img loading="lazy" decoding="async" src={`/bee/${bee}.webp`} alt="" />
       <p className="muted">{text}</p>
     </div>
   );

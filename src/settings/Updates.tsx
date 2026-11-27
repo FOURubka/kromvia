@@ -8,10 +8,8 @@ import { Markdown } from "../content/Markdown";
 
 type Available = { version: string; notes: string | null };
 
-let checked: Promise<Available | null> | null = null;
-const check = () => (checked ??= invoke<Available | null>("update_check").catch(() => null));
-
 const AUTO_KEY = "kromvia.autoUpdate";
+const BETA_KEY = "kromvia.betaUpdates";
 const DISMISSED_KEY = "kromvia.updateDismissed";
 const NOTES_KEY = "kromvia.updateNotes";
 
@@ -29,6 +27,11 @@ const write = (key: string, value: string | null) => {
   } catch {}
 };
 
+const beta = () => read(BETA_KEY) === "1";
+
+let checked: Promise<Available | null> | null = null;
+const check = () => (checked ??= invoke<Available | null>("update_check", { beta: beta() }).catch(() => null));
+
 export function useUpdate() {
   const [update, setUpdate] = useState<Available | null>(null);
   useEffect(() => {
@@ -43,7 +46,7 @@ function useInstall() {
   const install = (update: Available) => {
     setError(null);
     write(NOTES_KEY, JSON.stringify(update));
-    invoke<number>("update_install").then(
+    invoke<number>("update_install", { beta: beta() }).then(
       (id) => updates.started("update", id),
       (e) => setError(String(e)),
     );
@@ -56,6 +59,7 @@ export function Updates() {
   const update = useUpdate();
   const { install, job, error } = useInstall();
   const [auto, setAuto] = useState(read(AUTO_KEY) === "1");
+  const [isBeta, setBeta] = useState(beta);
   return (
     <section className="card">
       <h2>{update ? t("update.title", { version: update.version }) : t("update.section")}</h2>
@@ -68,6 +72,19 @@ export function Updates() {
             const on = e.currentTarget.checked;
             write(AUTO_KEY, on ? "1" : null);
             setAuto(on);
+          }}
+        />
+      </label>
+      <label className="field">
+        <span>{t("update.beta")}</span>
+        <input
+          type="checkbox"
+          checked={isBeta}
+          onChange={(e) => {
+            const on = e.currentTarget.checked;
+            write(BETA_KEY, on ? "1" : null);
+            setBeta(on);
+            checked = null;
           }}
         />
       </label>

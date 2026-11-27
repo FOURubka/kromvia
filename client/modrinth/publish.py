@@ -111,7 +111,7 @@ def main():
             "description": SUMMARY,
             "body": body,
             "categories": ["utility"],
-            "license_id": "LicenseRef-All-Rights-Reserved",
+            "license_id": "GPL-3.0-only",
             "client_side": "required",
             "server_side": "unsupported",
         }

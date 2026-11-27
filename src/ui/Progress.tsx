@@ -20,3 +20,29 @@ export function Progress({ job }: { job: JobProgress }) {
     </div>
   );
 }
+
+const STEPS = ["prepare", "java", "files", "loader", "start"] as const;
+const STEP_OF: Record<string, number> = { resolve: 0, signin: 0, xbox: 0, "room-mods": 0, extract: 1, download: 2, verify: 2, patch: 3, natives: 4 };
+
+export function LaunchProgress({ job }: { job: JobProgress }) {
+  const { t } = useI18n();
+  const pct = job.total ? Math.floor((job.done / job.total) * 100) : null;
+  const step = STEP_OF[job.stage] ?? 0;
+  const overall = Math.round(((step + (pct ?? 0) / 100) / STEPS.length) * 100);
+  return (
+    <div className="launch-progress">
+      <div className="launch-progress-fill" style={{ width: `${overall}%` }} />
+      <span className="launch-progress-label">
+        {t(`stage.${job.stage}` as MessageKey)}
+        {pct !== null && ` ${pct}%`}
+      </span>
+      <ol className="launch-steps">
+        {STEPS.map((s, i) => (
+          <li key={s} data-state={i < step ? "done" : i === step ? "now" : "next"}>
+            {t(`launch.step.${s}` as MessageKey)}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}

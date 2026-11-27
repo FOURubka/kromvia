@@ -45,8 +45,14 @@ pub fn run() {
                 engine::window_state::restore(&w);
             }
             app.manage(tray::init(app.handle()));
-            #[cfg(any(windows, target_os = "linux"))]
+            #[cfg(windows)]
             let _ = app.deep_link().register_all();
+            #[cfg(target_os = "linux")]
+            if app.deep_link().register_all().is_err() && std::env::var_os("APPDIR").is_some() {
+                if let Ok(dir) = app.path().data_dir() {
+                    engine::opener::register_scheme(&dir.join("applications"), "kromvia");
+                }
+            }
             let handle = app.handle().clone();
             app.deep_link().on_open_url(move |e| commands::desktop::open_pack(&handle, e.urls().iter().map(|u| u.as_str())));
             if let Ok(Some(urls)) = app.deep_link().get_current() {
@@ -284,6 +290,9 @@ pub fn run() {
             commands::social::share_screenshot_file,
             commands::social::share_get,
             commands::social::build_install,
+            commands::desktop::intro_video,
+            commands::social::share_image,
+            commands::social::share_private,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

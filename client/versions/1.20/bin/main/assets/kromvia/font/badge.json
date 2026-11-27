@@ -1,0 +1,7 @@
+{
+  "providers": [
+    {"type": "bitmap", "file": "kromvia:font/badge_kromvia.png", "height": 8, "ascent": 7, "chars": [""]},
+    {"type": "bitmap", "file": "kromvia:font/badge_check.png", "height": 8, "ascent": 7, "chars": [""]},
+    {"type": "bitmap", "file": "kromvia:font/badge_dev.png", "height": 8, "ascent": 7, "chars": [""]}
+  ]
+}

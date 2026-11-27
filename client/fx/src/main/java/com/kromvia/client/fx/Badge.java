@@ -12,6 +12,10 @@ final class Badge {
 
 	private Badge() {}
 
+	static Style nameFont(String id) {
+		return Style.EMPTY.withFont(new FontDescription.Resource(Identifier.fromNamespaceAndPath("kromvia", "name_" + id)));
+	}
+
 	static MutableComponent glyph(String g) {
 		return Component.literal(g).withStyle(FONT);
 	}

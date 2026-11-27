@@ -93,7 +93,7 @@ public final class Hud {
 		g.pose().popMatrix();
 	}
 
-	private static boolean cardHeld;
+	private static boolean cardHeld, listHeld;
 
 	public static void tick(Minecraft mc) {
 		com.kromvia.client.Config.tick();
@@ -119,6 +119,9 @@ public final class Hud {
 			if (e instanceof net.minecraft.world.entity.player.Player && e != mc.player) Mc.setScreen(new com.kromvia.client.ui.CardScreen(null, e.getName().getString()));
 		}
 		cardHeld = card;
+		boolean list = free && com.kromvia.client.Launcher.PRESENT && mc.options.keyPlayerList.isDown() && mc.options.keyAttack.isDown();
+		if (list && !listHeld) Mc.setScreen(new com.kromvia.client.ui.PlayersScreen());
+		listHeld = list;
 		com.kromvia.client.GameStats.tick(mc);
 		com.kromvia.client.ui.UiFont.tick(mc);
 	}

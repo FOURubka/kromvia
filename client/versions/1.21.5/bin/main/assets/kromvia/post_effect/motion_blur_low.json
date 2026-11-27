@@ -1,0 +1,74 @@
+{
+    "targets": {
+        "swap": {}
+    },
+    "passes": [
+        {
+            "vertex_shader": "minecraft:post/blit",
+            "fragment_shader": "kromvia:post/motion_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "minecraft:main"
+                },
+                {
+                    "sampler_name": "Depth",
+                    "target": "minecraft:main",
+                    "use_depth_buffer": true
+                }
+            ],
+            "output": "swap",
+            "uniforms": [
+                {
+                    "name": "Strength",
+                    "type": "float",
+                    "values": [
+                        0.15
+                    ]
+                },
+                {
+                    "name": "Samples",
+                    "type": "int",
+                    "values": [
+                        8.0
+                    ]
+                },
+                {
+                    "name": "InvViewProj",
+                    "type": "matrix4x4"
+                },
+                {
+                    "name": "PrevViewProj",
+                    "type": "matrix4x4"
+                },
+                {
+                    "name": "Delta",
+                    "type": "vec3"
+                }
+            ]
+        },
+        {
+            "vertex_shader": "minecraft:post/blit",
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap"
+                }
+            ],
+            "uniforms": [
+                {
+                    "name": "ColorModulate",
+                    "type": "vec4",
+                    "values": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ],
+            "output": "minecraft:main"
+        }
+    ]
+}

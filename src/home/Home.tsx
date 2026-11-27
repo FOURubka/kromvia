@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useI18n } from "../i18n";
-import { Progress } from "../ui/Progress";
+import { LaunchProgress, Progress } from "../ui/Progress";
 import { LaunchError } from "../ui/LaunchError";
 import { Glyph } from "../ui/Glyph";
 import { usePaged } from "../ui/Pager";
@@ -194,6 +194,26 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
   }, [current?.id]);
   const job = current && l.jobOf(current.id);
   const run = current && l.runOf(current.id);
+  const [online, setOnline] = useState(() => navigator.onLine);
+  const [startedAt, setStartedAt] = useState(0);
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const on = () => setOnline(navigator.onLine);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", on);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", on);
+    };
+  }, []);
+  const runId = run?.runId;
+  useEffect(() => {
+    if (!runId) return;
+    setStartedAt(Date.now());
+    const timer = setTimeout(() => setTick((n) => n + 1), 6000);
+    return () => clearTimeout(timer);
+  }, [runId]);
+  const beePose = job ? "loading" : run ? (Date.now() - startedAt < 6000 ? "success" : "idle") : current && l.crashes[current.id] ? "crash" : !online ? "offline" : "empty-home";
   const [restarting, setRestarting] = useState<string | null>(null);
   useEffect(() => {
     if (!restarting || l.runOf(restarting)) return;
@@ -341,14 +361,14 @@ export function Home({ onNavigate }: { onNavigate: (page: Nav) => void }) {
             <Glyph name="layout-sidebar-right" />
           </button>
           <div className="launchpad-art">
-            <img className="launchpad-bee" src="/bee/empty-home.webp" alt="" draggable={false} />
+            <img className="launchpad-bee" src={`/bee/${beePose}.webp`} alt="" draggable={false} />
           </div>
           {current ? (
             <div className="launchpad-center">
               {(job || run) && <img className="launch-bee" src={`/bee/${job ? "loading" : "idle"}.webp`} alt="" draggable={false} />}
               {job ? (
                 <div className="launch busy">
-                  <Progress job={job} />
+                  <LaunchProgress job={job} />
                   <button className="btn btn-ghost" onClick={() => invoke("job_cancel", { id: job.id })}>
                     <Glyph name="x" /> {t("common.cancel")}
                   </button>

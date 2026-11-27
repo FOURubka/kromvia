@@ -73,6 +73,9 @@ public class KromviaClient implements ClientModInitializer {
 			Extras.HIT_SOUND,
 			Extras.TOTEM_POPS,
 			Extras.DEATH_COORDS,
+			new com.kromvia.client.module.DeathRecap(),
+			new com.kromvia.client.module.Waypoints(),
+			new com.kromvia.client.module.FrameGraph(),
 			Extras.TAB_PING,
 			com.kromvia.client.ui.UiFont.FONT);
 

@@ -1,0 +1,9 @@
+{
+	"required": true,
+	"package": "com.kromvia.client.fx.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": ["QolToastsMixin", "QolTooltipMixin", "QolSlotAccessor", "QolButtonAccessor", "QolChatBackgroundMixin", "QolChatComponentMixin", "QolChatRowsMixin", "QolChatScreenMixin", "QolContainerScreenMixin", "QolGameRendererMixin", "QolGuiMixin", "QolLightTextureMixin", "QolLivingEntityMixin", "QolLivingEntityRenderStateMixin", "QolLivingEntityRendererMixin", "QolMouseHandlerMixin", "QolPauseScreenMixin", "QolScreenMixin", "QolTitleScreenMixin"],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

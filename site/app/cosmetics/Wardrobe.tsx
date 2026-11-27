@@ -99,7 +99,7 @@ function Card({ item, on, onClick }: { item: CatalogItem; on: boolean; onClick: 
   }, [item]);
   return (
     <button className={`block ${s.card}`} aria-pressed={on} onClick={onClick}>
-      {src ? <img src={src} alt="" /> : <span className={s.ph} />}
+      {src ? <img loading="lazy" decoding="async" src={src} alt="" /> : <span className={s.ph} />}
       <span>{item.name}</span>
     </button>
   );

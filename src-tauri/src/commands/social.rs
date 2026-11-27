@@ -228,10 +228,15 @@ pub fn sync_build(app: AppHandle, jobs: State<'_, Jobs>, instance_id: String) ->
 }
 
 #[tauri::command]
-pub async fn share_build(instance_id: String) -> Result<Value, String> {
+pub async fn share_build(instance_id: String, public: Option<bool>) -> Result<Value, String> {
     let (manifest, missing) = mrpack::manifest(&instance_id, &std::sync::Arc::new(Job::detached("share"))).await?;
-    let code = social::share("build", manifest).await?;
+    let code = if public.unwrap_or(false) { social::share_public("build", manifest).await? } else { social::share("build", manifest).await? };
     Ok(serde_json::json!({ "code": code, "missing": missing }))
+}
+
+#[tauri::command]
+pub async fn share_private(code: String) -> Result<(), String> {
+    social::share_private(&code).await
 }
 
 #[tauri::command]
@@ -316,4 +321,22 @@ pub async fn social_stats(stats: Value) -> Result<Value, String> {
 #[tauri::command]
 pub async fn social_profile(profile: Value) -> Result<Value, String> {
     social::set_profile(profile).await
+}
+
+#[tauri::command]
+pub async fn share_image(code: String) -> Result<String, String> {
+    use base64::Engine;
+    if code.is_empty() || !code.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        return Err("bad code".into());
+    }
+    let resp = crate::engine::core::http::client().get(format!("https://api.kromvia.com/share/{code}")).send().await.map_err(|e| e.to_string())?;
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+    let mime = resp.headers().get("content-type").and_then(|v| v.to_str().ok()).unwrap_or("image/png").to_string();
+    if !mime.starts_with("image/") {
+        return Err("not an image".into());
+    }
+    let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
+    Ok(format!("data:{mime};base64,{}", base64::engine::general_purpose::STANDARD.encode(&bytes)))
 }

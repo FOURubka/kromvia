@@ -4473,3 +4473,117 @@ textarea.input {
   border-left: 2px solid var(--accent, #8b5cf6);
   padding-left: 8px;
 }
+
+.launch-progress {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow: hidden;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.launch-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent);
+  opacity: 0.35;
+  transition: width 240ms var(--ease-out);
+}
+
+.launch-progress-label {
+  position: relative;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.launch-steps {
+  position: relative;
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+}
+
+.launch-steps li {
+  color: rgb(255 255 255 / 0.45);
+}
+
+.launch-steps li[data-state="done"] {
+  color: rgb(255 255 255 / 0.8);
+}
+
+.launch-steps li[data-state="now"] {
+  color: #fff;
+  font-weight: 700;
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skeleton li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.skeleton-icon,
+.skeleton-lines span {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--text, #888) 6%, transparent) 0%, color-mix(in srgb, var(--text, #888) 12%, transparent) 50%, color-mix(in srgb, var(--text, #888) 6%, transparent) 100%) 0 0 / 200% 100%;
+  animation: skeleton 1.6s linear infinite;
+}
+
+.skeleton-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+
+.skeleton-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-lines span {
+  height: 10px;
+  border-radius: 4px;
+}
+
+@keyframes skeleton {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-icon,
+  .skeleton-lines span {
+    animation: none;
+  }
+}
+
+input[type="checkbox"] {
+  min-width: 22px;
+  min-height: 22px;
+}
+
+.link.pop-title,
+.link.hit-title {
+  padding-block: 2px;
+}

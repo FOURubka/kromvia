@@ -1,0 +1,9 @@
+{
+	"required": true,
+	"package": "com.kromvia.client.fx.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": ["FxChatSlideMixin", "FxScoreboardMixin", "MoreHandMixin", "MoreParticleEngineMixin", "FxAbstractClientPlayerMixin", "FxAbstractSliderButtonMixin", "FxAbstractWidgetMixin", "FxAvatarRendererMixin", "FxCameraMixin", "FxCameraTypeMixin", "FxChatComponentMixin", "FxClientLevelMixin", "FxFishingHookRendererMixin", "FxFogRendererMixin", "FxGameRendererMixin", "FxGuiMixin", "FxItemInHandRendererMixin", "FxLevelRendererMixin", "FxLightningBoltRendererMixin", "FxLivingEntityRendererMixin", "FxMultiPlayerGameModeMixin", "FxNameTagMixin", "FxNameTextMixin", "FxParticleEngineMixin", "FxPlayerTabOverlayMixin", "FxPostChainAccessor", "FxPostPassAccessor", "FxScreenOverlayMixin", "FxShaderManagerMixin", "FxSkyRendererMixin", "FxSoundEngineMixin", "FxTabNameMixin", "FxWeatherEffectRendererMixin"],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

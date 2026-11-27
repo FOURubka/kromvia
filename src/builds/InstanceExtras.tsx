@@ -10,6 +10,16 @@ import { Glyph } from "../ui/Glyph";
 import { usePaged } from "../ui/Pager";
 import { Empty } from "../ui/Empty";
 import { Select } from "../ui/Select";
+import { Skeleton } from "../ui/Skeleton";
+
+const PUBLIC_KEY = "kromvia.publicBuilds";
+const publicBuilds = (): Record<string, string> => {
+  try {
+    return JSON.parse(localStorage.getItem(PUBLIC_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+};
 
 type World = {
   folder: string;
@@ -87,7 +97,7 @@ export function Worlds({ inst }: { inst: Instance }) {
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
       {worlds === null ? (
-        <p className="muted">{t("common.loading")}</p>
+        <Skeleton rows={4} />
       ) : worlds.length === 0 ? (
         <Empty bee="empty-worlds">{t("worlds.empty")}</Empty>
       ) : (
@@ -294,7 +304,7 @@ export function Screenshots({ inst }: { inst: Instance }) {
       </div>
       {error && <p className="error">{error}</p>}
       {shots === null ? (
-        <p className="muted">{t("common.loading")}</p>
+        <Skeleton rows={4} />
       ) : shots.length === 0 ? (
         <Empty bee="empty-shots">{t("shots.empty")}</Empty>
       ) : (
@@ -413,7 +423,7 @@ export function Files({ inst }: { inst: Instance }) {
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
       {!info ? (
-        <p className="muted">{t("common.loading")}</p>
+        <Skeleton rows={4} />
       ) : (
         <dl className="stats">
           {(
@@ -526,7 +536,7 @@ export function Backups({ inst, onRestored }: { inst: Instance; onRestored: () =
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
       {list === null ? (
-        <p className="muted">{t("common.loading")}</p>
+        <Skeleton rows={4} />
       ) : list.length === 0 ? (
         <Empty bee="empty-backups">{t("backups.empty")}</Empty>
       ) : (
@@ -586,6 +596,8 @@ export function Cloud({ inst, onInstalled }: { inst: Instance; onInstalled: () =
     setNotice(null);
     return p.catch((e) => setError(String(e)));
   };
+  const [listed, setListed] = useState<string | null>(() => publicBuilds()[inst.id] ?? null);
+  const [listing, setListing] = useState(false);
   const install = (manifest: unknown) => run(invoke<number>("build_install", { manifest }).then((id) => installs.started("build-install", id)));
   const upload = uploads.jobs[`sync-${inst.id}`];
   const installing = installs.jobs["build-install"];
@@ -611,6 +623,36 @@ export function Cloud({ inst, onInstalled }: { inst: Instance; onInstalled: () =
           <Glyph name="copy" /> {t("cloud.share")}
         </button>
       </div>
+      <label className="muted">
+        <input
+          type="checkbox"
+          checked={!!listed}
+          disabled={listing}
+          onChange={(e) => {
+            const on = e.currentTarget.checked;
+            setListing(true);
+            const done = (next: string | null) => {
+              const all = publicBuilds();
+              if (next) all[inst.id] = next;
+              else delete all[inst.id];
+              localStorage.setItem(PUBLIC_KEY, JSON.stringify(all));
+              setListed(next);
+            };
+            run(
+              (on
+                ? invoke<{ code: string }>("share_build", { instanceId: inst.id, public: true }).then((r) => done(r.code))
+                : invoke("share_private", { code: listed }).then(() => done(null), (err) => (String(err).includes("no such") ? done(null) : Promise.reject(err)))
+              ).finally(() => setListing(false)),
+            );
+          }}
+        />{" "}
+        {t("cloud.public")}
+      </label>
+      {listed && (
+        <p className="muted small">
+          {t("cloud.publicAt")} <code>https://kromvia.com/builds</code>
+        </p>
+      )}
       {upload && <Progress job={upload} />}
       {code && (
         <div className="room-code">

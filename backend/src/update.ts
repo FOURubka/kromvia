@@ -10,10 +10,21 @@ function github(token: string, path: string, accept = "application/vnd.github+js
   });
 }
 
-export async function manifest(token: string, origin: string): Promise<Manifest | null> {
-  const res = await github(token, "/releases/latest");
+async function release(token: string, beta: boolean): Promise<{ assets: Asset[] } | null> {
+  if (!beta) {
+    const res = await github(token, "/releases/latest");
+    return res.ok ? ((await res.json()) as { assets: Asset[] }) : null;
+  }
+  const res = await github(token, "/releases?per_page=10");
   if (!res.ok) return null;
-  const assets = ((await res.json()) as { assets: Asset[] }).assets;
+  const list = (await res.json()) as { draft: boolean; assets: Asset[] }[];
+  return list.find((r) => !r.draft && r.assets.some((a) => a.name === "latest.json")) ?? null;
+}
+
+export async function manifest(token: string, origin: string, beta = false): Promise<Manifest | null> {
+  const rel = await release(token, beta);
+  if (!rel) return null;
+  const assets = rel.assets;
   const file = assets.find((a) => a.name === "latest.json");
   if (!file) return null;
   const json = await github(token, `/releases/assets/${file.id}`, "application/octet-stream");

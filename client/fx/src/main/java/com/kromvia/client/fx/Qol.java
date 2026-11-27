@@ -5,6 +5,7 @@ import com.kromvia.client.Accounts;
 import com.google.common.collect.Ordering;
 import com.kromvia.client.compat.Gfx;
 import com.kromvia.client.compat.Mc;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.kromvia.client.module.Module;
 import com.kromvia.client.module.Toggles;
 import com.kromvia.client.module.setting.BoolSetting;
@@ -92,6 +93,7 @@ public final class Qol {
 
 	public static @Nullable Component filter(Component message) {
 		if (relayNotice(message.getString())) return null;
+		ChatSearchScreen.log(message.getString());
 		More.AUTO_GG.onChat(message.getString());
 		if (!FILTER.enabled) return message;
 		List<String> words = FILTER.list();
@@ -120,10 +122,19 @@ public final class Qol {
 		public final BoolSetting images = add(new BoolSetting("images", "Preview image links (the site sees your IP)", false));
 		public final BoolSetting screenshots = add(new BoolSetting("screenshots", "Buttons under screenshots", true));
 		public final BoolSetting safeCommands = add(new BoolSetting("safe_commands", "Clicked commands go to the chat box first", false));
+		public final BoolSetting search = add(new BoolSetting("search", "Ctrl+F in chat searches the history", true));
+		private boolean findHeld;
 
 		ChatTools() {
 			super("chat_tools", "Chat Tools", Category.UTILITY);
 			icon(Items.WRITABLE_BOOK);
+		}
+
+		@Override
+		public void tick(Minecraft mc) {
+			boolean down = search.on() && Mc.screen() instanceof net.minecraft.client.gui.screens.ChatScreen && mc.hasControlDown() && Mc.keyDown(InputConstants.KEY_F);
+			if (down && !findHeld) Mc.setScreen(new ChatSearchScreen(null));
+			findHeld = down;
 		}
 	}
 

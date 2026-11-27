@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useI18n } from "../i18n";
 
 export const INTRO_CREDITS = [
@@ -7,10 +8,46 @@ export const INTRO_CREDITS = [
   "Minecraft © Mojang AB / Microsoft. Kromvia is not an official Minecraft product and is not approved by or associated with Mojang or Microsoft.",
 ];
 
+const CHUNK = 256 * 1024;
+
+async function readIntro(ext: string) {
+  const parts: Uint8Array<ArrayBuffer>[] = [];
+  for (let offset = 0; ; ) {
+    const b64 = await invoke<string>("intro_video", { ext, offset });
+    const buf = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    if (buf.length) parts.push(buf);
+    offset += buf.length;
+    if (buf.length < CHUNK) return parts;
+  }
+}
+
+const WEBM = 'video/webm; codecs="vp9,opus"';
+
+function stream(v: HTMLVideoElement, blob: Blob) {
+  return blob.arrayBuffer().then(
+    (data) =>
+      new Promise<void>((resolve, reject) => {
+        const ms = new MediaSource();
+        ms.addEventListener(
+          "sourceopen",
+          () => {
+            const sb = ms.addSourceBuffer(WEBM);
+            sb.addEventListener("updateend", () => ms.endOfStream(), { once: true });
+            sb.addEventListener("error", reject, { once: true });
+            sb.appendBuffer(data);
+            resolve();
+          },
+          { once: true },
+        );
+        v.src = URL.createObjectURL(ms);
+      }),
+  );
+}
+
 export function Intro({ onDone }: { onDone: () => void }) {
   const { t } = useI18n();
   const video = useRef<HTMLVideoElement>(null);
-  const retried = useRef(false);
+  const tries = useRef(["webm", "mp4"]);
 
   const play = (v: HTMLVideoElement) =>
     v.play().catch(() => {
@@ -18,17 +55,27 @@ export function Intro({ onDone }: { onDone: () => void }) {
       return v.play();
     });
 
+  const busy = useRef(false);
+
   const fallback = () => {
+    if (busy.current) return;
     const v = video.current;
-    if (!v || retried.current) return onDone();
-    retried.current = true;
-    fetch("/intro.mp4")
-      .then((r) => (r.ok ? r.blob() : Promise.reject()))
-      .then((blob) => {
-        v.src = URL.createObjectURL(new Blob([blob], { type: "video/mp4" }));
-        return play(v);
+    const ext = tries.current.shift();
+    if (!v || !ext) return onDone();
+    busy.current = true;
+    readIntro(ext)
+      .catch(() => fetch(`/intro.${ext}`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject())))
+      .then((buf) => {
+        const blob = new Blob(Array.isArray(buf) ? buf : [buf], { type: `video/${ext}` });
+        v.muted = false;
+        return (ext === "webm" && "MediaSource" in window && MediaSource.isTypeSupported(WEBM) ? stream(v, blob) : Promise.resolve((v.src = URL.createObjectURL(blob)))).then(() =>
+          play(v).finally(() => (busy.current = false)),
+        );
       })
-      .catch(onDone);
+      .catch(() => {
+        busy.current = false;
+        fallback();
+      });
   };
 
   useEffect(() => {

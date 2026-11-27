@@ -11,6 +11,7 @@ import { Pager, usePaged } from "../ui/Pager";
 import { Empty } from "../ui/Empty";
 import { ProjectPage } from "./ProjectPage";
 import { Select } from "../ui/Select";
+import { Skeleton } from "../ui/Skeleton";
 
 export type Kind = "mod" | "modpack" | "resourcepack" | "shader" | "datapack";
 type Source = "modrinth" | "curseforge";
@@ -444,7 +445,7 @@ export function Content({ initialTab = "mod" }: { initialTab?: Tab }) {
                 );
               })}
             </ul>
-            {loading && <p className="muted">{t("common.loading")}</p>}
+            {loading && <Skeleton rows={hits.length ? 2 : 6} />}
             <Pager page={page} pages={Math.ceil(total / SEARCH_PAGE)} onPage={search} />
           </div>
         </div>

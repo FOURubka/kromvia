@@ -1,0 +1,5 @@
+{
+  "providers": [
+    {"type": "ttf", "file": "kromvia:name_retro.ttf", "shift": [0, 1], "size": 9, "oversample": 4}
+  ]
+}

@@ -48,6 +48,9 @@ public final class ModuleInfo {
 		put("hit_sound", "hit_sound", "Plays a sound when you hit someone: 36 built-in sounds, or drop your own .ogg files into config/kromvia/sounds and restart.");
 		put("totem_pops", "totem_pops", "Tells you when someone pops a Totem of Undying, and how many times.");
 		put("death_coords", "death_coords", "Posts where you died in chat so you can find your things.");
+		put("frame_graph", "frame_report", "A live graph of frame times with your average FPS and 1% lows. Red bars are stutters.");
+		put("waypoints", "compass", "Press B to drop a waypoint where you stand, B again next to it to remove it. A red one marks where you died. Your party sees new ones as pings.");
+		put("death_recap", "death_coords", "After you die, shows who hit you, with what, how much damage and from how far.");
 		put("tab_ping", "tab_ping", "Shows ping as a number in the player list.");
 		put("crosshair", "crosshair", "Your own crosshair: style, size, gap and colour.");
 		put("no_hurt_cam", "no_hurt_cam", "Stops the screen shaking when you take damage.");
@@ -97,7 +100,7 @@ public final class ModuleInfo {
 		put("chat_history", "chat_history", "Keeps your sent messages after you restart the game.");
 		put("better_chat", "better_chat", "Stacks repeated messages, keeps chat between worlds, slide-in and a nicer background.");
 		put("chat_filter", "chat_filter", "Hides or highlights messages with the words you pick.");
-		put("chat_tools", "chat_tools", "Copy or delete messages, preview images and safer clickable commands.");
+		put("chat_tools", "chat_tools", "Copy or delete messages, search the history with Ctrl+F, preview images and safer clickable commands.");
 		put("chat_macros", "chat_macros", "Send a message or command with F6 to F9.");
 		put("confirm_disconnect", "confirm_disconnect", "Asks before you leave a server.");
 		put("bobbing", "bobbing", "Turns screen and hand bobbing on or off one by one.");

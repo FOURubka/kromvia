@@ -65,3 +65,58 @@ jobs:
           releaseDraft: true
           uploadUpdaterJson: true
           tauriScript: bun run tauri
+
+  sign-windows:
+    name: Sign Windows installer
+    needs: release
+    if: vars.SIGNPATH_ORGANIZATION_ID != ''
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Download unsigned installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir unsigned
+          gh release download "$GITHUB_REF_NAME" -p "*_x64-setup.exe" -p "latest.json" -D unsigned
+          ls unsigned
+
+      - id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: unsigned/*_x64-setup.exe
+          if-no-files-found: error
+
+      - uses: signpath/github-action-submit-signing-request@a2c5b60d9c75f073142b653c354b632eedce097b # v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed
+
+      - name: Re-sign for the updater and replace release files
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          exe=$(ls signed/*_x64-setup.exe)
+          bun run tauri signer sign "$exe"
+          sig=$(cat "$exe.sig")
+          jq --arg sig "$sig" '.platforms |= with_entries(if (.key | startswith("windows-")) then .value.signature = $sig else . end)' unsigned/latest.json > latest.json
+          gh release upload "$GITHUB_REF_NAME" "$exe" "$exe.sig" latest.json --clobber

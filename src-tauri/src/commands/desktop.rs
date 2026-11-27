@@ -197,3 +197,15 @@ pub fn menu_media_add(paths: Vec<String>) -> Result<crate::engine::menu_media::M
 pub fn menu_media_remove(kind: String, name: String) -> Result<crate::engine::menu_media::Media, String> {
     crate::engine::menu_media::remove(&kind, &name)
 }
+
+#[tauri::command]
+pub fn intro_video(app: AppHandle, ext: String, offset: usize) -> Result<String, String> {
+    use base64::Engine;
+    if ext != "webm" && ext != "mp4" {
+        return Err("bad ext".into());
+    }
+    let asset = app.asset_resolver().get(format!("/intro.{ext}")).ok_or("no intro")?;
+    let start = offset.min(asset.bytes.len());
+    let end = (start + 256 * 1024).min(asset.bytes.len());
+    Ok(base64::engine::general_purpose::STANDARD.encode(&asset.bytes[start..end]))
+}

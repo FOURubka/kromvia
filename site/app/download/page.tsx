@@ -64,7 +64,7 @@ export default async function Download() {
           });
           return (
             <div key={p.os} className={`block ${s.card}`} data-yours={p.os === os || undefined}>
-              <img src={`/bee/${p.bee}.webp`} alt="" className={s.bee} />
+              <img loading="lazy" decoding="async" src={`/bee/${p.bee}.webp`} alt="" className={s.bee} />
               {p.os === os && <span className={`chip on ${s.yours}`}>{t.yours}</span>}
               <h2>{p.name}</h2>
               <p className={`dim ${s.note}`}>{t.notes[p.os]}</p>

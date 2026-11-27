@@ -41,7 +41,7 @@ export default async function Top() {
             <li key={p.id}>
               <Link href={`/u/${p.name}`} className={`block ${s.row}`} data-rank={i < 3 ? i + 1 : undefined}>
                 <span className={s.rank}>{i + 1}</span>
-                <img src={`https://mc-heads.net/avatar/${p.name}/40`} alt="" width={40} height={40} className={s.head} />
+                <img loading="lazy" decoding="async" src={`https://mc-heads.net/avatar/${p.name}/40`} alt="" width={40} height={40} className={s.head} />
                 <span className={s.name}>
                   {p.name}
                   {p.verified && <Glyph name="verified" size={16} />}
@@ -61,7 +61,7 @@ export default async function Top() {
 function Empty({ bee, text }: { bee: string; text: string }) {
   return (
     <div className={s.empty}>
-      <img src={`/bee/${bee}.webp`} alt="" />
+      <img loading="lazy" decoding="async" src={`/bee/${bee}.webp`} alt="" />
       <p className="muted">{text}</p>
     </div>
   );

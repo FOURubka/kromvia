@@ -405,6 +405,22 @@ test("shares are public by code", async () => {
   expect((await call(null, "GET", "/share/NOPE2345")).status).toBe(404);
 });
 
+test("only builds the owner lists show up in the public catalog", async () => {
+  const a = await signup("Alpha");
+  const b = await signup("Bravo");
+  const hidden = await call(a, "POST", "/v1/shares", { kind: "build", data: { name: "Secret", dependencies: { minecraft: "1.21.1" }, files: [] } });
+  const listed = await call(a, "POST", "/v1/shares", { kind: "build", data: { name: "PvP Pack", dependencies: { minecraft: "1.21.1", "fabric-loader": "0.16" }, files: [{}, {}] }, public: true });
+  expect(listed.status).toBe(201);
+  const all = await call(null, "GET", "/v1/builds");
+  expect(all.json).toEqual([expect.objectContaining({ code: listed.json.code, name: "PvP Pack", mc: "1.21.1", loader: "fabric", mods: 2, from: expect.objectContaining({ name: "Alpha" }) })]);
+  expect(all.json.some((x: { code: string }) => x.code === hidden.json.code)).toBe(false);
+  expect((await call(null, "GET", "/v1/builds?q=pvp")).json).toHaveLength(1);
+  expect((await call(null, "GET", "/v1/builds?q=nope")).json).toHaveLength(0);
+  expect((await call(b, "POST", `/v1/shares/${listed.json.code}/private`)).status).toBe(404);
+  expect((await call(a, "POST", `/v1/shares/${listed.json.code}/private`)).status).toBe(200);
+  expect((await call(null, "GET", "/v1/builds")).json).toEqual([]);
+});
+
 test("screenshots and logs open in a browser", async () => {
   const a = await signup("Alpha");
   expect((await call(a, "POST", "/v1/shares/screenshot", new Uint8Array([1, 2, 3]))).status).toBe(400);

@@ -46,7 +46,7 @@ export default async function Shared({ params }: PageProps<"/s/[code]">) {
   if (sh.kind === "screenshot")
     return (
       <div className={`wrap ${s.page}`}>
-        <img src={sh.url} alt={t.shot} className={s.shot} />
+        <img loading="lazy" decoding="async" src={sh.url} alt={t.shot} className={s.shot} />
         <p className="dim">{t.from(code.toUpperCase())}</p>
       </div>
     );

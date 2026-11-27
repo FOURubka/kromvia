@@ -26,8 +26,8 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: m.title, template: "%s · Kromvia" },
     description: m.description,
     icons: { icon: "/logo.svg" },
-    openGraph: { siteName: "Kromvia", images: ["/banner.png"], type: "website" },
-    twitter: { card: "summary_large_image", images: ["/banner.png"] },
+    openGraph: { siteName: "Kromvia", images: ["/banner.jpg"], type: "website" },
+    twitter: { card: "summary_large_image", images: ["/banner.jpg"] },
   };
 }
 

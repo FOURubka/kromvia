@@ -4,7 +4,7 @@ import { clanOf, privateClans, publicClans } from "./clans";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { b64url, verify } from "./auth";
-import { DEV, NAME, isDev } from "./playing";
+import { DEV, NAME, isDev, STALE_MS } from "./playing";
 import { asset, downloads, manifest } from "./update";
 import { PERF_DAYS, PERF_PER_DAY, insight, normGpu, projectsOf, runMods } from "./perf";
 import { PART_SIZE, RELAY_PART_PATH, dropOwned, relays } from "./relay";
@@ -95,7 +95,7 @@ app.get("/health", (c) => c.json({ ok: true }));
 
 app.get("/update/:target/:arch/:version", async (c) => {
   if (!c.env.GITHUB_TOKEN) return fail(503, "updates are not set up");
-  const out = await manifest(c.env.GITHUB_TOKEN, new URL(c.req.url).origin);
+  const out = await manifest(c.env.GITHUB_TOKEN, new URL(c.req.url).origin, c.req.query("channel") === "beta");
   return out ? c.json(out) : fail(503, "no release");
 });
 
@@ -269,6 +269,7 @@ async function roadmap(c: { env: Env; req: { raw: Request } }) {
 
 app.use("/v1/roadmap/*", cors({ origin: ["https://kromvia.com", "https://www.kromvia.com"], allowMethods: ["GET", "POST"] }));
 app.use("/v1/roadmap", cors({ origin: ["https://kromvia.com", "https://www.kromvia.com"], allowMethods: ["GET"] }));
+app.use("/v1/users", cors({ origin: ["https://kromvia.com", "https://www.kromvia.com"], allowMethods: ["GET"] }));
 
 app.get("/v1/roadmap", async (c) => c.json(await roadmap(c)));
 
@@ -296,11 +297,46 @@ app.get("/v1/users", async (c) => {
   const q = (c.req.query("q") ?? "").trim().toLowerCase();
   if (!/^[a-z0-9_]{1,16}$/.test(q)) return c.json([]);
   const { results } = await c.env.DB.prepare(
-    "SELECT a.id, a.name, a.mc_uuid FROM accounts a WHERE a.name_lower >= ?1 AND a.name_lower < ?1 || char(127) ORDER BY a.name_lower = ?1 DESC, a.seen DESC LIMIT 20",
+    "SELECT a.id, a.name, a.mc_uuid FROM accounts a WHERE instr(a.name_lower, ?1) > 0 ORDER BY a.name_lower = ?1 DESC, instr(a.name_lower, ?1) = 1 DESC, a.seen DESC LIMIT 20",
   )
     .bind(q)
     .all<Pick<Account, "id" | "name" | "mc_uuid">>();
   return c.json(results.map(publicAccount));
+});
+
+const PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\d+\.\d+\.\d+\.\d+)|e4mc|\.local$|^[^.]+$/;
+
+app.get("/v1/now", async (c) => {
+  const since = Date.now() - STALE_MS;
+  const [total, hosts] = await Promise.all([
+    c.env.DB.prepare("SELECT COUNT(DISTINCT account) AS n FROM playing WHERE updated > ?").bind(since).first<number>("n"),
+    c.env.DB.prepare("SELECT host, COUNT(DISTINCT account) AS n FROM playing WHERE updated > ? GROUP BY host ORDER BY n DESC LIMIT 60").bind(since).all<{ host: string; n: number }>(),
+  ]);
+  const servers = hosts.results.filter((h) => h.n >= 2 && !PRIVATE_HOST.test(h.host)).slice(0, 30).map((h) => ({ host: h.host, players: h.n }));
+  return c.json({ playing: total ?? 0, servers }, 200, { "cache-control": "public, max-age=60" });
+});
+
+app.get("/v1/builds", async (c) => {
+  const q = (c.req.query("q") ?? "").trim().toLowerCase().slice(0, 40);
+  const page = Math.max(0, Math.min(50, Number(c.req.query("page")) || 0));
+  const { results } = await c.env.DB.prepare(
+    `SELECT s.code, s.created, json_extract(s.data, '$.name') AS name, json_extract(s.data, '$.dependencies') AS deps,
+       json_array_length(s.data, '$.files') AS mods, a.id, a.name AS owner, a.mc_uuid
+     FROM shares s JOIN accounts a ON a.id = s.account
+     WHERE s.public = 1 AND s.kind = 'build' AND (?1 = '' OR lower(json_extract(s.data, '$.name')) LIKE '%' || ?1 || '%')
+     ORDER BY s.created DESC LIMIT 24 OFFSET ?2`,
+  )
+    .bind(q, page * 24)
+    .all<{ code: string; created: number; name: string | null; deps: string | null; mods: number | null; id: string; owner: string; mc_uuid: string | null }>();
+  return c.json(
+    results.map((r) => {
+      const deps = r.deps ? (JSON.parse(r.deps) as Record<string, string>) : {};
+      const loader = Object.keys(deps).find((k) => k !== "minecraft")?.replace(/-loader$/, "") ?? "vanilla";
+      return { code: r.code, name: r.name ?? "Build", mc: deps.minecraft ?? null, loader, mods: r.mods ?? 0, created: r.created, from: publicAccount({ id: r.id, name: r.owner, mc_uuid: r.mc_uuid }) };
+    }),
+    200,
+    { "cache-control": "public, max-age=120" },
+  );
 });
 
 app.get("/v1/users/:name", async (c) => {
@@ -875,10 +911,24 @@ app.post("/v1/shares", async (c) => {
   if (!SHARE_KINDS.includes(kind as (typeof SHARE_KINDS)[number])) return fail(400, "bad kind");
   if (data === undefined || (kind === "log" && typeof data !== "string")) return fail(400, "bad data");
   const me = c.var.account.id;
+  const listed = kind === "build" && field(c.var.body, "public") === true;
+  if (listed) {
+    const n = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM shares WHERE account = ? AND public = 1").bind(me).first<number>("n");
+    if ((n ?? 0) >= 10) return fail(429, "up to 10 public builds, make one private first");
+  }
   const code = await newShare(c.env, me);
   if (!code) return fail(429, "too many shares, wait for old ones to expire");
-  await c.env.DB.prepare("INSERT INTO shares (code, account, kind, data, created) VALUES (?, ?, ?, ?, ?)").bind(code, me, kind, JSON.stringify(data), Date.now()).run();
+  await c.env.DB.prepare("INSERT INTO shares (code, account, kind, data, created, public, pinned) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .bind(code, me, kind, JSON.stringify(data), Date.now(), listed ? 1 : 0, listed ? 1 : 0)
+    .run();
   return c.json({ code }, 201);
+});
+
+app.post("/v1/shares/:code/private", async (c) => {
+  const res = await c.env.DB.prepare("UPDATE shares SET public = 0, pinned = 0, created = ? WHERE code = ? AND account = ? AND public = 1")
+    .bind(Date.now(), c.req.param("code").toUpperCase(), c.var.account.id)
+    .run();
+  return res.meta.changes ? c.json({ ok: true }) : fail(404, "no such public build");
 });
 
 app.post(SHOT_PATH, async (c) => {

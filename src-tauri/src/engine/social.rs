@@ -307,6 +307,18 @@ pub async fn share(kind: &str, data: Value) -> Result<String, String> {
     res["code"].as_str().map(str::to_string).ok_or_else(|| "no code in the answer".into())
 }
 
+pub async fn share_public(kind: &str, data: Value) -> Result<String, String> {
+    let res = send(Method::POST, "/v1/shares", Some(json!({ "kind": kind, "data": data, "public": true }))).await?;
+    res["code"].as_str().map(str::to_string).ok_or_else(|| "no code in the answer".into())
+}
+
+pub async fn share_private(code: &str) -> Result<(), String> {
+    if !code.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err("bad code".into());
+    }
+    send(Method::POST, &format!("/v1/shares/{code}/private"), None).await.map(|_| ())
+}
+
 pub async fn share_screenshot(path: &std::path::Path) -> Result<String, String> {
     const MAX: u64 = 8 * 1024 * 1024;
     if std::fs::metadata(path).map_err(|e| e.to_string())?.len() > MAX {

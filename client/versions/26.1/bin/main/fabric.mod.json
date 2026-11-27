@@ -1,0 +1,19 @@
+{
+	"schemaVersion": 1,
+	"id": "kromvia",
+	"version": "${version}",
+	"name": "Kromvia Client",
+	"description": "Built-in client of the Kromvia launcher: module menu and HUD.",
+	"authors": ["Kromvia"],
+	"license": "All-Rights-Reserved",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["com.kromvia.client.KromviaClient"]
+	},
+	"mixins": ["kromvia.mixins.json"${fxMixins}],
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "${minecraft}",
+		"java": ">=21"
+	}
+}

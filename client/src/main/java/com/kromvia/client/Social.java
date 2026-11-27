@@ -82,6 +82,7 @@ public final class Social {
 	private static volatile JsonObject card;
 	private static String sentStarred;
 	private static volatile int[] nameColors;
+	private static volatile String nameFont;
 	private static volatile String wantSetup;
 	private static volatile long wantSetupAt;
 	private static volatile String setupStatus;
@@ -172,7 +173,8 @@ public final class Social {
 			} else setupStatus = str(su, "error") != null ? str(su, "error") : "Could not copy the setup.";
 		}
 		JsonObject nm = s.has("name") && s.get("name").isJsonObject() ? s.getAsJsonObject("name") : null;
-		nameColors = nm == null ? null : new int[] {rgb(str(nm, "a")), rgb(str(nm, "b"))};
+		nameColors = nm == null || str(nm, "a") == null && str(nm, "b") == null ? null : new int[] {rgb(str(nm, "a")), rgb(str(nm, "b"))};
+		nameFont = nm == null ? null : str(nm, "font");
 		received = true;
 		version++;
 	}
@@ -342,6 +344,10 @@ public final class Social {
 
 	public static int[] nameColors() {
 		return nameColors;
+	}
+
+	public static String nameFont() {
+		return nameFont;
 	}
 
 	public static int rgb(String hex) {

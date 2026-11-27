@@ -1,0 +1,47 @@
+.scroll {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.table thead th {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.table tbody th {
+  font-weight: 600;
+}
+
+.table td[data-cell="yes"] {
+  color: #7ee0b0;
+}
+
+.table td[data-cell="part"] {
+  color: #ffd36e;
+}
+
+.table td[data-cell="no"] {
+  color: var(--text-dim);
+}
+
+.table [data-own] {
+  background: rgb(139 92 246 / 0.08);
+}
+
+.cta {
+  margin: 32px 0 80px;
+}

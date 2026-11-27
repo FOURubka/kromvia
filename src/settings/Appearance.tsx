@@ -4,6 +4,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { useI18n } from "../i18n";
 import { Glyph } from "../ui/Glyph";
 import { Select } from "../ui/Select";
+import { setUiSounds, uiSoundsOn } from "../lib/uiSound";
 
 type Theme = { id: string; name: string };
 const THEME_KEY = "kromvia.customTheme";
@@ -62,6 +63,8 @@ export function AppearanceExtras() {
   const [autostart, setAutostart] = useState(false);
   const [crashReports, setCrashReports] = useState(true);
   const [perfReports, setPerfReports] = useState(true);
+  const [sounds, setSounds] = useState(uiSoundsOn);
+  const [compact, setCompact] = useState(() => localStorage.getItem("kromvia.density") === "compact");
   const [status, setStatus] = useState<{ error: boolean; text: string } | null>(null);
   const fail = (e: unknown) => setStatus({ error: true, text: String(e) });
 
@@ -155,6 +158,31 @@ export function AppearanceExtras() {
         </label>
         <label className="muted">
           <input type="checkbox" checked={perfReports} onChange={(e) => togglePerfReports(e.currentTarget.checked)} /> {t("settings.perfReports")}
+        </label>
+        <label className="muted">
+          <input
+            type="checkbox"
+            checked={sounds}
+            onChange={(e) => {
+              setUiSounds(e.currentTarget.checked);
+              setSounds(e.currentTarget.checked);
+            }}
+          />{" "}
+          {t("settings.uiSounds")}
+        </label>
+        <label className="muted">
+          <input
+            type="checkbox"
+            checked={compact}
+            onChange={(e) => {
+              const on = e.currentTarget.checked;
+              localStorage.setItem("kromvia.density", on ? "compact" : "normal");
+              if (on) document.documentElement.dataset.density = "compact";
+              else delete document.documentElement.dataset.density;
+              setCompact(on);
+            }}
+          />{" "}
+          {t("settings.compact")}
         </label>
       </div>
       {status && <p className={status.error ? "error" : "muted"}>{status.text}</p>}

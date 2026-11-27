@@ -67,7 +67,7 @@ export default async function Rooms() {
           <h1>{t.head}</h1>
           <p>{t.lede}</p>
         </div>
-        <img src="/bee/card-rooms.webp" alt="" className={s.bee} />
+        <img loading="lazy" decoding="async" src="/bee/card-rooms.webp" alt="" className={s.bee} />
       </header>
 
       <div className={s.cols}>

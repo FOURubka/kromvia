@@ -1,0 +1,9 @@
+{
+	"required": true,
+	"package": "com.kromvia.client.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": ["CrashPatchMixin", "BuiltInPackSourceMixin", "FontOversampleMixin", "AbstractButtonMixin", "AvatarRendererMixin", "CameraMixin", "ChatComponentMixin", "ClientLevelDataMixin", "ClientPacketListenerMixin", "EasyPlaceMixin", "FreecamAimMixin", "EntityMixin", "KeyMappingMixin", "OptionsMixin", "KeyMappingAccessor", "EntityRenderDispatcherAccessor", "FogRendererMixin", "GameRendererMixin", "GuiMixin", "KeyboardHandlerMixin", "LevelMixin", "LevelRendererMixin", "LivingEntityRendererInvoker", "MinecraftMixin", "MinecraftUseInvoker", "MouseHandlerMixin", "MultiPlayerGameModeMixin", "PauseScreenMixin", "OptionInstanceAccessor", "OverlayTextureAccessor", "PlayerTabOverlayMixin", "ScreenEffectRendererMixin", "ScreenMixin"],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

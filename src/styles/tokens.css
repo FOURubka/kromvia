@@ -87,3 +87,15 @@
 
   color-scheme: dark;
 }
+
+:root[data-density="compact"] {
+  --text-md: 14px;
+  --text-lg: 17px;
+  --text-xl: 24px;
+  --space-2: 6px;
+  --space-3: 9px;
+  --space-4: 12px;
+  --space-5: 18px;
+  --space-6: 24px;
+  --nav-row: 40px;
+}

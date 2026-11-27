@@ -20,6 +20,24 @@ pub fn open_path(path: impl AsRef<Path>) -> Result<(), String> {
     tauri_plugin_opener::open_path(path, None::<&str>).map_err(|e| e.to_string())
 }
 
+pub fn host_command(program: &str) -> std::process::Command {
+    let mut cmd = std::process::Command::new(program);
+    for (key, value) in host_env() {
+        match value {
+            Some(v) => cmd.env(key, v),
+            None => cmd.env_remove(key),
+        };
+    }
+    cmd
+}
+
+#[cfg(target_os = "linux")]
+pub fn register_scheme(apps_dir: &Path, scheme: &str) {
+    let Some(bin) = std::env::current_exe().ok().and_then(|b| b.file_name().map(|n| n.to_string_lossy().into_owned())) else { return };
+    let _ = host_command("update-desktop-database").arg(apps_dir).status();
+    let _ = host_command("xdg-mime").args(["default", &format!("{bin}-handler.desktop"), &format!("x-scheme-handler/{scheme}")]).status();
+}
+
 pub fn host_env() -> Vec<(String, Option<String>)> {
     let Ok(appdir) = std::env::var("APPDIR") else { return Vec::new() };
     let mut out = vec![("APPDIR".to_string(), None), ("APPIMAGE".to_string(), None)];

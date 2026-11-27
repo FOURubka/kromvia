@@ -60,7 +60,8 @@ export async function wornOn(db: D1Database, host: string, nicks: string[]): Pro
       if (r.clan_tag) worn.clan = { id: r.clan_id, tag: r.clan_tag, icon: r.clan_icon };
       delete worn.name;
       const profile = JSON.parse(r.profile ?? "{}");
-      if (profile.nameColor || profile.nameColor2) worn.name = { a: profile.nameColor ?? null, b: profile.nameColor2 ?? null };
+      const font = profile.nameFont && profile.nameFont !== "default" ? profile.nameFont : null;
+      if (profile.nameColor || profile.nameColor2 || font) worn.name = { a: profile.nameColor ?? null, b: profile.nameColor2 ?? null, font };
       return [r.nick_lower, worn];
     }),
   );

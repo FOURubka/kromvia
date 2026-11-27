@@ -43,8 +43,11 @@ type GameAsk = { do?: string; id?: string; to?: string; text?: string; party?: s
 const LOCAL_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|[^.]*$)/;
 const joinable = (servers: Record<string, string>) => Object.fromEntries(Object.entries(servers).filter(([, h]) => !LOCAL_HOST.test(h)));
 
-type MeLite = { id: string; dev?: boolean; clan?: { id: string; tag: string } | null; profile?: { nameColor?: string; nameColor2?: string } };
-const nameColors = (m: MeLite) => (m.profile?.nameColor || m.profile?.nameColor2 ? { a: m.profile.nameColor ?? null, b: m.profile.nameColor2 ?? null } : null);
+type MeLite = { id: string; dev?: boolean; clan?: { id: string; tag: string } | null; profile?: { nameColor?: string; nameColor2?: string; nameFont?: string } };
+const nameColors = (m: MeLite) => {
+  const font = m.profile?.nameFont && m.profile.nameFont !== "default" ? m.profile.nameFont : null;
+  return m.profile?.nameColor || m.profile?.nameColor2 || font ? { a: m.profile?.nameColor ?? null, b: m.profile?.nameColor2 ?? null, font } : null;
+};
 
 const SHOT = /^https:\/\/api\.kromvia\.com\/share\/[A-Za-z0-9]{4,16}$/;
 
@@ -130,7 +133,7 @@ function useSocialState() {
   const [gameTick, setGameTick] = useState(0);
   const [heads, setHeads] = useState<Record<string, string>>({});
   const [setup, setSetup] = useState<Record<string, unknown> | null>(null);
-  const [myName, setMyName] = useState<{ a: string | null; b: string | null } | null>(null);
+  const [myName, setMyName] = useState<{ a: string | null; b: string | null; font: string | null } | null>(null);
   const [card, setCard] = useState<Record<string, unknown> | null>(null);
   const cardFor = useRef<(name: string) => void>(() => {});
   const instancesRef = useRef<{ id: string }[]>([]);
