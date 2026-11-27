@@ -20,6 +20,7 @@ pub fn open_path(path: impl AsRef<Path>) -> Result<(), String> {
     tauri_plugin_opener::open_path(path, None::<&str>).map_err(|e| e.to_string())
 }
 
+#[cfg(target_os = "linux")]
 pub fn host_command(program: &str) -> std::process::Command {
     let mut cmd = std::process::Command::new(program);
     for (key, value) in host_env() {
