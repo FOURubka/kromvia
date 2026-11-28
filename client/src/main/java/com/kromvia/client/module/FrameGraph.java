@@ -6,9 +6,10 @@ import net.minecraft.world.item.Items;
 
 public final class FrameGraph extends Module {
 	private static final int N = 120, W = 120, H = 34;
-	private final float[] ms = new float[N];
-	private int at, count;
-	private long last;
+	private static final float[] ms = new float[N];
+	private static int at, count;
+	private static long last;
+	private static boolean hooked;
 
 	public FrameGraph() {
 		super("frame_graph", "Frame Time Graph", Module.Category.HUD, Module.Corner.TOP_LEFT, false);
@@ -30,8 +31,12 @@ public final class FrameGraph extends Module {
 		return "60 fps · 1% low 48";
 	}
 
-	@Override
-	public void render(Gfx g, Minecraft mc, int x, int y) {
+	public static void frame() {
+		hooked = true;
+		tick();
+	}
+
+	private static void tick() {
 		long now = System.nanoTime();
 		if (last != 0) {
 			float dt = (now - last) / 1e6F;
@@ -42,6 +47,11 @@ public final class FrameGraph extends Module {
 			}
 		}
 		last = now;
+	}
+
+	@Override
+	public void render(Gfx g, Minecraft mc, int x, int y) {
+		if (!hooked) tick();
 		g.fill(x, y, x + W + 4, y + H + 14, 0x88101014);
 		float sum = 0, worst = 0;
 		for (int i = 0; i < count; i++) {

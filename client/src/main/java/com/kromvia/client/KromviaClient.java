@@ -76,6 +76,7 @@ public class KromviaClient implements ClientModInitializer {
 			new com.kromvia.client.module.DeathRecap(),
 			new com.kromvia.client.module.Waypoints(),
 			new com.kromvia.client.module.FrameGraph(),
+			com.kromvia.client.module.Perf.INSTANCE,
 			Extras.TAB_PING,
 			com.kromvia.client.ui.UiFont.FONT);
 

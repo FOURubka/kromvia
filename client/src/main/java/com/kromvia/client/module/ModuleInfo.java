@@ -72,6 +72,7 @@ public final class ModuleInfo {
 		put("easy_place", "easy_place", "Place blocks on doors, trapdoors, chests and other usable blocks without sneaking.");
 		put("zoom", "zoom", "Hold C to zoom in. Scroll while zooming to change it.");
 		put("fullbright", "fullbright", "Makes everything bright, even caves at night.");
+		put("performance", "fps", "Client-side speedups. Reuse HUD redraws the HUD at the refresh rate you pick and repeats it in between, so it costs less every frame.");
 		put("crash_patch", "crash_patch", "If the game crashes in a world, it takes you to a menu instead of closing.");
 		put("no_fog", "no_fog", "Removes distance fog.");
 		put("block_outline", "block_outline", "Changes the colour and thickness of the block outline.");
